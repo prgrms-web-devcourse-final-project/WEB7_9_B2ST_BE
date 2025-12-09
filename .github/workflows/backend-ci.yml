@@ -1,0 +1,64 @@
+name: ✨ B2st Backend CI ✨
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      SPRING_PROFILES_ACTIVE: test
+
+    steps:
+      - name: ✨ Checkout repository
+        uses: actions/checkout@v5
+
+      - name: ✨ JDK 21 설정
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: ✨ Gradle Caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 🗂️ Create test application.yml
+        run: |
+          mkdir -p ./src/main/resources
+          cd ./src/main/resources
+          
+          touch ./application-test.yml
+          echo "$APPLICATION_TEST" > ./application-test.yml      
+
+        env:
+          APPLICATION_TEST: ${{ secrets.APPLICATION_TEST }}
+        shell: bash
+
+      - name: ✨ Gradlew 권한 설정
+        run: chmod +x ./gradlew
+
+      - name: 🏗️ Gradle 빌드
+        run: ./gradlew build
+
+      - name: 🧪 테스트 실행
+        run: ./gradlew test
+
+      - name: 📊 테스트 결과 업로드
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.run_number }}
+          path: |
+            build/reports/tests/test/
+            build/test-results/test/
+          retention-days: 7

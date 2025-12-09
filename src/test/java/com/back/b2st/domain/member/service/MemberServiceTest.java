@@ -19,41 +19,41 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
-@ExtendWith(MockitoExtension.class) // Mockito 환경 사용
+@ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
 
     @InjectMocks
-    private MemberService memberService; // 가짜 객체들이 주입될 타겟 서비스
+    private MemberService memberService;
 
     @Mock
-    private MemberRepository memberRepository; // 가짜 리포지토리
+    private MemberRepository memberRepository;
 
     @Mock
-    private PasswordEncoder passwordEncoder; // 가짜 암호화기
+    private PasswordEncoder passwordEncoder;
 
     @Test
     @DisplayName("회원가입 성공 테스트")
     void signup_success() {
-        // given (준비)
+        // given
         SignupRequest request = createSignupRequest("test@email.com", "validPw123!", "tester", "nickname");
 
-        // Mocking: 중복된 이메일/닉네임이 없다고 가정
+        // Mocking
         given(memberRepository.existsByEmail(request.getEmail())).willReturn(false);
         given(memberRepository.existsByNickname(request.getNickname())).willReturn(false);
         given(passwordEncoder.encode(request.getPassword())).willReturn("encodedPassword");
 
-        // Mocking: save 호출 시 ID가 1인 Member 반환하도록 설정
+        // Mocking: save 호출 시 ID가 1인 Member 반환하도록
         Member savedMember = Member.builder()
                 .email(request.getEmail())
                 .role(Member.Role.MEMBER)
                 .build();
-        ReflectionTestUtils.setField(savedMember, "id", 1L); // ID 강제 주입
+        ReflectionTestUtils.setField(savedMember, "id", 1L);
         given(memberRepository.save(any(Member.class))).willReturn(savedMember);
 
-        // when (실행)
+        // when
         Long memberId = memberService.signup(request);
 
-        // then (검증)
+        // then
         assertThat(memberId).isEqualTo(1L);
     }
 
@@ -63,7 +63,7 @@ class MemberServiceTest {
         // given
         SignupRequest request = createSignupRequest("duplicate@email.com", "pw", "name", "nick");
 
-        // Mocking: 이메일이 이미 존재한다고 가정
+        // Mocking
         given(memberRepository.existsByEmail(request.getEmail())).willReturn(true);
 
         // when & then
@@ -75,7 +75,7 @@ class MemberServiceTest {
     // 테스트용 DTO 생성 헬퍼 메서드
     private SignupRequest createSignupRequest(String email, String pw, String name, String nick) {
         SignupRequest request = new SignupRequest();
-        // Reflection을 사용하여 private 필드에 값 주입 (Setter가 없는 경우 유용)
+        // Reflection
         ReflectionTestUtils.setField(request, "email", email);
         ReflectionTestUtils.setField(request, "password", pw);
         ReflectionTestUtils.setField(request, "name", name);

@@ -41,7 +41,7 @@ class MemberControllerTest {
         mockMvc.perform(post("/members/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andDo(print()) // 로그 출력
+                .andDo(print())
                 .andExpect(status().isOk());
     }
 
@@ -56,7 +56,7 @@ class MemberControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
-                .andExpect(status().isBadRequest()); // @Valid 검증 실패 시 400 에러
+                .andExpect(status().isBadRequest());
     }
 
     @Test

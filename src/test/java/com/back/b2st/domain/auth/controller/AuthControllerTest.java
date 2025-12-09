@@ -19,10 +19,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.LoginRequest;
+import com.back.b2st.domain.auth.dto.TokenReissueRequest;
 import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.global.jwt.dto.TokenInfo;
 import com.back.b2st.global.test.AbstractContainerBaseTest;
 
 import tools.jackson.databind.ObjectMapper;
@@ -124,5 +126,58 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			// 아직 글로벌 핸들러 들어오기 전이라 403 발생함
 			// 일단 테스트 통과 위해 isForbidden()으로 설정.
 			.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@DisplayName("통합: 토큰 재발급 성공")
+	void reissue_integration_success() throws Exception {
+		// Redis에 기존 Refresh Token 저장해두기
+		String email = "reissue@test.com";
+		String oldRefreshToken = "oldRefreshTokenValue";
+		refreshTokenRepository.save(new RefreshToken(email, oldRefreshToken));
+
+		// Mocking: JwtTokenProvider에서 토큰을 해석하는 과정 단순화 위해 실제 토큰 생성해서 테스트
+		// 회원 가입 및 토큰 발급
+		Member member = Member.builder()
+			.email(email)
+			.password(passwordEncoder.encode("Password123!"))
+			.name("유저")
+			.nickname("닉네임")
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.build();
+		memberRepository.save(member);
+
+		// 로그인 요청으로 유효한 토큰 세트 확보
+		LoginRequest loginRequest = new LoginRequest();
+		ReflectionTestUtils.setField(loginRequest, "email", email);
+		ReflectionTestUtils.setField(loginRequest, "password", "Password123!");
+
+		String loginResponse = mockMvc.perform(post("/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(loginRequest)))
+			.andReturn().getResponse().getContentAsString();
+
+		TokenInfo tokenInfo = objectMapper.readValue(loginResponse, TokenInfo.class);
+
+		Thread.sleep(1000);
+
+		// 재발급 요청
+		TokenReissueRequest reissueRequest = new TokenReissueRequest();
+		ReflectionTestUtils.setField(reissueRequest, "accessToken", tokenInfo.getAccessToken());
+		ReflectionTestUtils.setField(reissueRequest, "refreshToken", tokenInfo.getRefreshToken());
+
+		// API 실행
+		mockMvc.perform(post("/auth/reissue")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(reissueRequest)))
+			.andDo(print())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.accessToken").exists())
+			.andExpect(jsonPath("$.accessToken").isString());
+
+		// Redis값체크
+		RefreshToken updatedRedisToken = refreshTokenRepository.findById(email).orElseThrow();
+		assertThat(updatedRedisToken.getToken()).isNotEqualTo(tokenInfo.getRefreshToken());
 	}
 }

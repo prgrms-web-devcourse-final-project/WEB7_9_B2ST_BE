@@ -1,8 +1,5 @@
 package com.back.b2st.global.error.handler;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -10,6 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.global.error.code.CommonErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -19,81 +17,60 @@ import lombok.extern.slf4j.Slf4j;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-	/**
-	 * 비즈니스 예외 처리
-	 */
+	/* =========================
+	   도메인 비즈니스 예외
+	   ========================= */
 	@ExceptionHandler(BusinessException.class)
-	public ResponseEntity<Map<String, String>> handleBusinessException(BusinessException ex) {
+	public ResponseEntity<BaseResponse<Void>> handleBusinessException(BusinessException ex) {
 		log.error("BusinessException: {}", ex.getMessage(), ex);
+
 		return ResponseEntity
 			.status(ex.getErrorCode().getStatus())
-			.body(createErrorResponse(ex.getErrorCode().getCode(), ex.getErrorCode().getMessage()));
+			.body(BaseResponse.error(ex.getErrorCode())); // data = null
 	}
 
-	/**
-	 * Validation 예외 처리
-	 */
+	/* =========================
+	   검증/바인딩 예외
+	   ========================= */
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<Map<String, String>> handleValidationException(MethodArgumentNotValidException ex) {
+	public ResponseEntity<BaseResponse<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
 		log.error("MethodArgumentNotValidException: {}", ex.getMessage(), ex);
+
 		return ResponseEntity
 			.status(CommonErrorCode.BAD_REQUEST.getStatus())
-			.body(createErrorResponse(
-				CommonErrorCode.BAD_REQUEST.getCode(),
-				CommonErrorCode.BAD_REQUEST.getMessage()
-			));
+			.body(BaseResponse.error(CommonErrorCode.BAD_REQUEST)); // data = null
 	}
 
-
-	/**
-	 * 요청 본문 파싱 실패
-	 */
 	@ExceptionHandler(HttpMessageNotReadableException.class)
-	public ResponseEntity<Map<String, String>> handleNotReadableException(HttpMessageNotReadableException ex) {
+	public ResponseEntity<BaseResponse<Void>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
 		log.error("HttpMessageNotReadableException: {}", ex.getMessage(), ex);
+
 		return ResponseEntity
 			.status(CommonErrorCode.BAD_REQUEST.getStatus())
-			.body(createErrorResponse(
-				CommonErrorCode.BAD_REQUEST.getCode(),
-				CommonErrorCode.BAD_REQUEST.getMessage()
-			));
+			.body(BaseResponse.error(CommonErrorCode.BAD_REQUEST)); // data = null
 	}
 
-	/**
-	 * HTTP 메서드 불일치
-	 */
+	/* =========================
+	   HTTP 관련 예외
+	   ========================= */
 	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-	public ResponseEntity<Map<String, String>> handleMethodNotSupportedException(HttpRequestMethodNotSupportedException ex) {
+	public ResponseEntity<BaseResponse<Void>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
 		log.error("HttpRequestMethodNotSupportedException: {}", ex.getMessage(), ex);
+
 		return ResponseEntity
 			.status(CommonErrorCode.METHOD_NOT_ALLOWED.getStatus())
-			.body(createErrorResponse(
-				CommonErrorCode.METHOD_NOT_ALLOWED.getCode(),
-				CommonErrorCode.METHOD_NOT_ALLOWED.getMessage()
-			));
+			.body(BaseResponse.error(CommonErrorCode.METHOD_NOT_ALLOWED)); // data = null
 	}
 
-	/**
-	 * 그 외 모든 예외 처리
-	 */
+	/* =========================
+	   그 외 모든 예외
+	   ========================= */
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<Map<String, String>> handleException(Exception ex) {
-		log.error("Unexpected Exception: {}", ex.getMessage(), ex);
+	public ResponseEntity<BaseResponse<Void>> handleException(Exception ex) {
+		log.error("Unhandled Exception: {}", ex.getMessage(), ex);
+
 		return ResponseEntity
 			.status(CommonErrorCode.INTERNAL_SERVER_ERROR.getStatus())
-			.body(createErrorResponse(
-				CommonErrorCode.INTERNAL_SERVER_ERROR.getCode(),
-				CommonErrorCode.INTERNAL_SERVER_ERROR.getMessage()
-			));
-	}
-
-	/**
-	 * 에러 응답 생성
-	 */
-	private Map<String, String> createErrorResponse(String code, String message) {
-		Map<String, String> response = new HashMap<>();
-		response.put("code", code);
-		response.put("message", message);
-		return response;
+			.body(BaseResponse.error(CommonErrorCode.INTERNAL_SERVER_ERROR)); // data = null
 	}
 }

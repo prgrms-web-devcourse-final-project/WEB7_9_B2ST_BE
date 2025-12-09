@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.auth.dto.LoginRequest;
+import com.back.b2st.domain.auth.dto.TokenReissueRequest;
 import com.back.b2st.domain.auth.service.AuthService;
 import com.back.b2st.global.jwt.dto.TokenInfo;
 
@@ -23,6 +24,12 @@ public class AuthController {
 	@PostMapping("/login")
 	public ResponseEntity<TokenInfo> login(@Valid @RequestBody LoginRequest request) {
 		TokenInfo tokenInfo = authService.login(request);
+		return ResponseEntity.ok(tokenInfo);
+	}
+
+	@PostMapping("/reissue")
+	public ResponseEntity<TokenInfo> reissue(@Valid @RequestBody TokenReissueRequest request) {
+		TokenInfo tokenInfo = authService.reissue(request);
 		return ResponseEntity.ok(tokenInfo);
 	}
 }

@@ -65,7 +65,6 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.email(email)
 			.password(passwordEncoder.encode(password))
 			.name("로그인유저")
-			.nickname("로그인닉네임")
 			.role(Member.Role.MEMBER)
 			.isVerified(true)
 			.provider(Member.Provider.EMAIL)
@@ -82,8 +81,8 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.accessToken").exists())
-			.andExpect(jsonPath("$.refreshToken").exists());
+			.andExpect(jsonPath("$.data.accessToken").exists())
+			.andExpect(jsonPath("$.data.refreshToken").exists());
 
 		// Redis 검증: 실제 RefreshToken이 저장되었는지 확인
 		// RefreshToken 엔티티의 @Id는 email이므로 findById(email)로 조회
@@ -102,7 +101,6 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.email("fail@test.com")
 			.password(passwordEncoder.encode("Password123!"))
 			.name("유저")
-			.nickname("닉네임")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
 			.build();
@@ -114,15 +112,10 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		ReflectionTestUtils.setField(request, "password", "WrongPw123!");
 
 		// 요청 및 401/500 에러 확인
-		// Spring Security 기본 설정상 인증 실패는 401
+		// Spring Security 기본 설정상 인증 실패는 401.
 		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
-			// .andDo(print())
-			// .andExpect(status().isUnauthorized()); // 인증 실패
-
-			// (임시 수정) 원래는 isUnauthorized()(401)여야 하지만
-			// 아직 글로벌 핸들러 들어오기 전이라 403 발생함
-			// 일단 테스트 통과 위해 isForbidden()으로 설정.
-			.andExpect(status().isForbidden());
+			.andDo(print())
+			.andExpect(status().isUnauthorized()); // 인증 실패
 	}
 }

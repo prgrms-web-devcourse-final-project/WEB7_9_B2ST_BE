@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.0.0'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'checkstyle'
 }
 
 group = 'com.back'
@@ -29,13 +30,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    // jpa, mysql, redis
+    // jpa, redis
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-    // mysql 커넥터
-    runtimeOnly 'com.mysql:mysql-connector-j'
+    // DB 드라이버
+    runtimeOnly 'org.postgresql:postgresql'  // PostgreSQL
 
     // security & jwt
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -59,6 +60,28 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     runtimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.compilerArgs.add('-parameters')
+}
+
+tasks.withType(Checkstyle) {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+// Checkstyle 설정
+checkstyle {
+    toolVersion = '10.12.5'
+    configFile = rootProject.file('codestyle/naver-checkstyle-rules.xml')
+    configProperties = [
+            suppressionFile: rootProject.file('codestyle/naver-checkstyle-suppressions.xml').absolutePath
+    ]
+    ignoreFailures = false
 }
 
 tasks.named('test') {

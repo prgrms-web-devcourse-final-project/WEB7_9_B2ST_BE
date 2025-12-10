@@ -26,15 +26,15 @@ import lombok.NoArgsConstructor;
 @Table(name = "members", indexes = {
 	@Index(name = "idx_member_provider_id", columnList = "provider, provider_id")
 })
+@SequenceGenerator(
+	name = "member_id_gen",
+	sequenceName = "members_seq",
+	allocationSize = 50
+)
 public class Member extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "member_id_gen")
-	@SequenceGenerator(
-		name = "member_id_gen",
-		sequenceName = "members_seq",
-		allocationSize = 50
-	)
 	@Column(name = "member_id")
 	private Long id;
 

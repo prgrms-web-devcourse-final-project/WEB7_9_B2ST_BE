@@ -32,17 +32,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: 🗂️ Create test application.yml
+      - name: 🗂️ Make application-test.yml
         run: |
           mkdir -p ./src/main/resources
-          cd ./src/main/resources
           
-          touch ./application-test.yml
-          echo "$APPLICATION_TEST" > ./application-test.yml      
-
-        env:
-          APPLICATION_TEST: ${{ secrets.APPLICATION_TEST }}
-        shell: bash
+          echo "${{ secrets.APPLICATION_TEST_YML }}" > src/main/resources/application-test.yml
 
       - name: ✨ Gradlew 권한 설정
         run: chmod +x ./gradlew

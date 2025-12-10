@@ -22,16 +22,12 @@ public class MemberService {
 		if (memberRepository.existsByEmail(request.getEmail())) {
 			throw new IllegalArgumentException("이미 가입된 이메일입니다.");
 		}
-		if (memberRepository.existsByNickname(request.getNickname())) {
-			throw new IllegalArgumentException("이미 존재하는 닉네임입니다.");
-		}
 
 		// 비밀번호 암호화 및 엔티티 생성
 		Member member = Member.builder()
 			.email(request.getEmail())
 			.password(passwordEncoder.encode(request.getPassword()))
 			.name(request.getName())
-			.nickname(request.getNickname())
 			.phone(request.getPhone())
 			.birth(request.getBirth())
 			.role(Member.Role.MEMBER) // 기본 가입은 MEMBER

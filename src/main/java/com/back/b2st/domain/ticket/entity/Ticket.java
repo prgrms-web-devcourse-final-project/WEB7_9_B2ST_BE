@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,10 +26,13 @@ import lombok.NoArgsConstructor;
 @Getter
 @Table(
 	name = "tickets",
+	uniqueConstraints = @UniqueConstraint(
+		name = "uk_tickets_reservation_member_seat",
+		columnNames = {"reservation_id, member_id, seat_id"}
+	),
 	indexes = {
-		@Index(name = "idx_tickets_reservation", columnList = "reservation_id"),
-		@Index(name = "idx_tickets_member", columnList = "member_id"),
-		@Index(name = "idx_tickets_seat", columnList = "seat_id")
+		@Index(name = "idx_tickets_reservation_member", columnList = "reservation_id, member_id"),
+		@Index(name = "idx_tickets_member", columnList = "member_id")
 	})
 @EntityListeners(AuditingEntityListener.class)
 @SequenceGenerator(

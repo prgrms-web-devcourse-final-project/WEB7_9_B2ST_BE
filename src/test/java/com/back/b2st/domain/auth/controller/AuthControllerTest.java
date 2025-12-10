@@ -81,8 +81,8 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.accessToken").exists())
-			.andExpect(jsonPath("$.refreshToken").exists());
+			.andExpect(jsonPath("$.data.accessToken").exists())
+			.andExpect(jsonPath("$.data.refreshToken").exists());
 
 		// Redis 검증: 실제 RefreshToken이 저장되었는지 확인
 		// RefreshToken 엔티티의 @Id는 email이므로 findById(email)로 조회

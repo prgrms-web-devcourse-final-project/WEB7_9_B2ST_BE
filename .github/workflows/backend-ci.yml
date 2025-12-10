@@ -44,6 +44,10 @@ jobs:
       - name: 🏗️ Gradle 빌드
         run: ./gradlew build
 
+      - name: 📝 Checkstyle 검사
+        run: ./gradlew checkstyleMain checkstyleTest
+        continue-on-error: false
+
       - name: 🧪 테스트 실행
         run: ./gradlew test
 

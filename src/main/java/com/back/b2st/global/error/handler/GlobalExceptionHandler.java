@@ -63,6 +63,19 @@ public class GlobalExceptionHandler {
 	}
 
 	/* =========================
+            인증 관련 예외
+            ========================= */
+	@ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
+	public ResponseEntity<BaseResponse<Void>> handleBadCredentials
+	(org.springframework.security.authentication.BadCredentialsException ex) {
+		log.error("BadCredentialsException: {}", ex.getMessage(), ex);
+
+		return ResponseEntity
+			.status(CommonErrorCode.UNAUTHORIZED.getStatus())
+			.body(BaseResponse.error(CommonErrorCode.UNAUTHORIZED)); // data = null
+	}
+
+	/* =========================
 	   그 외 모든 예외
 	   ========================= */
 	@ExceptionHandler(Exception.class)

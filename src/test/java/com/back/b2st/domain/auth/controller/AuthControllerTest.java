@@ -112,7 +112,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		ReflectionTestUtils.setField(request, "password", "WrongPw123!");
 
 		// 요청 및 401/500 에러 확인
-		// Spring Security 기본 설정상 인증 실패는 401
+		// Spring Security 기본 설정상 인증 실패는 401.
 		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())

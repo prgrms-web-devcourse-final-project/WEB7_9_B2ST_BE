@@ -28,7 +28,7 @@ import lombok.NoArgsConstructor;
 	name = "tickets",
 	uniqueConstraints = @UniqueConstraint(
 		name = "uk_tickets_reservation_member_seat",
-		columnNames = {"reservation_id, member_id, seat_id"}
+		columnNames = {"reservation_id", "member_id", "seat_id"}
 	),
 	indexes = {
 		@Index(name = "idx_tickets_reservation_member", columnList = "reservation_id, member_id"),
@@ -47,7 +47,7 @@ public class Ticket extends BaseEntity {
 	@Column(name = "ticket_id")
 	private Long id;
 
-	@Column(name = "reservation_id ", nullable = false)
+	@Column(name = "reservation_id", nullable = false)
 	private Long reservationId;
 
 	@Column(name = "member_id", nullable = false)

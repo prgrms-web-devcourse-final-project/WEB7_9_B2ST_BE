@@ -22,6 +22,6 @@ public class MemberController {
 	@PostMapping("/signup")
 	public ResponseEntity<String> signup(@Valid @RequestBody SignupRequest request) {
 		Long memberId = memberService.signup(request);
-		return ResponseEntity.ok("(response 수정 필요)회원가입 성공 ID: " + memberId);
+		return ResponseEntity.ok().body(memberId.toString());
 	}
 }

@@ -41,9 +41,6 @@ public class Member extends BaseEntity {
 	@Column(nullable = false)
 	private String name;
 
-	@Column(nullable = false, unique = true)
-	private String nickname;
-
 	private String phone;
 
 	private LocalDate birth;
@@ -71,7 +68,6 @@ public class Member extends BaseEntity {
 		this.email = email;
 		this.password = password;
 		this.name = name;
-		this.nickname = nickname;
 		this.phone = phone;
 		this.birth = birth;
 		this.role = role;

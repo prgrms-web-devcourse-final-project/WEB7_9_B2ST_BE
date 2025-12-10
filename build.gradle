@@ -35,7 +35,7 @@ dependencies {
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     // mysql 커넥터
-    runtimeOnly 'com.mysql:mysql-connector-j'
+    runtimeOnly 'org.postgresql:postgresql'
 
     // security & jwt
     implementation 'org.springframework.boot:spring-boot-starter-security'

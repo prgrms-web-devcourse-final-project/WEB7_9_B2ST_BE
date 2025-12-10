@@ -34,7 +34,7 @@ jobs:
 
       - name: 🗂️ Make application-test.yml
         run: |
-          mkdir -p .src/main/resources
+          mkdir -p ./src/main/resources
           
           echo "${{ secrets.APPLICATION_TEST_YML }}" > src/main/resources/application-test.yml
 

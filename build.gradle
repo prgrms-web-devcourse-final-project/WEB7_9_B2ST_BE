@@ -34,8 +34,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-    // mysql 커넥터
-    runtimeOnly 'com.mysql:mysql-connector-j'
+    // DB 드라이버
+    runtimeOnly 'org.postgresql:postgresql'
 
     // security & jwt
     implementation 'org.springframework.boot:spring-boot-starter-security'

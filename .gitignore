@@ -46,4 +46,5 @@ out/
 
 # 예외 처리
 !docker-compose.yml
+!docker/docker-compose.yml
 !.github/workflows/*.yml

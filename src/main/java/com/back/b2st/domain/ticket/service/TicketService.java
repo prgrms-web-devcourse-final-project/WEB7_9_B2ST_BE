@@ -9,9 +9,11 @@ import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TicketService {
 
 	private final TicketRepository ticketRepository;
@@ -34,7 +36,12 @@ public class TicketService {
 	@Transactional
 	public Ticket cancelTicket(Long reservationId, Long memberId, Long seatId) {
 		Ticket ticket = getTicket(reservationId, memberId, seatId);
-		ticket.cancel();
+
+		switch (ticket.getStatus()) {
+			case ISSUED -> ticket.cancel();
+			case CANCELED -> throw new BusinessException(TicketErrorCode.ALREADY_CANCEL_TICKET);
+			default -> throw new BusinessException(TicketErrorCode.TICKET_NOT_CANCELABLE);
+		}
 
 		return ticket;
 	}

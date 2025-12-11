@@ -127,4 +127,24 @@ class TicketServiceTest {
 		assertThat(findTicket.getStatus()).isEqualTo(TicketStatus.TRANSFERRED);
 	}
 
+	@Test
+	void 티켓_만료변경() {
+		// when
+		Long rId = 2L;
+		Long mId = 2L;
+		Long sId = 4L;
+
+		Ticket ticket = ticketService.createTicket(rId, mId, sId);
+
+		// when
+		ticket.expire();
+
+		// then
+		assertThat(ticket.getStatus()).isEqualTo(TicketStatus.EXPIRED);
+
+		// DB 검증
+		Ticket findTicket = ticketRepository.findById(ticket.getId()).orElseThrow();
+		assertThat(findTicket.getStatus()).isEqualTo(TicketStatus.EXPIRED);
+	}
+
 }

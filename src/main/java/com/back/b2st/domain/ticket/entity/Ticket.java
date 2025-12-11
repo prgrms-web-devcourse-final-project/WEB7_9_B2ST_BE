@@ -92,4 +92,8 @@ public class Ticket extends BaseEntity {
 	public void transfer() {
 		this.status = TicketStatus.TRANSFERRED;
 	}
+
+	public void expire() {
+		this.status = TicketStatus.EXPIRED;
+	}
 }

@@ -65,7 +65,7 @@ public class AuthService {
 		if (principal instanceof UserPrincipal userPrincipal) {
 			email = userPrincipal.getEmail(); // UserPrincipal이면 여기서 이메일 추출
 		} else {
-			email = authentication.getName(); // 그 외의 경우(혹시 모를 호환성)
+			email = authentication.getName(); // 그 외의 경우(혹시 모를 호환성 있을까)
 		}
 
 		// Redis 에서 사용자의 Refresh Token 가져오기

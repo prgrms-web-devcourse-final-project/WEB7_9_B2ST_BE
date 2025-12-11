@@ -28,7 +28,8 @@ public class TradeController {
 		@Valid @RequestBody CreateTradeRequest request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
-		CreateTradeResponse response = tradeService.createTrade(request, userPrincipal.getId());
+		Long memberId = (userPrincipal != null) ? userPrincipal.getId() : 1L;
+		CreateTradeResponse response = tradeService.createTrade(request, memberId);
 
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}

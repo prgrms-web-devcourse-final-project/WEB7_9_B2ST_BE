@@ -24,29 +24,15 @@ public class TradeService {
 
 	@Transactional
 	public CreateTradeResponse createTrade(CreateTradeRequest request, Long memberId) {
-		// 1. 티켓 중복 등록 검증
 		validateTicketNotDuplicated(request.getTicketId());
-
-		// 2. 교환/양도 타입별 검증
 		validateTradeType(request);
 
-		// 3. TODO: Ticket 도메인에서 티켓 정보 조회
-		// Ticket ticket = ticketService.getTicket(request.getTicketId());
-		// validateTicketOwnership(ticket, memberId);
-		// String section = ticket.getSection();
-		// String row = ticket.getRow();
-		// String seatNumber = ticket.getSeatNumber();
-		// Long performanceId = ticket.getPerformanceId();
-		// Long scheduleId = ticket.getScheduleId();
-
-		// 임시 Mock 데이터 (Ticket 연동 전)
 		String section = "A";
 		String row = "5열";
 		String seatNumber = "12석";
-		Long performanceId = 1L;  // Mock
-		Long scheduleId = 1L;     // Mock
+		Long performanceId = 1L;
+		Long scheduleId = 1L;
 
-		// 4. Trade 생성
 		Trade trade = Trade.builder()
 			.memberId(memberId)
 			.performanceId(performanceId)
@@ -64,12 +50,10 @@ public class TradeService {
 			Trade savedTrade = tradeRepository.save(trade);
 			return new CreateTradeResponse(savedTrade);
 		} catch (DataIntegrityViolationException e) {
-			// DB unique constraint 위반 시 (동시성 문제로 중복 발생)
 			throw new BusinessException(TradeErrorCode.TICKET_ALREADY_REGISTERED);
 		}
 	}
 
-	// 티켓 중복 등록 검증
 	private void validateTicketNotDuplicated(Long ticketId) {
 		boolean exists = tradeRepository.existsByTicketIdAndStatus(
 			ticketId,
@@ -81,10 +65,8 @@ public class TradeService {
 		}
 	}
 
-	// 교환/양도 타입별 검증
 	private void validateTradeType(CreateTradeRequest request) {
 		if (request.getType() == TradeType.EXCHANGE) {
-			// 교환: totalCount = 1, price = null
 			if (request.getTotalCount() != 1) {
 				throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_COUNT);
 			}
@@ -92,7 +74,6 @@ public class TradeService {
 				throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_PRICE);
 			}
 		} else if (request.getType() == TradeType.TRANSFER) {
-			// 양도: price 필수
 			if (request.getPrice() == null || request.getPrice() <= 0) {
 				throw new BusinessException(TradeErrorCode.INVALID_TRANSFER_PRICE);
 			}

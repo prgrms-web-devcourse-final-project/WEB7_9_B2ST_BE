@@ -12,11 +12,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import com.back.b2st.global.jwt.dto.TokenInfo;
+import com.back.b2st.security.CustomUserDetails;
+import com.back.b2st.security.UserPrincipal;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -44,43 +44,73 @@ public class JwtTokenProvider {
 		this.refreshTokenValidity = refreshTokenValidity;
 	}
 
-	// 유저 정보를 가지고 AccessToken, RefreshToken 생성
 	public TokenInfo generateToken(Authentication authentication) {
-		// 권한 가져오기
-		String authorities = authentication.getAuthorities()
-			.stream()
+		String authorities = authentication.getAuthorities().stream()
 			.map(GrantedAuthority::getAuthority)
 			.collect(Collectors.joining(","));
 
 		long now = (new Date()).getTime();
 
-		// Access Token 생성
-		String accessToken = Jwts.builder().subject(authentication.getName()) // 이메일
-			.claim("auth", authorities)        // 권한 정보 저장
-			.expiration(new Date(now + accessTokenValidity)).signWith(key).compact();
+		// Principal 타입에 따라 ID 추출 로직 분기
+		Object principal = authentication.getPrincipal();
+		Long memberId;
 
-		// Refresh Token 생성
-		String refreshToken = Jwts.builder().expiration(new Date(now + refreshTokenValidity)).signWith(key).compact();
+		if (principal instanceof CustomUserDetails userDetails) {
+			// 초기 로그인 시점
+			memberId = userDetails.getId();
+		} else if (principal instanceof UserPrincipal userPrincipal) {
+			// 토큰 재발급 시점 (토큰에서 복원된 객체)
+			memberId = userPrincipal.getId();
+		} else {
+			// 예외 처리 (혹시 모를 상황)
+			throw new IllegalArgumentException("지원하지 않는 인증 객체입니다.");
+		}
 
-		return TokenInfo.builder().grantType("Bearer").accessToken(accessToken).refreshToken(refreshToken).build();
+		// Access Token 빌더
+		String accessToken = Jwts.builder()
+			.subject(authentication.getName())
+			.claim("auth", authorities)
+			.claim("id", memberId)
+			.expiration(new Date(now + accessTokenValidity))
+			.signWith(key)
+			.compact();
+
+		// Refresh Token 빌더
+		String refreshToken = Jwts.builder()
+			.expiration(new Date(now + refreshTokenValidity))
+			.signWith(key)
+			.compact();
+
+		return TokenInfo.builder()
+			.grantType("Bearer")
+			.accessToken(accessToken)
+			.refreshToken(refreshToken)
+			.build();
 	}
 
-	// JWT 토큰을 복호화하여 토큰에 들어있는 정보 꺼내기
+	// 토큰에서 인증 정보 조회 로직
 	public Authentication getAuthentication(String accessToken) {
-		// 토큰 복호화
 		Claims claims = parseClaims(accessToken);
 
 		if (claims.get("auth") == null) {
 			throw new RuntimeException("권한 정보가 없는 토큰입니다.");
 		}
 
-		// 클레임에서 권한 정보 가져오기
-		Collection<? extends GrantedAuthority> authorities = Arrays.stream(claims.get("auth").toString().split(","))
-			.map(SimpleGrantedAuthority::new)
-			.collect(Collectors.toList());
+		Collection<? extends GrantedAuthority> authorities =
+			Arrays.stream(claims.get("auth").toString().split(","))
+				.map(SimpleGrantedAuthority::new)
+				.collect(Collectors.toList());
 
-		// UserDetails 객체를 만들어서 Authentication 리턴
-		UserDetails principal = new User(claims.getSubject(), "", authorities);
+		// Claims에서 ID 꺼내서 UserPrincipal 생성
+		// DB 조회 없이 토큰 정보로만
+		Long userId = claims.get("id", Long.class);
+
+		UserPrincipal principal = UserPrincipal.builder()
+			.id(userId)
+			.email(claims.getSubject())
+			.role(authorities.iterator().next().getAuthority())
+			.build();
+
 		return new UsernamePasswordAuthenticationToken(principal, "", authorities);
 	}
 

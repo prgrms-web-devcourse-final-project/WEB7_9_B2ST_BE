@@ -12,6 +12,7 @@ import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.global.jwt.JwtTokenProvider;
 import com.back.b2st.global.jwt.dto.TokenInfo;
+import com.back.b2st.security.UserPrincipal;
 
 import lombok.RequiredArgsConstructor;
 
@@ -50,11 +51,20 @@ public class AuthService {
 			throw new IllegalArgumentException("Refresh Token이 유효하지 않습니다.");
 		}
 
-		// Access Token 에서 Authentication 객체 가져오기 (만료되어도 정보는 가져옴)
+		// Access Token 에서 Authentication 객체 가져오기
 		Authentication authentication = jwtTokenProvider.getAuthentication(request.getAccessToken());
 
+		// 이메일 추출
+		String email;
+		Object principal = authentication.getPrincipal();
+		if (principal instanceof UserPrincipal userPrincipal) {
+			email = userPrincipal.getEmail(); // UserPrincipal이면 여기서 이메일 추출
+		} else {
+			email = authentication.getName(); // 그 외의 경우(혹시 모를 호환성)
+		}
+
 		// Redis 에서 사용자의 Refresh Token 가져오기
-		RefreshToken refreshToken = refreshTokenRepository.findById(authentication.getName())
+		RefreshToken refreshToken = refreshTokenRepository.findById(email) // 수정된 email 변수 사용
 			.orElseThrow(() -> new IllegalArgumentException("로그아웃 된 사용자입니다."));
 
 		// Redis 의 토큰과 요청 보낸 토큰 일치 여부 확인
@@ -66,7 +76,7 @@ public class AuthService {
 		TokenInfo newToken = jwtTokenProvider.generateToken(authentication);
 
 		// Refresh Token Redis 업데이트
-		refreshTokenRepository.save(new RefreshToken(authentication.getName(), newToken.getRefreshToken()));
+		refreshTokenRepository.save(new RefreshToken(email, newToken.getRefreshToken())); // 여기도 email 변수 사용
 
 		return newToken;
 	}

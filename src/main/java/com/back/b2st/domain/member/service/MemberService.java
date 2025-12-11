@@ -4,6 +4,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.member.dto.MyInfoResponse;
 import com.back.b2st.domain.member.dto.SignupRequest;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
@@ -37,5 +38,13 @@ public class MemberService {
 
 		// 저장
 		return memberRepository.save(member).getId();
+	}
+
+	@Transactional(readOnly = true)
+	public MyInfoResponse getMyInfo(Long memberId) {
+		Member member = memberRepository.findById(memberId)
+			.orElseThrow(() -> new IllegalArgumentException("해당하는 회원 찾을 수 없습니다."));
+
+		return MyInfoResponse.from(member);
 	}
 }

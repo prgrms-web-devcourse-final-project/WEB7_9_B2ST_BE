@@ -2,6 +2,7 @@ package com.back.b2st.domain.ticket.service;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +22,17 @@ class TicketServiceTest {
 	private TicketRepository ticketRepository;
 	@Autowired
 	private TicketService ticketService;
+
+	private Ticket ticket;
+
+	@BeforeEach
+	void setUp() {
+		Long rId = 2L;
+		Long mId = 2L;
+		Long sId = 4L;
+
+		ticket = ticketService.createTicket(rId, mId, sId);
+	}
 
 	@Test
 	void 티켓생성() {
@@ -50,14 +62,12 @@ class TicketServiceTest {
 	@Test
 	void 티켓_취소변경() {
 		// when
-		Long rId = 2L;
-		Long mId = 2L;
-		Long sId = 4L;
-
-		Ticket ticket = ticketService.createTicket(rId, mId, sId);
+		Long rId = ticket.getReservationId();
+		Long mId = ticket.getMemberId();
+		Long sId = ticket.getSeatId();
 
 		// when
-		ticket.cancel();
+		ticketService.cancelTicket(rId, mId, sId);
 
 		// then
 		assertThat(ticket.getStatus()).isEqualTo(TicketStatus.CANCELED);
@@ -70,14 +80,12 @@ class TicketServiceTest {
 	@Test
 	void 티켓_사용변경() {
 		// when
-		Long rId = 2L;
-		Long mId = 2L;
-		Long sId = 4L;
-
-		Ticket ticket = ticketService.createTicket(rId, mId, sId);
+		Long rId = ticket.getReservationId();
+		Long mId = ticket.getMemberId();
+		Long sId = ticket.getSeatId();
 
 		// when
-		ticket.use();
+		ticketService.useTicket(rId, mId, sId);
 
 		// then
 		assertThat(ticket.getStatus()).isEqualTo(TicketStatus.USED);
@@ -90,14 +98,12 @@ class TicketServiceTest {
 	@Test
 	void 티켓_교환변경() {
 		// when
-		Long rId = 2L;
-		Long mId = 2L;
-		Long sId = 4L;
-
-		Ticket ticket = ticketService.createTicket(rId, mId, sId);
+		Long rId = ticket.getReservationId();
+		Long mId = ticket.getMemberId();
+		Long sId = ticket.getSeatId();
 
 		// when
-		ticket.exchange();
+		ticketService.exchangeTicket(rId, mId, sId);
 
 		// then
 		assertThat(ticket.getStatus()).isEqualTo(TicketStatus.EXCHANGED);
@@ -110,14 +116,12 @@ class TicketServiceTest {
 	@Test
 	void 티켓_양도변경() {
 		// when
-		Long rId = 2L;
-		Long mId = 2L;
-		Long sId = 4L;
-
-		Ticket ticket = ticketService.createTicket(rId, mId, sId);
+		Long rId = ticket.getReservationId();
+		Long mId = ticket.getMemberId();
+		Long sId = ticket.getSeatId();
 
 		// when
-		ticket.transfer();
+		ticketService.transferTicket(rId, mId, sId);
 
 		// then
 		assertThat(ticket.getStatus()).isEqualTo(TicketStatus.TRANSFERRED);
@@ -130,14 +134,12 @@ class TicketServiceTest {
 	@Test
 	void 티켓_만료변경() {
 		// when
-		Long rId = 2L;
-		Long mId = 2L;
-		Long sId = 4L;
-
-		Ticket ticket = ticketService.createTicket(rId, mId, sId);
+		Long rId = ticket.getReservationId();
+		Long mId = ticket.getMemberId();
+		Long sId = ticket.getSeatId();
 
 		// when
-		ticket.expire();
+		ticketService.expireTicket(rId, mId, sId);
 
 		// then
 		assertThat(ticket.getStatus()).isEqualTo(TicketStatus.EXPIRED);

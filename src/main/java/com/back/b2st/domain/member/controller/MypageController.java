@@ -1,5 +1,6 @@
 package com.back.b2st.domain.member.controller;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,9 +21,9 @@ public class MypageController {
 	private final MemberService memberService;
 
 	@GetMapping("/me")
-	public BaseResponse<MyInfoResponse> getMyInfo(@CurrentUser UserPrincipal userPrincipal) {
+	public ResponseEntity<BaseResponse<MyInfoResponse>> getMyInfo(@CurrentUser UserPrincipal userPrincipal) {
 		MyInfoResponse myInfo = memberService.getMyInfo(userPrincipal.getId());
 
-		return BaseResponse.success(myInfo);
+		return ResponseEntity.ok(BaseResponse.success(myInfo));
 	}
 }

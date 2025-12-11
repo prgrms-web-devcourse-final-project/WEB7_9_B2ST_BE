@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 		@Index(name = "idx_lottery_results_member", columnList = "member_id"),
 		@Index(name = "idx_lottery_results_schedule", columnList = "schedule_id"),
 		@Index(name = "idx_lottery_results_member_schedule", columnList = "member_id, schedule_id"),
-		@Index(name = "idx_lottery_results_payment_deadline", columnList = "payment_deadline")
+		@Index(name = "idx_lottery_results_payment_deadline", columnList = "payment_deadline"),
 		@Index(name = "idx_lottery_results_payment_deadline", columnList = "payment_deadline")
 	}
 )

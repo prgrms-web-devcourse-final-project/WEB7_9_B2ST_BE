@@ -38,7 +38,7 @@ public class LotteryEntry extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lotter_entrys_id_gen")
-	@Column(name = "lottery_entrys_id")
+	@Column(name = "lottery_entry_id")
 	private Long id;
 
 	@Column(name = "member_id", nullable = false)

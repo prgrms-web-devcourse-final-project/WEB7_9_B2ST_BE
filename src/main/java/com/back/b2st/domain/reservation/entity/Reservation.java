@@ -55,7 +55,6 @@ public class Reservation extends BaseEntity {
 		this.performanceId = performanceId;
 		this.memberId = memberId;
 		this.seatId = seatId;
-		this.status = ReservationStatus.PENDING;  // 기본은 “결제 대기”
 	}
 
 	/** === 상태 변경 === */

@@ -3,7 +3,6 @@ package com.back.b2st.domain.auth.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
-import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -89,6 +88,7 @@ class AuthServiceTest {
 
 		// 1. Refresh Token 유효성 검사 통과 가정
 		given(jwtTokenProvider.validateToken("validRefresh")).willReturn(true);
+		given(jwtTokenProvider.validateTokenSignature("oldAccess")).willReturn(true);
 		// 2. Access Token에서 인증 정보 추출
 		given(jwtTokenProvider.getAuthentication("oldAccess")).willReturn(authentication);
 		// 3. Redis에 저장된 토큰 조회
@@ -123,6 +123,7 @@ class AuthServiceTest {
 		given(authentication.getName()).willReturn("test@test.com");
 
 		given(jwtTokenProvider.validateToken("hackRefresh")).willReturn(true);
+		given(jwtTokenProvider.validateTokenSignature("oldAccess")).willReturn(true);
 		given(jwtTokenProvider.getAuthentication("oldAccess")).willReturn(authentication);
 
 		// Redis에는 "originRefresh"가 저장되어 있음

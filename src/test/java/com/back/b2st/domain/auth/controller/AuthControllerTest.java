@@ -19,12 +19,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.LoginRequest;
+import com.back.b2st.domain.auth.dto.TokenReissueRequest;
 import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.global.test.AbstractContainerBaseTest;
 
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
@@ -117,5 +119,55 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
 			.andExpect(status().isUnauthorized()); // 인증 실패
+	}
+
+	@Test
+	@DisplayName("통합: 토큰 재발급 성공")
+	void reissue_integration_success() throws Exception {
+		String email = "reissue@test.com";
+
+		// 회원 가입
+		Member member = Member.builder()
+			.email(email)
+			.password(passwordEncoder.encode("Password123!"))
+			.name("유저")
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.build();
+		memberRepository.save(member);
+
+		// 로그인 요청
+		LoginRequest loginRequest = new LoginRequest();
+		ReflectionTestUtils.setField(loginRequest, "email", email);
+		ReflectionTestUtils.setField(loginRequest, "password", "Password123!");
+
+		String responseBody = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+			.content(objectMapper.writeValueAsString(loginRequest))).andReturn().getResponse().getContentAsString();
+
+		JsonNode rootNode = objectMapper.readTree(responseBody);
+		JsonNode dataNode = rootNode.path("data");
+
+		String accessToken = dataNode.path("accessToken").asText();
+		String refreshToken = dataNode.path("refreshToken").asText();
+
+		Thread.sleep(1500);
+
+		// 재발급 요청 객체 생성
+		TokenReissueRequest reissueRequest = TokenReissueRequest.builder()
+			.accessToken(accessToken)
+			.refreshToken(refreshToken)
+			.build();
+
+		// API 실행 및 검증
+		mockMvc.perform(post("/auth/reissue").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(reissueRequest)))
+			.andDo(print())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.accessToken").exists())
+			.andExpect(jsonPath("$.data.accessToken").isString());
+
+		// Redis 값 변경 확인
+		RefreshToken updatedRedisToken = refreshTokenRepository.findById(email).orElseThrow();
+		assertThat(updatedRedisToken.getToken()).isNotEqualTo(refreshToken);
 	}
 }

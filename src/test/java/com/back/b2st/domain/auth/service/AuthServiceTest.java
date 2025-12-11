@@ -22,6 +22,7 @@ import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.global.jwt.JwtTokenProvider;
 import com.back.b2st.global.jwt.dto.TokenInfo;
+import com.back.b2st.security.UserPrincipal;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -134,5 +135,23 @@ class AuthServiceTest {
 		org.assertj.core.api.Assertions.assertThatThrownBy(() -> authService.reissue(request))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("토큰의 유저 정보가 일치하지 않습니다.");
+	}
+
+	@Test
+	@DisplayName("로그아웃 성공")
+	void logout_success() {
+		// given
+		// UserPrincipal Mocking
+		UserPrincipal principal = UserPrincipal.builder()
+			.id(1L)
+			.email("logout@test.com")
+			.role("ROLE_MEMBER")
+			.build();
+
+		// when
+		authService.logout(principal);
+
+		// then
+		verify(refreshTokenRepository).deleteById("logout@test.com");
 	}
 }

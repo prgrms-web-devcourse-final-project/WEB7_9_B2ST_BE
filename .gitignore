@@ -41,8 +41,7 @@ out/
 *.yaml
 
 ### env ###
-docker/.env
-.env.*
+.env
 
 # 예외 처리
 !docker-compose.yml

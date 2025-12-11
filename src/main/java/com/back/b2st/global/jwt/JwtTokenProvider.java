@@ -101,6 +101,19 @@ public class JwtTokenProvider {
 		return false;
 	}
 
+	// 토큰 서명 검증
+	public boolean validateTokenSignature(String token) {
+		try {
+			Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+			return true;
+		} catch (ExpiredJwtException e) {
+			// 만료된 토큰이라도 서명이 정상이면 true
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
 	private Claims parseClaims(String accessToken) {
 		try {
 			return Jwts.parser().verifyWith(key).build().parseSignedClaims(accessToken).getPayload();

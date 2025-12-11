@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.LoginRequest;
+import com.back.b2st.domain.auth.dto.TokenReissueRequest;
 import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.global.jwt.JwtTokenProvider;
@@ -40,5 +41,38 @@ public class AuthService {
 		refreshTokenRepository.save(new RefreshToken(authentication.getName(), tokenInfo.getRefreshToken()));
 
 		return tokenInfo;
+	}
+
+	@Transactional
+	public TokenInfo reissue(TokenReissueRequest request) {
+		// Refresh Token 검증
+		if (!jwtTokenProvider.validateToken(request.getRefreshToken())) {
+			throw new IllegalArgumentException("Refresh Token이 유효하지 않습니다.");
+		}
+
+		// Access Token 서명 검증
+		if (!jwtTokenProvider.validateTokenSignature(request.getAccessToken())) {
+			throw new IllegalArgumentException("유효하지 않은 Access Token입니다.");
+		}
+
+		// Access Token 에서 Authentication 객체 가져오기 (만료되어도 정보는 가져옴)
+		Authentication authentication = jwtTokenProvider.getAuthentication(request.getAccessToken());
+
+		// Redis 에서 사용자의 Refresh Token 가져오기
+		RefreshToken refreshToken = refreshTokenRepository.findById(authentication.getName())
+			.orElseThrow(() -> new IllegalArgumentException("로그아웃 된 사용자입니다."));
+
+		// Redis 의 토큰과 요청 보낸 토큰 일치 여부 확인
+		if (!refreshToken.getToken().equals(request.getRefreshToken())) {
+			throw new IllegalArgumentException("토큰의 유저 정보가 일치하지 않습니다.");
+		}
+
+		// 새로운 토큰 생성
+		TokenInfo newToken = jwtTokenProvider.generateToken(authentication);
+
+		// Refresh Token Redis 업데이트
+		refreshTokenRepository.save(new RefreshToken(authentication.getName(), newToken.getRefreshToken()));
+
+		return newToken;
 	}
 }

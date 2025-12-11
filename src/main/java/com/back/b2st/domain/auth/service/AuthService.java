@@ -64,7 +64,7 @@ public class AuthService {
 		}
 
 		// Redis 에서 사용자의 Refresh Token 가져오기
-		RefreshToken refreshToken = refreshTokenRepository.findById(email) // 수정된 email 변수 사용
+		RefreshToken refreshToken = refreshTokenRepository.findById(email)
 			.orElseThrow(() -> new IllegalArgumentException("로그아웃 된 사용자입니다."));
 
 		// Redis 의 토큰과 요청 보낸 토큰 일치 여부 확인
@@ -76,7 +76,7 @@ public class AuthService {
 		TokenInfo newToken = jwtTokenProvider.generateToken(authentication);
 
 		// Refresh Token Redis 업데이트
-		refreshTokenRepository.save(new RefreshToken(email, newToken.getRefreshToken())); // 여기도 email 변수 사용
+		refreshTokenRepository.save(new RefreshToken(email, newToken.getRefreshToken()));
 
 		return newToken;
 	}

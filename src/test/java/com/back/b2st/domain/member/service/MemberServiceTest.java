@@ -35,7 +35,7 @@ class MemberServiceTest {
 	@DisplayName("회원가입 성공 테스트")
 	void signup_success() {
 		// given
-		SignupRequest request = createSignupRequest("test@email.com", "validPw123!", "tester", "nickname");
+		SignupRequest request = createSignupRequest("test@email.com", "validPw123!", "tester");
 
 		// Mocking
 		given(memberRepository.existsByEmail(request.getEmail())).willReturn(false);
@@ -57,7 +57,7 @@ class MemberServiceTest {
 	@DisplayName("회원가입 실패 - 이메일 중복")
 	void signup_fail_duplicate_email() {
 		// given
-		SignupRequest request = createSignupRequest("duplicate@email.com", "pw", "name", "nick");
+		SignupRequest request = createSignupRequest("duplicate@email.com", "pw", "name");
 
 		// Mocking
 		given(memberRepository.existsByEmail(request.getEmail())).willReturn(true);
@@ -68,7 +68,7 @@ class MemberServiceTest {
 	}
 
 	// 테스트용 DTO 생성 헬퍼 메서드
-	private SignupRequest createSignupRequest(String email, String pw, String name, String nick) {
+	private SignupRequest createSignupRequest(String email, String pw, String name) {
 		SignupRequest request = new SignupRequest();
 		// Reflection
 		ReflectionTestUtils.setField(request, "email", email);

@@ -1,5 +1,6 @@
 package com.back.b2st.domain.trade.service;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,9 +60,13 @@ public class TradeService {
 			.seatNumber(seatNumber)
 			.build();
 
-		Trade savedTrade = tradeRepository.save(trade);
-
-		return new CreateTradeResponse(savedTrade);
+		try {
+			Trade savedTrade = tradeRepository.save(trade);
+			return new CreateTradeResponse(savedTrade);
+		} catch (DataIntegrityViolationException e) {
+			// DB unique constraint 위반 시 (동시성 문제로 중복 발생)
+			throw new BusinessException(TradeErrorCode.TICKET_ALREADY_REGISTERED);
+		}
 	}
 
 	// 티켓 중복 등록 검증

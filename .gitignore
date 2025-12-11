@@ -41,7 +41,7 @@ out/
 *.yaml
 
 ### env ###
-.env
+docker/.env
 .env.*
 
 # 예외 처리

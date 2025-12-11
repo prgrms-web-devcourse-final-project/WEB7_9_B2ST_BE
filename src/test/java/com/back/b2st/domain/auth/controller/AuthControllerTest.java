@@ -174,13 +174,11 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 	@Test
 	@DisplayName("통합: 로그아웃 성공")
 	void logout_integration_success() throws Exception {
-		// 1. Redis에 Refresh Token 저장 (로그인 상태 가정)
+		// 로그인 상태 가정
 		String email = "logout@test.com";
 		refreshTokenRepository.save(new RefreshToken(email, "someRefreshToken"));
 
-		// 2. 로그인 토큰 발급 (API 호출을 위해 AccessToken 필요)
-		// (편의상 회원가입->로그인 과정을 거쳐서 유효한 AccessToken을 얻는 헬퍼 메서드를 만드는 게 좋지만,
-		//  여기서는 로직 흐름상 로그인 과정을 반복합니다.)
+		// 로그인 토큰 발급
 		Member member = Member.builder()
 			.email(email)
 			.password(passwordEncoder.encode("Password123!"))
@@ -201,14 +199,13 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		String accessToken = objectMapper.readTree(loginResponse).path("data").path("accessToken").asText();
 
-		// 3. 로그아웃 요청
+		// 로그아웃 요청
 		mockMvc.perform(post("/auth/logout")
 				.header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())
 			.andExpect(status().isOk());
 
-		// 4. Redis 검증: 데이터가 지워졌는지 확인
 		boolean exists = refreshTokenRepository.findById(email).isPresent();
 		assertThat(exists).isFalse();
 	}

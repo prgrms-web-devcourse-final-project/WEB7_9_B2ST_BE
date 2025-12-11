@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -30,10 +30,17 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
-			.csrf(AbstractHttpConfigurer::disable)
+			.csrf(csrf -> csrf
+				.ignoringRequestMatchers("/h2-console/**") // H2 콘솔은 CSRF 예외 처리
+			)
+			.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+
 			.authorizeHttpRequests(auth -> auth
-				.requestMatchers("/members/signup", "/auth/**", "/h2-console/**").permitAll() // 회원가입, 로그인은 모두 허용
-				.anyRequest().authenticated() // 그 외는 인증 필요
+				.requestMatchers(
+					"/members/signup", "/auth/**", "/h2-console/**", "/error",
+					"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"    // Swagger
+				).permitAll()
+				.anyRequest().authenticated()
 			)
 			.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 

@@ -1,11 +1,14 @@
 package com.back.b2st.domain.trade.service;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequest;
 import com.back.b2st.domain.trade.dto.response.CreateTradeResponse;
+import com.back.b2st.domain.trade.dto.response.TradeResponse;
 import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
@@ -21,6 +24,29 @@ import lombok.RequiredArgsConstructor;
 public class TradeService {
 
 	private final TradeRepository tradeRepository;
+
+	public TradeResponse getTrade(Long tradeId) {
+		Trade trade = tradeRepository.findById(tradeId)
+			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
+
+		return TradeResponse.from(trade);
+	}
+
+	public Page<TradeResponse> getTrades(TradeType type, TradeStatus status, Pageable pageable) {
+		Page<Trade> trades;
+
+		if (type != null && status != null) {
+			trades = tradeRepository.findAllByTypeAndStatus(type, status, pageable);
+		} else if (type != null) {
+			trades = tradeRepository.findAllByType(type, pageable);
+		} else if (status != null) {
+			trades = tradeRepository.findAllByStatus(status, pageable);
+		} else {
+			trades = tradeRepository.findAll(pageable);
+		}
+
+		return trades.map(TradeResponse::from);
+	}
 
 	@Transactional
 	public CreateTradeResponse createTrade(CreateTradeRequest request, Long memberId) {

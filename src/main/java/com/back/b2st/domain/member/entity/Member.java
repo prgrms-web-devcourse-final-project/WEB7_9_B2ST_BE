@@ -69,7 +69,7 @@ public class Member extends BaseEntity {
 	private LocalDateTime deletedAt;
 
 	@Builder
-	public Member(String email, String password, String name, String nickname, String phone, LocalDate birth, Role role,
+	public Member(String email, String password, String name, String phone, LocalDate birth, Role role,
 		Provider provider, String providerId, boolean isVerified) {
 		this.email = email;
 		this.password = password;

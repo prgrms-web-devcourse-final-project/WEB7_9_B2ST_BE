@@ -14,17 +14,24 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "trade", indexes = {
-	@Index(name = "idx_trade_member_status", columnList = "member_id, status"),
-	@Index(name = "idx_trade_performance", columnList = "performance_id, status"),
-	@Index(name = "idx_trade_type_status", columnList = "type, status")
-})
+@Table(name = "trade",
+	uniqueConstraints = @UniqueConstraint(
+		name = "uk_trade_ticket_active",
+		columnNames = {"ticket_id", "status"}
+	),
+	indexes = {
+		@Index(name = "idx_trade_member_status", columnList = "member_id, status"),
+		@Index(name = "idx_trade_performance", columnList = "performance_id, status"),
+		@Index(name = "idx_trade_type_status", columnList = "type, status")
+	}
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SequenceGenerator(
@@ -48,7 +55,7 @@ public class Trade extends BaseEntity {
 	@Column(name = "schedule_id", nullable = false)
 	private Long scheduleId;
 
-	@Column(name = "ticket_id", nullable = false, unique = true)
+	@Column(name = "ticket_id", nullable = false)
 	private Long ticketId;
 
 	@Enumerated(EnumType.STRING)
@@ -100,5 +107,6 @@ public class Trade extends BaseEntity {
 
 	public void cancel() {
 		this.status = TradeStatus.CANCELLED;
+		this.deletedAt = LocalDateTime.now();
 	}
 }

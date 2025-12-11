@@ -26,14 +26,14 @@ public class TicketService {
 		return ticketRepository.save(ticket);
 	}
 
-	private Ticket checkTicket(Long reservationId, Long memberId, Long seatId) {
+	private Ticket getTicket(Long reservationId, Long memberId, Long seatId) {
 		return ticketRepository.findByReservationIdAndMemberIdAndSeatId(reservationId, memberId, seatId)
 			.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
 	}
 
 	@Transactional
 	public Ticket cancelTicket(Long reservationId, Long memberId, Long seatId) {
-		Ticket ticket = checkTicket(reservationId, memberId, seatId);
+		Ticket ticket = getTicket(reservationId, memberId, seatId);
 		ticket.cancel();
 
 		return ticket;
@@ -41,7 +41,7 @@ public class TicketService {
 
 	@Transactional
 	public Ticket useTicket(Long reservationId, Long memberId, Long seatId) {
-		Ticket ticket = checkTicket(reservationId, memberId, seatId);
+		Ticket ticket = getTicket(reservationId, memberId, seatId);
 		ticket.use();
 
 		return ticket;
@@ -49,7 +49,7 @@ public class TicketService {
 
 	@Transactional
 	public Ticket exchangeTicket(Long reservationId, Long memberId, Long seatId) {
-		Ticket ticket = checkTicket(reservationId, memberId, seatId);
+		Ticket ticket = getTicket(reservationId, memberId, seatId);
 		ticket.exchange();
 
 		return ticket;
@@ -57,7 +57,7 @@ public class TicketService {
 
 	@Transactional
 	public Ticket transferTicket(Long reservationId, Long memberId, Long seatId) {
-		Ticket ticket = checkTicket(reservationId, memberId, seatId);
+		Ticket ticket = getTicket(reservationId, memberId, seatId);
 		ticket.transfer();
 
 		return ticket;
@@ -65,7 +65,7 @@ public class TicketService {
 
 	@Transactional
 	public Ticket expireTicket(Long reservationId, Long memberId, Long seatId) {
-		Ticket ticket = checkTicket(reservationId, memberId, seatId);
+		Ticket ticket = getTicket(reservationId, memberId, seatId);
 		ticket.expire();
 
 		return ticket;

@@ -76,4 +76,20 @@ public class Ticket extends BaseEntity {
 		this.qrCode = qrCode;
 		this.status = TicketStatus.ISSUED;
 	}
+
+	public void cancel() {
+		this.status = TicketStatus.CANCELED;
+	}
+
+	public void use() {
+		this.status = TicketStatus.USED;
+	}
+
+	public void exchange() {
+		this.status = TicketStatus.EXCHANGED;
+	}
+
+	public void transfer() {
+		this.status = TicketStatus.TRANSFERRED;
+	}
 }

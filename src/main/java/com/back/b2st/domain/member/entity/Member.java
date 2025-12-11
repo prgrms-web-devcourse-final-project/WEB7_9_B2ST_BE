@@ -13,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -25,10 +26,15 @@ import lombok.NoArgsConstructor;
 @Table(name = "members", indexes = {
 	@Index(name = "idx_member_provider_id", columnList = "provider, provider_id")
 })
+@SequenceGenerator(
+	name = "member_id_gen",
+	sequenceName = "members_seq",
+	allocationSize = 50
+)
 public class Member extends BaseEntity {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "member_id_gen")
 	@Column(name = "member_id")
 	private Long id;
 
@@ -40,9 +46,6 @@ public class Member extends BaseEntity {
 
 	@Column(nullable = false)
 	private String name;
-
-	@Column(nullable = false, unique = true)
-	private String nickname;
 
 	private String phone;
 
@@ -71,7 +74,6 @@ public class Member extends BaseEntity {
 		this.email = email;
 		this.password = password;
 		this.name = name;
-		this.nickname = nickname;
 		this.phone = phone;
 		this.birth = birth;
 		this.role = role;

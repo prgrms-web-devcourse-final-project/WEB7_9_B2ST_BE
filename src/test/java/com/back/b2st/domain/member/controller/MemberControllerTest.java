@@ -37,7 +37,7 @@ class MemberControllerTest {
 	@DisplayName("통합: 회원가입 성공")
 	void signup_integration_success() throws Exception {
 		// given
-		SignupRequest request = createSignupRequest("newuser@test.com", "StrongP@ss123", "신규유저", "NewNick");
+		SignupRequest request = createSignupRequest("newuser@test.com", "StrongP@ss123", "신규유저");
 
 		// when & then
 		mockMvc.perform(post("/members/signup")
@@ -51,7 +51,7 @@ class MemberControllerTest {
 	@DisplayName("통합: 회원가입 실패 - 유효하지 않은 이메일 형식")
 	void signup_integration_fail_bad_email() throws Exception {
 		// given
-		SignupRequest request = createSignupRequest("bad-email", "StrongP@ss123", "신규유저", "NewNick");
+		SignupRequest request = createSignupRequest("bad-email", "StrongP@ss123", "신규유저");
 
 		// when & then
 		mockMvc.perform(post("/members/signup")
@@ -65,7 +65,7 @@ class MemberControllerTest {
 	@DisplayName("통합: 회원가입 실패 - 비밀번호 규칙 미준수")
 	void signup_integration_fail_weak_password() throws Exception {
 		// given (특문 미포함)
-		SignupRequest request = createSignupRequest("user@test.com", "weakpassword1", "신규유저", "NewNick");
+		SignupRequest request = createSignupRequest("user@test.com", "weakpassword1", "신규유저");
 
 		// when & then
 		mockMvc.perform(post("/members/signup")
@@ -75,12 +75,11 @@ class MemberControllerTest {
 			.andExpect(status().isBadRequest());
 	}
 
-	private SignupRequest createSignupRequest(String email, String pw, String name, String nick) {
+	private SignupRequest createSignupRequest(String email, String pw, String name) {
 		SignupRequest request = new SignupRequest();
 		ReflectionTestUtils.setField(request, "email", email);
 		ReflectionTestUtils.setField(request, "password", pw);
 		ReflectionTestUtils.setField(request, "name", name);
-		ReflectionTestUtils.setField(request, "nickname", nick);
 		ReflectionTestUtils.setField(request, "birth", LocalDate.of(1990, 1, 1));
 		return request;
 	}

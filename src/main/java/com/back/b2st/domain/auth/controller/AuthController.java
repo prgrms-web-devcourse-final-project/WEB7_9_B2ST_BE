@@ -1,0 +1,35 @@
+package com.back.b2st.domain.auth.controller;
+
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.back.b2st.domain.auth.dto.LoginRequest;
+import com.back.b2st.domain.auth.dto.TokenReissueRequest;
+import com.back.b2st.domain.auth.service.AuthService;
+import com.back.b2st.global.common.BaseResponse;
+import com.back.b2st.global.jwt.dto.TokenInfo;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+	private final AuthService authService;
+
+	@PostMapping("/login")
+	public BaseResponse<TokenInfo> login(@Valid @RequestBody LoginRequest request) {
+		TokenInfo tokenInfo = authService.login(request);
+		return BaseResponse.success(tokenInfo);
+	}
+
+	@PostMapping("/reissue")
+	public BaseResponse<TokenInfo> reissue(@Valid @RequestBody TokenReissueRequest request) {
+		TokenInfo tokenInfo = authService.reissue(request);
+		return BaseResponse.success(tokenInfo);
+	}
+}

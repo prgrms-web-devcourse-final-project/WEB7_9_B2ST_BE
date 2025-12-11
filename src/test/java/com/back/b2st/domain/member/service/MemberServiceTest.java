@@ -39,7 +39,6 @@ class MemberServiceTest {
 
 		// Mocking
 		given(memberRepository.existsByEmail(request.getEmail())).willReturn(false);
-		given(memberRepository.existsByNickname(request.getNickname())).willReturn(false);
 		given(passwordEncoder.encode(request.getPassword())).willReturn("encodedPassword");
 
 		// Mocking: save 호출 시 ID가 1인 Member 반환하도록
@@ -75,7 +74,6 @@ class MemberServiceTest {
 		ReflectionTestUtils.setField(request, "email", email);
 		ReflectionTestUtils.setField(request, "password", pw);
 		ReflectionTestUtils.setField(request, "name", name);
-		ReflectionTestUtils.setField(request, "nickname", nick);
 		ReflectionTestUtils.setField(request, "birth", LocalDate.of(2000, 1, 1));
 		return request;
 	}

@@ -51,6 +51,11 @@ public class AuthService {
 			throw new IllegalArgumentException("Refresh Token이 유효하지 않습니다.");
 		}
 
+		// Access Token 서명 검증
+		if (!jwtTokenProvider.validateTokenSignature(request.getAccessToken())) {
+			throw new IllegalArgumentException("유효하지 않은 Access Token입니다.");
+		}
+
 		// Access Token 에서 Authentication 객체 가져오기
 		Authentication authentication = jwtTokenProvider.getAuthentication(request.getAccessToken());
 

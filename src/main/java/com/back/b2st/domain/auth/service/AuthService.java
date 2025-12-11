@@ -85,4 +85,9 @@ public class AuthService {
 
 		return newToken;
 	}
+
+	@Transactional
+	public void logout(UserPrincipal principal) {
+		refreshTokenRepository.deleteById(principal.getEmail());
+	}
 }

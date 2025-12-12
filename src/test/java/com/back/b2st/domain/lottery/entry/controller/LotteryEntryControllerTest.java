@@ -57,7 +57,7 @@ class LotteryEntryControllerTest {
 		Long memberId = 1L;
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
-		Integer quantity = 4;
+		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
@@ -100,7 +100,7 @@ class LotteryEntryControllerTest {
 		Long memberId = 99L;
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
-		Integer quantity = 4;
+		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
@@ -135,7 +135,7 @@ class LotteryEntryControllerTest {
 	}
 
 	@Test
-	@DisplayName("추첨응모_실패_신청인원초과")
+	@DisplayName("추첨응모_실패_인원수0")
 	void registerLotteryEntry_fail_quantityZero() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/entry";
@@ -144,7 +144,39 @@ class LotteryEntryControllerTest {
 		Long memberId = 1L;
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
-		Integer quantity = 0;
+		int quantity = 0;
+
+		String requestBody = "{"
+			+ "\"memberId\": " + memberId + ","
+			+ "\"scheduleId\": " + scheduleId + ","
+			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"quantity\": " + quantity
+			+ "}";
+
+		// when & then
+		mvc.perform(
+				post(url, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value(400))
+			.andExpect(jsonPath("$.message").value("잘못된 요청입니다."))
+		;
+	}
+
+	@Test
+	@DisplayName("추첨응모_실패_신청인원초과")
+	void registerLotteryEntry_fail_quantity() throws Exception {
+		// given
+		String url = "/api/performances/{performanceId}/lottery/entry";
+		Long param = 1L;
+
+		Long memberId = 1L;
+		Long scheduleId = 2L;
+		Long seatGradeId = 3L;
+		int quantity = LotteryConstants.MAX_LOTTERY_ENTRY_COUNT + 1;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
@@ -167,8 +199,8 @@ class LotteryEntryControllerTest {
 	}
 
 	@Test
-	@DisplayName("추첨응모_실패_신청인원초과")
-	void registerLotteryEntry_fail_quantity() throws Exception {
+	@DisplayName("추첨응모_실패_중복응모")
+	void registerLotteryEntry_fail_duplicate() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = 1L;
@@ -176,7 +208,7 @@ class LotteryEntryControllerTest {
 		Long memberId = 1L;
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
-		Integer quantity = LotteryConstants.MAX_LOTTERY_ENTRY_COUNT + 1;
+		int quantity = 6;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
@@ -194,7 +226,7 @@ class LotteryEntryControllerTest {
 			.andDo(print())
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value(400))
-			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.EXCEEDS_MAX_ALLOCATION.getMessage()))
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.DUPLICATE_ENTRY.getMessage()))
 		;
 	}
 

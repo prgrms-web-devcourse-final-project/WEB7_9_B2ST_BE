@@ -81,10 +81,6 @@ public class LotteryEntryService {
 			throw new BusinessException(LotteryEntryErrorCode.INVALID_GRADE_INFO);
 		}
 
-		if (!(requset.quantity() > 0)) {
-			throw new BusinessException(LotteryEntryErrorCode.INVALID_QUANTITY);
-		}
-
 		// TODO: 최대 응모인원 수 관련내용 없음
 		if (requset.quantity() > LotteryConstants.MAX_LOTTERY_ENTRY_COUNT) {
 			throw new BusinessException(LotteryEntryErrorCode.EXCEEDS_MAX_ALLOCATION);

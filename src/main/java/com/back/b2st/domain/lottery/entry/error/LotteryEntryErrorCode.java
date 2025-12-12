@@ -16,7 +16,6 @@ public enum LotteryEntryErrorCode implements ErrorCode {
 	INVALID_SCHEDULE_INFO(HttpStatus.BAD_REQUEST, "L403", "회차 정보가 올바르지 않습니다."),
 	PERFORMANCE_SCHEDULE_MISMATCH(HttpStatus.BAD_REQUEST, "L404", "공연 정보와 회차 정보가 일치하지 않습니다."),
 	INVALID_GRADE_INFO(HttpStatus.BAD_REQUEST, "L405", "등급 정보가 올바르지 않습니다."),
-	INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "L408", "인원수는 1 이상이어야 합니다."),
 	EXCEEDS_MAX_ALLOCATION(HttpStatus.BAD_REQUEST, "L409", "응모 가능 수량은 초과할 수 없습니다."),
 	DUPLICATE_ENTRY(HttpStatus.CONFLICT, "L409", "이미 존재하는 응모 내역이 있습니다."),
 

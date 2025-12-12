@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.reservation.entity.ScheduleSeat;
+import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ public class DataInitializer implements CommandLineRunner {
 
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
+	private final ScheduleSeatRepository scheduleSeatRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -65,5 +68,13 @@ public class DataInitializer implements CommandLineRunner {
 		log.info("   - 관리자: admin@tt.com / 1234");
 		log.info("   - 유저1 : user1@tt.com / 1234");
 		log.info("   - 유저2 : user2@tt.com / 1234");
+
+		ScheduleSeat testSeat = ScheduleSeat.builder()
+			.scheduleId(1001L)
+			.seatId(55L)
+			.build();
+
+		scheduleSeatRepository.save(testSeat);
+		log.info("[DataInit] 테스트용 좌석 생성 완료 → scheduleId=1001, seatId=55");
 	}
 }

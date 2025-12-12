@@ -170,4 +170,43 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		RefreshToken updatedRedisToken = refreshTokenRepository.findById(email).orElseThrow();
 		assertThat(updatedRedisToken.getToken()).isNotEqualTo(refreshToken);
 	}
+
+	@Test
+	@DisplayName("통합: 로그아웃 성공")
+	void logout_integration_success() throws Exception {
+		// 로그인 상태 가정
+		String email = "logout@test.com";
+		refreshTokenRepository.save(new RefreshToken(email, "someRefreshToken"));
+
+		// 로그인 토큰 발급
+		Member member = Member.builder()
+			.email(email)
+			.password(passwordEncoder.encode("Password123!"))
+			.name("로그아웃")
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.build();
+		memberRepository.save(member);
+
+		LoginRequest loginRequest = new LoginRequest();
+		ReflectionTestUtils.setField(loginRequest, "email", email);
+		ReflectionTestUtils.setField(loginRequest, "password", "Password123!");
+
+		String loginResponse = mockMvc.perform(post("/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(loginRequest)))
+			.andReturn().getResponse().getContentAsString();
+
+		String accessToken = objectMapper.readTree(loginResponse).path("data").path("accessToken").asText();
+
+		// 로그아웃 요청
+		mockMvc.perform(post("/auth/logout")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON))
+			.andDo(print())
+			.andExpect(status().isOk());
+
+		boolean exists = refreshTokenRepository.findById(email).isPresent();
+		assertThat(exists).isFalse();
+	}
 }

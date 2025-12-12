@@ -6,10 +6,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.auth.Error.AuthErrorCode;
 import com.back.b2st.domain.auth.dto.LoginRequest;
 import com.back.b2st.domain.auth.dto.TokenReissueRequest;
 import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
+import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.jwt.JwtTokenProvider;
 import com.back.b2st.global.jwt.dto.TokenInfo;
 import com.back.b2st.security.UserPrincipal;
@@ -48,12 +50,12 @@ public class AuthService {
 	public TokenInfo reissue(TokenReissueRequest request) {
 		// Refresh Token 검증
 		if (!jwtTokenProvider.validateToken(request.getRefreshToken())) {
-			throw new IllegalArgumentException("Refresh Token이 유효하지 않습니다.");
+			throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
 		}
 
 		// Access Token 서명 검증
 		if (!jwtTokenProvider.validateTokenSignature(request.getAccessToken())) {
-			throw new IllegalArgumentException("유효하지 않은 Access Token입니다.");
+			throw new BusinessException(AuthErrorCode.INVALID_ACCESS_TOKEN);
 		}
 
 		// Access Token 에서 Authentication 객체 가져오기
@@ -70,11 +72,11 @@ public class AuthService {
 
 		// Redis 에서 사용자의 Refresh Token 가져오기
 		RefreshToken refreshToken = refreshTokenRepository.findById(email)
-			.orElseThrow(() -> new IllegalArgumentException("로그아웃 된 사용자입니다."));
+			.orElseThrow(() -> new BusinessException(AuthErrorCode.LOGGED_OUT_USER));
 
 		// Redis 의 토큰과 요청 보낸 토큰 일치 여부 확인
 		if (!refreshToken.getToken().equals(request.getRefreshToken())) {
-			throw new IllegalArgumentException("토큰의 유저 정보가 일치하지 않습니다.");
+			throw new BusinessException(AuthErrorCode.TOKEN_MISMATCH);
 		}
 
 		// 새로운 토큰 생성

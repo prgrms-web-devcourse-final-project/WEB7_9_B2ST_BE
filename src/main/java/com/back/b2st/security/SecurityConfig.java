@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
 	private final JwtTokenProvider jwtTokenProvider;
+	private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -40,6 +41,11 @@ public class SecurityConfig {
 					"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"    // Swagger
 				).permitAll()
 				.anyRequest().authenticated()
+			)
+			.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+			.exceptionHandling(exception -> exception
+					.authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401 에러 처리
+				// .accessDeniedHandler(jwtAccessDeniedHandler) // 나중에 403 처리기도 만들면 여기 등록
 			)
 			.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 

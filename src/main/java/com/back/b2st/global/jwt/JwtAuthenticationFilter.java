@@ -13,7 +13,9 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends GenericFilterBean {
 
@@ -25,14 +27,18 @@ public class JwtAuthenticationFilter extends GenericFilterBean {
 		// Request Header 에서 JWT 토큰 추출
 		String token = resolveToken((HttpServletRequest)request);
 
-		// validateToken 으로 토큰 유효성 검사
-		if (token != null && jwtTokenProvider.validateToken(token)) {
-			// 토큰이 유효할 경우 토큰에서 Authentication 객체를 가지고 와서 SecurityContext 에 저장
-			Authentication authentication = jwtTokenProvider.getAuthentication(token);
-			SecurityContextHolder.getContext().setAuthentication(authentication);
+		// 토큰이 존재할 때만 검증 시도
+		if (token != null) {
+			try {
+				if (jwtTokenProvider.validateToken(token)) {
+					Authentication authentication = jwtTokenProvider.getAuthentication(token);
+					SecurityContextHolder.getContext().setAuthentication(authentication);
+				}
+			} catch (Exception e) {
+				log.debug("JWT Filter Error: {}", e.getMessage());
+			}
 		}
-
-		// 다음 필터로 이동
+		// 인증 실패 시 AuthenticationEntryPoint 처리
 		chain.doFilter(request, response);
 	}
 
@@ -40,7 +46,7 @@ public class JwtAuthenticationFilter extends GenericFilterBean {
 	private String resolveToken(HttpServletRequest request) {
 		String bearerToken = request.getHeader("Authorization");
 		if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-			return bearerToken.substring(7); // "Bearer " 이후의 문자열(토큰)만 반환
+			return bearerToken.substring(7);
 		}
 		return null;
 	}

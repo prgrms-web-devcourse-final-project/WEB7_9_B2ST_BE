@@ -2,7 +2,7 @@ package com.back.b2st.domain.lottery.result.entity;
 
 import java.time.LocalDateTime;
 
-import com.back.b2st.domain.lottery.result.constants.LotteryConstants;
+import com.back.b2st.domain.lottery.constants.LotteryConstants;
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;

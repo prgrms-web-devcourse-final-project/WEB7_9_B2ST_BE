@@ -31,9 +31,9 @@ public class MypageController {
 	}
 
 	@PatchMapping("/password")
-	public ResponseEntity<BaseResponse<Void>> changePassword(@CurrentUser UserPrincipal userPrincipal,
+	public BaseResponse<Void> changePassword(@CurrentUser UserPrincipal userPrincipal,
 		@RequestBody PasswordChangeRequest request) {
 		memberService.changePassword(userPrincipal.getId(), request);
-		return ResponseEntity.ok(BaseResponse.success(null));
+		return BaseResponse.success(null);
 	}
 }

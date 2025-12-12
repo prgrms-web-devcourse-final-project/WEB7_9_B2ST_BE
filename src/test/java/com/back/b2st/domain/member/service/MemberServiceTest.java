@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.back.b2st.domain.member.dto.PasswordChangeRequest;
 import com.back.b2st.domain.member.dto.SignupRequest;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
@@ -76,5 +78,48 @@ class MemberServiceTest {
 		ReflectionTestUtils.setField(request, "name", name);
 		ReflectionTestUtils.setField(request, "birth", LocalDate.of(2000, 1, 1));
 		return request;
+	}
+
+	@Test
+	@DisplayName("비밀번호 변경 성공")
+	void changePassword_success() {
+		// given
+		Long memberId = 1L;
+		Member member = Member.builder().password("encodedOldPw").build();
+
+		PasswordChangeRequest request = PasswordChangeRequest.builder()
+			.currentPassword("oldPw")
+			.newPassword("newPw123!")
+			.build();
+
+		given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+		given(passwordEncoder.matches("oldPw", "encodedOldPw")).willReturn(true); // 비번 일치
+		given(passwordEncoder.encode("newPw123!")).willReturn("encodedNewPw");
+
+		// when
+		memberService.changePassword(memberId, request);
+
+		// then
+		assertThat(member.getPassword()).isEqualTo("encodedNewPw");
+	}
+
+	@Test
+	@DisplayName("비밀번호 변경 실패 - 현재 비밀번호 불일치")
+	void changePassword_fail_mismatch() {
+		// given
+		Long memberId = 1L;
+		Member member = Member.builder().password("encodedOldPw").build();
+		PasswordChangeRequest request = PasswordChangeRequest.builder()
+			.currentPassword("wrongPw")
+			.newPassword("newPw123!")
+			.build();
+
+		given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+		given(passwordEncoder.matches("wrongPw", "encodedOldPw")).willReturn(false); // 비번 불일치
+
+		// when & then
+		assertThatThrownBy(() -> memberService.changePassword(memberId, request))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("현재 비밀번호가 일치하지 않습니다.");
 	}
 }

@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.member.dto.MyInfoResponse;
+import com.back.b2st.domain.member.dto.PasswordChangeRequest;
 import com.back.b2st.domain.member.dto.SignupRequest;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
@@ -46,5 +47,20 @@ public class MemberService {
 			.orElseThrow(() -> new IllegalArgumentException("해당하는 회원 찾을 수 없습니다."));
 
 		return MyInfoResponse.from(member);
+	}
+
+	public void changePassword(Long memberId, PasswordChangeRequest request) {
+		Member member = memberRepository.findById(memberId)
+			.orElseThrow(() -> new IllegalArgumentException("해당하는 회원 찾을 수 없습니다."));
+
+		if (!passwordEncoder.matches(request.getCurrentPassword(), member.getPassword())) {
+			throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+		}
+
+		if (request.getNewPassword().equals(request.getCurrentPassword())) {
+			throw new IllegalArgumentException("새 비밀번호는 기존 비밀번호와 다르게 설정해야 합니다.");
+		}
+
+		member.updatePassword(passwordEncoder.encode(request.getNewPassword()));
 	}
 }

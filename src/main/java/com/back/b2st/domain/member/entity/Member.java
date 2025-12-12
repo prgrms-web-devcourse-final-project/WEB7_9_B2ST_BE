@@ -89,4 +89,8 @@ public class Member extends BaseEntity {
 	public enum Provider {
 		EMAIL, KAKAO
 	}
+
+	public void updatePassword(String encodedPassword) {
+		this.password = encodedPassword;
+	}
 }

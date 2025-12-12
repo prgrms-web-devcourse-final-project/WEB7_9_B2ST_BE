@@ -37,7 +37,7 @@ import lombok.NoArgsConstructor;
 public class LotteryEntry extends BaseEntity {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lotter_entrys_id_gen")
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lottery_entry_id_gen")
 	@Column(name = "lottery_entry_id")
 	private Long id;
 
@@ -47,9 +47,8 @@ public class LotteryEntry extends BaseEntity {
 	@Column(name = "schedule_id", nullable = false)
 	private Long scheduleId;
 
-	// @Enumerated(EnumType.STRING)
-	@Column(name = "grade", nullable = false, length = 20)
-	private String grade;    // TODO Long? Enum?
+	@Column(name = "seat_grade_id", nullable = false)
+	private Long seatGradeId;
 
 	@Column(name = "price", nullable = false)
 	private Integer price;
@@ -65,13 +64,13 @@ public class LotteryEntry extends BaseEntity {
 	public LotteryEntry(
 		Long memberId,
 		Long scheduleId,
-		String grade,
+		Long seatGradeId,
 		Integer price,
 		Integer quantity
 	) {
 		this.memberId = memberId;
 		this.scheduleId = scheduleId;
-		this.grade = grade;
+		this.seatGradeId = seatGradeId;
 		this.price = price;
 		this.quantity = quantity;
 		this.status = LotteryStatus.APPLIED;

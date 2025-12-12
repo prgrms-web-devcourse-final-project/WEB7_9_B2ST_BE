@@ -234,7 +234,7 @@ class LotteryEntryControllerTest {
 					.content(requestBody)
 			)
 			.andDo(print())
-			.andExpect(status().isBadRequest())
+			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value(409))
 			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.DUPLICATE_ENTRY.getMessage()))
 		;

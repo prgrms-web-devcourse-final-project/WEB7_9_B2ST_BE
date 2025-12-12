@@ -1,7 +1,5 @@
 package com.back.b2st.domain.reservation.entity;
 
-import java.time.LocalDateTime;
-
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -61,7 +59,7 @@ public class ScheduleSeat extends BaseEntity {
 	/* === 상태 전환 메서드 === */
 
 	/** HOLD 상태로 변경 */
-	public void hold(LocalDateTime expireAt) {
+	public void hold() {
 		this.status = SeatStatus.HOLD;
 	}
 

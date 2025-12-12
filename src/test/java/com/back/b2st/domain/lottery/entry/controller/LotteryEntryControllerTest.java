@@ -208,7 +208,7 @@ class LotteryEntryControllerTest {
 		Long memberId = 1L;
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
-		int quantity = 6;
+		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
@@ -224,8 +224,18 @@ class LotteryEntryControllerTest {
 					.content(requestBody)
 			)
 			.andDo(print())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.code").value(201))
+		;
+
+		mvc.perform(
+				post(url, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.code").value(400))
+			.andExpect(jsonPath("$.code").value(409))
 			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.DUPLICATE_ENTRY.getMessage()))
 		;
 	}

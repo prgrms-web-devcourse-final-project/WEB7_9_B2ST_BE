@@ -24,8 +24,9 @@ import lombok.NoArgsConstructor;
 	name = "lottery_entries",
 	indexes = {
 		@Index(name = "idx_lottery_entries_member", columnList = "member_id"),
+		@Index(name = "idx_lottery_entries_performance", columnList = "performance_id"),
 		@Index(name = "idx_lottery_entries_schedule", columnList = "schedule_id"),
-		@Index(name = "idx_lottery_entries_member_schedule", columnList = "member_id, schedule_id"),
+		@Index(name = "idx_lottery_entries_member_performance_schedule", columnList = "member_id, performance_id, schedule_id"),
 		@Index(name = "idx_lottery_entries_status", columnList = "status")
 	}
 )
@@ -35,7 +36,6 @@ import lombok.NoArgsConstructor;
 	allocationSize = 50
 )
 public class LotteryEntry extends BaseEntity {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lottery_entry_id_gen")
 	@Column(name = "lottery_entry_id")
@@ -43,6 +43,9 @@ public class LotteryEntry extends BaseEntity {
 
 	@Column(name = "member_id", nullable = false)
 	private Long memberId;
+
+	@Column(name = "performance_id", nullable = false)
+	private Long performanceId;
 
 	@Column(name = "schedule_id", nullable = false)
 	private Long scheduleId;
@@ -63,12 +66,14 @@ public class LotteryEntry extends BaseEntity {
 	@Builder
 	public LotteryEntry(
 		Long memberId,
+		Long performanceId,
 		Long scheduleId,
 		Long seatGradeId,
 		Integer price,
 		Integer quantity
 	) {
 		this.memberId = memberId;
+		this.performanceId = performanceId;
 		this.scheduleId = scheduleId;
 		this.seatGradeId = seatGradeId;
 		this.price = price;

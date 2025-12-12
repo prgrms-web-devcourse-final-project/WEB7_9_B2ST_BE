@@ -53,9 +53,6 @@ public class LotteryEntry extends BaseEntity {
 	@Column(name = "seat_grade_id", nullable = false)
 	private Long seatGradeId;
 
-	@Column(name = "price", nullable = false)
-	private Integer price;
-
 	@Column(name = "quantity", nullable = false)
 	private Integer quantity;
 
@@ -69,14 +66,12 @@ public class LotteryEntry extends BaseEntity {
 		Long performanceId,
 		Long scheduleId,
 		Long seatGradeId,
-		Integer price,
 		Integer quantity
 	) {
 		this.memberId = memberId;
 		this.performanceId = performanceId;
 		this.scheduleId = scheduleId;
 		this.seatGradeId = seatGradeId;
-		this.price = price;
 		this.quantity = quantity;
 		this.status = LotteryStatus.APPLIED;
 	}

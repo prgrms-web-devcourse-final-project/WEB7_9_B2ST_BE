@@ -25,10 +25,9 @@ public class LotteryEntryController {
 		@PathVariable("performanceId") Long performanceId
 	) {
 		try {
-			return BaseResponse.created(lotteryEntryService.getSeatLayout(performanceId));
+			return BaseResponse.success(lotteryEntryService.getSeatLayout(performanceId));
 		} catch (BusinessException e) {
 			return BaseResponse.error(e.getErrorCode());
 		}
 	}
-
 }

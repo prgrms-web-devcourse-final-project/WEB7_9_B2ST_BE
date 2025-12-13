@@ -1,4 +1,4 @@
-package com.back.b2st.domain.seat.entity;
+package com.back.b2st.domain.seat.seat.entity;
 
 import com.back.b2st.global.jpa.entity.BaseEntity;
 

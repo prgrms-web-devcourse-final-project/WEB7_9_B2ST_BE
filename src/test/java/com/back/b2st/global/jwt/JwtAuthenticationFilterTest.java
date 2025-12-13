@@ -21,6 +21,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.back.b2st.domain.auth.Error.AuthErrorCode;
+
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.ServletException;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,7 +60,7 @@ class JwtAuthenticationFilterTest {
 			"user@test.com", null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
 		);
 
-		when(jwtTokenProvider.validateToken(token)).thenReturn(true);
+		doNothing().when(jwtTokenProvider).validateToken(token);
 		when(jwtTokenProvider.getAuthentication(token)).thenReturn(authentication);
 
 		// when
@@ -63,29 +68,67 @@ class JwtAuthenticationFilterTest {
 
 		// then
 		assertEquals(authentication, SecurityContextHolder.getContext().getAuthentication());
-		assertNotNull(filterChain.getRequest()); // 필터 체인이 계속 진행되었는지 확인
+		assertNotNull(filterChain.getRequest());
 	}
 
 	@Test
-	@DisplayName("유효하지 않은 토큰이 있는 경우, SecurityContext는 비어있음")
-	void doFilter_withInvalidToken_shouldNotSetAuthenticationInContext() throws ServletException, IOException {
+	@DisplayName("만료된 토큰인 경우, request attribute에 EXPIRED_TOKEN 저장")
+	void doFilter_withExpiredToken_shouldSetAttribute() throws ServletException, IOException {
 		// given
-		String token = "invalid-token";
+		String token = "expired-token";
 		request.addHeader("Authorization", "Bearer " + token);
 
-		when(jwtTokenProvider.validateToken(token)).thenReturn(false);
+		doThrow(new ExpiredJwtException(null, null, "Expired"))
+			.when(jwtTokenProvider).validateToken(token);
+
+		// when
+		jwtAuthenticationFilter.doFilter(request, response, filterChain);
+
+		// then
+		assertNull(SecurityContextHolder.getContext().getAuthentication()); // 인증 객체 없음
+		// [중요] Attribute에 에러 코드가 잘 들어갔는지 확인
+		assertEquals(AuthErrorCode.EXPIRED_TOKEN, request.getAttribute("exception"));
+	}
+
+	@Test
+	@DisplayName("서명이 위조된 토큰인 경우, request attribute에 INVALID_ACCESS_TOKEN 저장")
+	void doFilter_withInvalidSignatureToken_shouldSetAttribute() throws ServletException, IOException {
+		// given
+		String token = "invalid-sig-token";
+		request.addHeader("Authorization", "Bearer " + token);
+
+		doThrow(new SignatureException("Invalid signature"))
+			.when(jwtTokenProvider).validateToken(token);
 
 		// when
 		jwtAuthenticationFilter.doFilter(request, response, filterChain);
 
 		// then
 		assertNull(SecurityContextHolder.getContext().getAuthentication());
-		assertNotNull(filterChain.getRequest());
+		assertEquals(AuthErrorCode.INVALID_ACCESS_TOKEN, request.getAttribute("exception"));
 	}
 
 	@Test
-	@DisplayName("토큰이 없는 경우, SecurityContext는 비어있")
-	void doFilter_withoutToken_shouldNotSetAuthenticationInContext() throws ServletException, IOException {
+	@DisplayName("지원하지 않는 토큰인 경우, request attribute에 UNSUPPORTED_TOKEN 저장")
+	void doFilter_withUnsupportedToken_shouldSetAttribute() throws ServletException, IOException {
+		// given
+		String token = "unsupported-token";
+		request.addHeader("Authorization", "Bearer " + token);
+
+		doThrow(new UnsupportedJwtException("Unsupported"))
+			.when(jwtTokenProvider).validateToken(token);
+
+		// when
+		jwtAuthenticationFilter.doFilter(request, response, filterChain);
+
+		// then
+		assertNull(SecurityContextHolder.getContext().getAuthentication());
+		assertEquals(AuthErrorCode.UNSUPPORTED_TOKEN, request.getAttribute("exception"));
+	}
+
+	@Test
+	@DisplayName("토큰이 없는 경우, 아무 동작 없이 다음 필터로 진행")
+	void doFilter_withoutToken_shouldDoNothing() throws ServletException, IOException {
 		// given
 		// No Authorization header
 
@@ -94,21 +137,23 @@ class JwtAuthenticationFilterTest {
 
 		// then
 		assertNull(SecurityContextHolder.getContext().getAuthentication());
+		assertNull(request.getAttribute("exception")); // 에러 속성도 없어야 함
 		assertNotNull(filterChain.getRequest());
 	}
 
 	@Test
-	@DisplayName("토큰이 'Bearer '로 시작하지 않는 경우, SecurityContext는 비어있음")
-	void doFilter_withInvalidBearerFormat_shouldNotSetAuthenticationInContext() throws ServletException, IOException {
+	@DisplayName("토큰 형식이 'Bearer '가 아닌 경우, 아무 동작 없이 다음 필터로 진행")
+	void doFilter_withInvalidBearerFormat_shouldDoNothing() throws ServletException, IOException {
 		// given
-		String token = "invalid-bearer-token";
-		request.addHeader("Authorization", token); // "Bearer " prefix is missing
+		String token = "invalid-format-token";
+		request.addHeader("Authorization", token); // Prefix missing
 
 		// when
 		jwtAuthenticationFilter.doFilter(request, response, filterChain);
 
 		// then
 		assertNull(SecurityContextHolder.getContext().getAuthentication());
+		assertNull(request.getAttribute("exception"));
 		assertNotNull(filterChain.getRequest());
 	}
 }

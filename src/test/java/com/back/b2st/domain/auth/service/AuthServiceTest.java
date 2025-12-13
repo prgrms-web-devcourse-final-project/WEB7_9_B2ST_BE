@@ -13,10 +13,10 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.core.Authentication;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.back.b2st.domain.auth.Error.AuthErrorCode;
 import com.back.b2st.domain.auth.dto.LoginRequest;
 import com.back.b2st.domain.auth.dto.TokenReissueRequest;
 import com.back.b2st.domain.auth.entity.RefreshToken;
+import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.domain.auth.service.AuthService;
 import com.back.b2st.global.error.exception.BusinessException;

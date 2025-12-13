@@ -1,4 +1,4 @@
-package com.back.b2st.domain.auth.Error;
+package com.back.b2st.domain.auth.error;
 
 import org.springframework.http.HttpStatus;
 

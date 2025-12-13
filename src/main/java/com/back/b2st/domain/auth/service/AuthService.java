@@ -6,10 +6,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.auth.Error.AuthErrorCode;
 import com.back.b2st.domain.auth.dto.LoginRequest;
 import com.back.b2st.domain.auth.dto.TokenReissueRequest;
 import com.back.b2st.domain.auth.entity.RefreshToken;
+import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.jwt.JwtTokenProvider;

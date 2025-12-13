@@ -9,7 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.back.b2st.domain.auth.Error.AuthErrorCode;
+import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.global.error.code.CommonErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;

@@ -14,7 +14,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
-import com.back.b2st.domain.auth.Error.AuthErrorCode;
+import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.jwt.dto.TokenInfo;
 import com.back.b2st.security.CustomUserDetails;

@@ -64,7 +64,7 @@ public class TradeController {
 
 	@PatchMapping("/{tradeId}")
 	public BaseResponse<Void> updateTrade(
-		@PathVariable Long tradeId,
+		@PathVariable("tradeId") Long tradeId,
 		@Valid @RequestBody UpdateTradeRequest request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
@@ -74,7 +74,7 @@ public class TradeController {
 
 	@DeleteMapping("/{tradeId}")
 	public BaseResponse<Void> deleteTrade(
-		@PathVariable Long tradeId,
+		@PathVariable("tradeId") Long tradeId,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
 		tradeService.deleteTrade(tradeId, userPrincipal.getId());

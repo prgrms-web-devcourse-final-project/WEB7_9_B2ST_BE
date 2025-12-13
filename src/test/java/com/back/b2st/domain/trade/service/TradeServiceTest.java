@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,12 +17,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequest;
+import com.back.b2st.domain.trade.dto.request.UpdateTradeRequest;
 import com.back.b2st.domain.trade.dto.response.CreateTradeResponse;
 import com.back.b2st.domain.trade.entity.Trade;
+import com.back.b2st.domain.trade.entity.TradeRequest;
+import com.back.b2st.domain.trade.entity.TradeRequestStatus;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
 import com.back.b2st.domain.trade.repository.TradeRepository;
+import com.back.b2st.domain.trade.repository.TradeRequestRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +37,9 @@ class TradeServiceTest {
 
 	@Mock
 	private TradeRepository tradeRepository;
+
+	@Mock
+	private TradeRequestRepository tradeRequestRepository;
 
 	@Test
 	@DisplayName("교환 게시글 생성 성공")
@@ -197,5 +208,281 @@ class TradeServiceTest {
 		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TICKET_ALREADY_REGISTERED);
+	}
+
+	@Test
+	@DisplayName("양도 게시글 수정 성공")
+	void updateTrade_success() {
+		// given
+		Long tradeId = 1L;
+		Long memberId = 100L;
+		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(2)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+
+		// when
+		tradeService.updateTrade(tradeId, request, memberId);
+
+		// then
+		assertThat(trade.getPrice()).isEqualTo(60000);
+	}
+
+	@Test
+	@DisplayName("존재하지 않는 Trade ID로 수정 실패")
+	void updateTrade_fail_notFound() {
+		// given
+		Long tradeId = 999L;
+		Long memberId = 100L;
+		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.empty());
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.updateTrade(tradeId, request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TRADE_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("본인이 아닌 경우 수정 실패")
+	void updateTrade_fail_unauthorized() {
+		// given
+		Long tradeId = 1L;
+		Long ownerId = 100L;
+		Long requesterId = 200L;
+		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+
+		Trade trade = Trade.builder()
+			.memberId(ownerId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(2)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.updateTrade(tradeId, request, requesterId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.UNAUTHORIZED_TRADE_ACCESS);
+	}
+
+	@Test
+	@DisplayName("ACTIVE가 아닌 상태에서 수정 실패")
+	void updateTrade_fail_notActive() {
+		// given
+		Long tradeId = 1L;
+		Long memberId = 100L;
+		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(2)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+		trade.cancel();
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.updateTrade(tradeId, request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_STATUS);
+	}
+
+	@Test
+	@DisplayName("교환 타입 수정 실패")
+	void updateTrade_fail_exchangeType() {
+		// given
+		Long tradeId = 1L;
+		Long memberId = 100L;
+		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.EXCHANGE)
+			.price(null)
+			.totalCount(1)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.updateTrade(tradeId, request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.CANNOT_UPDATE_EXCHANGE_TRADE);
+	}
+
+	@Test
+	@DisplayName("게시글 삭제 성공")
+	void deleteTrade_success() {
+		// given
+		Long tradeId = 1L;
+		Long memberId = 100L;
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(2)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.PENDING))
+			.willReturn(Collections.emptyList());
+
+		// when
+		tradeService.deleteTrade(tradeId, memberId);
+
+		// then
+		assertThat(trade.getStatus()).isEqualTo(TradeStatus.CANCELLED);
+		assertThat(trade.getDeletedAt()).isNotNull();
+	}
+
+	@Test
+	@DisplayName("존재하지 않는 Trade ID로 삭제 실패")
+	void deleteTrade_fail_notFound() {
+		// given
+		Long tradeId = 999L;
+		Long memberId = 100L;
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.empty());
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.deleteTrade(tradeId, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TRADE_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("본인이 아닌 경우 삭제 실패")
+	void deleteTrade_fail_unauthorized() {
+		// given
+		Long tradeId = 1L;
+		Long ownerId = 100L;
+		Long requesterId = 200L;
+
+		Trade trade = Trade.builder()
+			.memberId(ownerId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(2)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.deleteTrade(tradeId, requesterId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.UNAUTHORIZED_TRADE_ACCESS);
+	}
+
+	@Test
+	@DisplayName("ACTIVE가 아닌 상태에서 삭제 실패")
+	void deleteTrade_fail_notActive() {
+		// given
+		Long tradeId = 1L;
+		Long memberId = 100L;
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(2)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+		trade.complete();
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.deleteTrade(tradeId, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_STATUS);
+	}
+
+	@Test
+	@DisplayName("PENDING 교환 신청이 있는 경우 삭제 실패")
+	void deleteTrade_fail_hasPendingRequests() {
+		// given
+		Long tradeId = 1L;
+		Long memberId = 100L;
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.EXCHANGE)
+			.price(null)
+			.totalCount(1)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		TradeRequest pendingRequest = TradeRequest.builder()
+			.trade(trade)
+			.requesterId(200L)
+			.requesterTicketId(2L)
+			.build();
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.PENDING))
+			.willReturn(List.of(pendingRequest));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.deleteTrade(tradeId, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.CANNOT_DELETE_WITH_PENDING_REQUESTS);
 	}
 }

@@ -22,7 +22,7 @@ import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
 class SeatSelectionConcurrencyTest {
 
 	@Autowired
-	private SeatSelectionService seatSelectionService;
+	private SeatHoldService seatHoldService;
 
 	@Autowired
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -54,7 +54,7 @@ class SeatSelectionConcurrencyTest {
 
 		Runnable task = () -> {
 			try {
-				seatSelectionService.holdSeat(scheduleId, seatId);
+				seatHoldService.holdSeat(scheduleId, seatId);
 				successCount.incrementAndGet(); // HOLD 성공한 스레드 수 증가
 			} catch (Exception e) {
 				System.out.println("[Thread Error] " + e.getMessage());

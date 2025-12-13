@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ReservationService {
 
-	private final SeatSelectionService seatSelectionService;
+	private final SeatHoldService seatHoldService;
 	private final ReservationRepository reservationRepository;
 
 	/** === 예매 생성 === */
@@ -22,7 +22,7 @@ public class ReservationService {
 	public ReservationResponse createReservation(Long memberId, ReservationRequest request) {
 
 		// 1. 좌석 HOLD 진행
-		seatSelectionService.holdSeat(request.performanceId(), request.seatId());
+		seatHoldService.holdSeat(request.performanceId(), request.seatId());
 
 		// 2. Reservation 엔티티 생성
 		Reservation reservation = Reservation.builder()

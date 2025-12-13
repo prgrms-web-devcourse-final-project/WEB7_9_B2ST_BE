@@ -20,10 +20,10 @@ import com.back.b2st.global.error.exception.BusinessException;
 @SpringBootTest
 @Transactional
 @ActiveProfiles("test")
-class SeatSelectionServiceTest {
+class SeatHoldServiceTest {
 
 	@Autowired
-	private SeatSelectionService seatSelectionService;
+	private SeatHoldService seatHoldService;
 
 	@Autowired
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -46,7 +46,7 @@ class SeatSelectionServiceTest {
 	@DisplayName("좌석 HOLD 성공 - AVAILABLE → HOLD")
 	void holdSeat_success() {
 		// when 좌석 HOLD 서비스 호출
-		seatSelectionService.holdSeat(scheduleId, seatId);
+		seatHoldService.holdSeat(scheduleId, seatId);
 
 		// then 해당 좌석 상태가 HOLD 로 변경되었는지 검증
 		ScheduleSeat updated = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
@@ -66,7 +66,7 @@ class SeatSelectionServiceTest {
 		// when / then BusinessException 발생해야 함
 		BusinessException ex = assertThrows(
 			BusinessException.class,
-			() -> seatSelectionService.holdSeat(scheduleId, seatId)
+			() -> seatHoldService.holdSeat(scheduleId, seatId)
 		);
 
 		assertThat(ex.getErrorCode()).isEqualTo(ReservationErrorCode.SEAT_ALREADY_SOLD);
@@ -76,12 +76,12 @@ class SeatSelectionServiceTest {
 	@DisplayName("이미 HOLD 된 좌석을 다시 HOLD 시도하면 실패해야 한다")
 	void holdSeat_fail_holdSeat() {
 		// given 먼저 HOLD 처리
-		seatSelectionService.holdSeat(scheduleId, seatId);
+		seatHoldService.holdSeat(scheduleId, seatId);
 
 		// when / then 같은 좌석 다시 HOLD 시 예외 발생
 		BusinessException ex = assertThrows(
 			BusinessException.class,
-			() -> seatSelectionService.holdSeat(scheduleId, seatId)
+			() -> seatHoldService.holdSeat(scheduleId, seatId)
 		);
 
 		assertThat(ex.getErrorCode()).isEqualTo(ReservationErrorCode.SEAT_ALREADY_HOLD);

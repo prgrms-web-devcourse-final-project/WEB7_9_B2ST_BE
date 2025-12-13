@@ -1,4 +1,4 @@
-package com.back.b2st.domain.seat.grade.entity;
+package com.back.b2st.domain.venue.seat.grade.entity;
 
 public enum SeatGradeType {
 	STANDARD,    // 기본

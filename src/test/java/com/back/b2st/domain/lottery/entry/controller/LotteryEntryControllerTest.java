@@ -4,18 +4,22 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.lottery.constants.LotteryConstants;
 import com.back.b2st.domain.lottery.entry.error.LotteryEntryErrorCode;
+import com.back.b2st.domain.member.entity.Member;
+import com.back.b2st.domain.member.repository.MemberRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
@@ -25,6 +29,26 @@ class LotteryEntryControllerTest {
 
 	@Autowired
 	private MockMvc mvc;
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	@Autowired
+	private MemberRepository memberRepository;
+
+	private Member tMember;
+
+	@BeforeEach
+	void setUp() {
+		Member user1 = Member.builder()
+			.email("lotteryEntry@tt.com")
+			.password(passwordEncoder.encode("1234"))
+			.name("추첨응모")
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isVerified(true)
+			.build();
+
+		tMember = memberRepository.save(user1);
+	}
 
 	@Test
 	@DisplayName("좌석정보조회_성공")
@@ -54,7 +78,7 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = 1L;
 
-		Long memberId = 1L;
+		Long memberId = tMember.getId();
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
 		int quantity = 4;
@@ -97,7 +121,7 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = 1L;
 
-		Long memberId = 99L;
+		Long memberId = 99999999L;
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
 		int quantity = 4;
@@ -141,7 +165,7 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = 1L;
 
-		Long memberId = 1L;
+		Long memberId = tMember.getId();
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
 		int quantity = 0;
@@ -173,7 +197,8 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = 1L;
 
-		Long memberId = 1L;
+		Long memberId = tMember.getId();
+		;
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
 		int quantity = LotteryConstants.MAX_LOTTERY_ENTRY_COUNT + 1;
@@ -205,7 +230,7 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = 1L;
 
-		Long memberId = 1L;
+		Long memberId = tMember.getId();
 		Long scheduleId = 2L;
 		Long seatGradeId = 3L;
 		int quantity = 4;

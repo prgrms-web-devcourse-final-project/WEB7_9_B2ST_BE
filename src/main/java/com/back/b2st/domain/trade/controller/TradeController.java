@@ -38,8 +38,8 @@ public class TradeController {
 
 	@GetMapping
 	public ResponseEntity<BaseResponse<Page<TradeResponse>>> getTrades(
-		@RequestParam(required = false) TradeType type,
-		@RequestParam(required = false) TradeStatus status,
+		@RequestParam(value = "type", required = false) TradeType type,
+		@RequestParam(value = "status", required = false) TradeStatus status,
 		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
 	) {
 		Page<TradeResponse> response = tradeService.getTrades(type, status, pageable);
@@ -47,7 +47,7 @@ public class TradeController {
 	}
 
 	@GetMapping("/{tradeId}")
-	public ResponseEntity<BaseResponse<TradeResponse>> getTrade(@PathVariable Long tradeId) {
+	public ResponseEntity<BaseResponse<TradeResponse>> getTrade(@PathVariable("tradeId") Long tradeId) {
 		TradeResponse response = tradeService.getTrade(tradeId);
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
@@ -57,32 +57,27 @@ public class TradeController {
 		@Valid @RequestBody CreateTradeRequest request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
-		Long memberId = (userPrincipal != null) ? userPrincipal.getId() : 1L;
-		CreateTradeResponse response = tradeService.createTrade(request, memberId);
+		CreateTradeResponse response = tradeService.createTrade(request, userPrincipal.getId());
 
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
 	@PatchMapping("/{tradeId}")
-	public ResponseEntity<BaseResponse<Void>> updateTrade(
+	public BaseResponse<Void> updateTrade(
 		@PathVariable Long tradeId,
 		@Valid @RequestBody UpdateTradeRequest request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
-		Long memberId = (userPrincipal != null) ? userPrincipal.getId() : 1L;
-		tradeService.updateTrade(tradeId, request, memberId);
-
-		return ResponseEntity.ok(BaseResponse.success(null));
+		tradeService.updateTrade(tradeId, request, userPrincipal.getId());
+		return BaseResponse.success(null);
 	}
 
 	@DeleteMapping("/{tradeId}")
-	public ResponseEntity<BaseResponse<Void>> deleteTrade(
+	public BaseResponse<Void> deleteTrade(
 		@PathVariable Long tradeId,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
-		Long memberId = (userPrincipal != null) ? userPrincipal.getId() : 1L;
-		tradeService.deleteTrade(tradeId, memberId);
-
-		return ResponseEntity.ok(BaseResponse.success(null));
+		tradeService.deleteTrade(tradeId, userPrincipal.getId());
+		return BaseResponse.success(null);
 	}
 }

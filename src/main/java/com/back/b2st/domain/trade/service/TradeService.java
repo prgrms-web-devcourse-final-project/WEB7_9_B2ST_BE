@@ -100,8 +100,7 @@ public class TradeService {
 
 	@Transactional
 	public void updateTrade(Long tradeId, UpdateTradeRequest request, Long memberId) {
-		Trade trade = tradeRepository.findById(tradeId)
-			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
+		Trade trade = findTradeById(tradeId);
 
 		validateTradeOwner(trade, memberId);
 		validateTradeIsActive(trade);
@@ -112,14 +111,18 @@ public class TradeService {
 
 	@Transactional
 	public void deleteTrade(Long tradeId, Long memberId) {
-		Trade trade = tradeRepository.findById(tradeId)
-			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
+		Trade trade = findTradeById(tradeId);
 
 		validateTradeOwner(trade, memberId);
 		validateTradeIsActive(trade);
 		validateNoPendingRequests(trade);
 
 		trade.cancel();
+	}
+
+	private Trade findTradeById(Long tradeId) {
+		return tradeRepository.findById(tradeId)
+			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
 	}
 
 	private void validateTradeType(CreateTradeRequest request) {

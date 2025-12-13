@@ -1,5 +1,7 @@
 package com.back.b2st.domain.trade.service;
 
+import java.util.List;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -7,13 +9,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequest;
+import com.back.b2st.domain.trade.dto.request.UpdateTradeRequest;
 import com.back.b2st.domain.trade.dto.response.CreateTradeResponse;
 import com.back.b2st.domain.trade.dto.response.TradeResponse;
 import com.back.b2st.domain.trade.entity.Trade;
+import com.back.b2st.domain.trade.entity.TradeRequest;
+import com.back.b2st.domain.trade.entity.TradeRequestStatus;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
 import com.back.b2st.domain.trade.repository.TradeRepository;
+import com.back.b2st.domain.trade.repository.TradeRequestRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -24,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class TradeService {
 
 	private final TradeRepository tradeRepository;
+	private final TradeRequestRepository tradeRequestRepository;
 
 	public TradeResponse getTrade(Long tradeId) {
 		Trade trade = tradeRepository.findById(tradeId)
@@ -91,6 +98,30 @@ public class TradeService {
 		}
 	}
 
+	@Transactional
+	public void updateTrade(Long tradeId, UpdateTradeRequest request, Long memberId) {
+		Trade trade = tradeRepository.findById(tradeId)
+			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
+
+		validateTradeOwner(trade, memberId);
+		validateTradeIsActive(trade);
+		validateTradeIsTransfer(trade);
+
+		trade.updatePrice(request.getPrice());
+	}
+
+	@Transactional
+	public void deleteTrade(Long tradeId, Long memberId) {
+		Trade trade = tradeRepository.findById(tradeId)
+			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
+
+		validateTradeOwner(trade, memberId);
+		validateTradeIsActive(trade);
+		validateNoPendingRequests(trade);
+
+		trade.cancel();
+	}
+
 	private void validateTradeType(CreateTradeRequest request) {
 		if (request.getType() == TradeType.EXCHANGE) {
 			if (request.getTotalCount() != 1) {
@@ -103,6 +134,35 @@ public class TradeService {
 			if (request.getPrice() == null || request.getPrice() <= 0) {
 				throw new BusinessException(TradeErrorCode.INVALID_TRANSFER_PRICE);
 			}
+		}
+	}
+
+	private void validateTradeOwner(Trade trade, Long memberId) {
+		if (!trade.getMemberId().equals(memberId)) {
+			throw new BusinessException(TradeErrorCode.UNAUTHORIZED_TRADE_ACCESS);
+		}
+	}
+
+	private void validateTradeIsActive(Trade trade) {
+		if (trade.getStatus() != TradeStatus.ACTIVE) {
+			throw new BusinessException(TradeErrorCode.INVALID_TRADE_STATUS);
+		}
+	}
+
+	private void validateTradeIsTransfer(Trade trade) {
+		if (trade.getType() == TradeType.EXCHANGE) {
+			throw new BusinessException(TradeErrorCode.CANNOT_UPDATE_EXCHANGE_TRADE);
+		}
+	}
+
+	private void validateNoPendingRequests(Trade trade) {
+		List<TradeRequest> pendingRequests = tradeRequestRepository.findByTradeAndStatus(
+			trade,
+			TradeRequestStatus.PENDING
+		);
+
+		if (!pendingRequests.isEmpty()) {
+			throw new BusinessException(TradeErrorCode.CANNOT_DELETE_WITH_PENDING_REQUESTS);
 		}
 	}
 }

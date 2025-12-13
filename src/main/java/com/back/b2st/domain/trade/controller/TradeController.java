@@ -5,7 +5,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequest;
+import com.back.b2st.domain.trade.dto.request.UpdateTradeRequest;
 import com.back.b2st.domain.trade.dto.response.CreateTradeResponse;
 import com.back.b2st.domain.trade.dto.response.TradeResponse;
 import com.back.b2st.domain.trade.entity.TradeStatus;
@@ -58,5 +61,28 @@ public class TradeController {
 		CreateTradeResponse response = tradeService.createTrade(request, memberId);
 
 		return ResponseEntity.ok(BaseResponse.success(response));
+	}
+
+	@PatchMapping("/{tradeId}")
+	public ResponseEntity<BaseResponse<Void>> updateTrade(
+		@PathVariable Long tradeId,
+		@Valid @RequestBody UpdateTradeRequest request,
+		@CurrentUser UserPrincipal userPrincipal
+	) {
+		Long memberId = (userPrincipal != null) ? userPrincipal.getId() : 1L;
+		tradeService.updateTrade(tradeId, request, memberId);
+
+		return ResponseEntity.ok(BaseResponse.success(null));
+	}
+
+	@DeleteMapping("/{tradeId}")
+	public ResponseEntity<BaseResponse<Void>> deleteTrade(
+		@PathVariable Long tradeId,
+		@CurrentUser UserPrincipal userPrincipal
+	) {
+		Long memberId = (userPrincipal != null) ? userPrincipal.getId() : 1L;
+		tradeService.deleteTrade(tradeId, memberId);
+
+		return ResponseEntity.ok(BaseResponse.success(null));
 	}
 }

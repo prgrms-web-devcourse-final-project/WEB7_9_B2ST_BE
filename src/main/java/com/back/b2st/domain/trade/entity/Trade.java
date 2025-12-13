@@ -101,6 +101,10 @@ public class Trade extends BaseEntity {
 		this.seatNumber = seatNumber;
 	}
 
+	public void updatePrice(Integer newPrice) {
+		this.price = newPrice;
+	}
+
 	public void complete() {
 		this.status = TradeStatus.COMPLETED;
 	}

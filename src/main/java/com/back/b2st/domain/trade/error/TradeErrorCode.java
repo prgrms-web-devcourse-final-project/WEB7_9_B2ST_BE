@@ -22,7 +22,9 @@ public enum TradeErrorCode implements ErrorCode {
 	TICKET_ALREADY_REGISTERED(HttpStatus.BAD_REQUEST, "X409", "이미 등록된 티켓입니다."),
 	INVALID_EXCHANGE_COUNT(HttpStatus.BAD_REQUEST, "X410", "교환은 1개만 가능합니다."),
 	INVALID_EXCHANGE_PRICE(HttpStatus.BAD_REQUEST, "X411", "교환은 가격을 설정할 수 없습니다."),
-	INVALID_TRANSFER_PRICE(HttpStatus.BAD_REQUEST, "X412", "양도 가격은 필수입니다.");
+	INVALID_TRANSFER_PRICE(HttpStatus.BAD_REQUEST, "X412", "양도 가격은 필수입니다."),
+	CANNOT_UPDATE_EXCHANGE_TRADE(HttpStatus.BAD_REQUEST, "X413", "교환 게시글은 수정할 수 없습니다."),
+	CANNOT_DELETE_WITH_PENDING_REQUESTS(HttpStatus.BAD_REQUEST, "X414", "대기 중인 교환 신청이 있어 삭제할 수 없습니다.");
 
 	private final HttpStatus status;
 	private final String code;

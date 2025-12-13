@@ -1,23 +1,29 @@
 package com.back.b2st.domain.trade.controller;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.security.UserPrincipal;
+
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
 class TradeControllerTest {
@@ -27,6 +33,20 @@ class TradeControllerTest {
 
 	@Autowired
 	private ObjectMapper objectMapper;
+
+	private Authentication mockAuth;
+
+	@BeforeEach
+	void setup() {
+		// Mock user for testing
+		UserPrincipal mockUser = UserPrincipal.builder()
+			.id(4L)
+			.email("trade@test.com")
+			.role("ROLE_MEMBER")
+			.build();
+
+		mockAuth = new UsernamePasswordAuthenticationToken(mockUser, null, null);
+	}
 
 	@Test
 	@DisplayName("교환 게시글 생성 성공")
@@ -43,6 +63,7 @@ class TradeControllerTest {
 
 		// when & then
 		mockMvc.perform(post("/api/trades")
+				.with(authentication(mockAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(requestBody))
 			.andDo(print())
@@ -67,6 +88,7 @@ class TradeControllerTest {
 
 		// when & then
 		mockMvc.perform(post("/api/trades")
+				.with(authentication(mockAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(requestBody))
 			.andDo(print())
@@ -90,11 +112,13 @@ class TradeControllerTest {
 			""";
 
 		mockMvc.perform(post("/api/trades")
+			.with(authentication(mockAuth))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(firstRequest));
 
 		// when - 동일한 티켓으로 다시 생성 시도
 		mockMvc.perform(post("/api/trades")
+				.with(authentication(mockAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(firstRequest))
 			.andDo(print())
@@ -117,6 +141,7 @@ class TradeControllerTest {
 
 		// when & then
 		mockMvc.perform(post("/api/trades")
+				.with(authentication(mockAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(requestBody))
 			.andDo(print())
@@ -139,6 +164,7 @@ class TradeControllerTest {
 
 		// when & then
 		mockMvc.perform(post("/api/trades")
+				.with(authentication(mockAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(requestBody))
 			.andDo(print())
@@ -161,6 +187,7 @@ class TradeControllerTest {
 
 		// when & then
 		mockMvc.perform(post("/api/trades")
+				.with(authentication(mockAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(requestBody))
 			.andDo(print())
@@ -180,6 +207,7 @@ class TradeControllerTest {
 
 		// when & then
 		mockMvc.perform(post("/api/trades")
+				.with(authentication(mockAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(requestBody))
 			.andDo(print())
@@ -199,6 +227,7 @@ class TradeControllerTest {
 			""";
 
 		String response = mockMvc.perform(post("/api/trades")
+				.with(authentication(mockAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(createRequest))
 			.andReturn()
@@ -207,7 +236,8 @@ class TradeControllerTest {
 
 		Long tradeId = objectMapper.readTree(response).get("data").get("tradeId").asLong();
 
-		mockMvc.perform(get("/api/trades/" + tradeId))
+		mockMvc.perform(get("/api/trades/" + tradeId)
+				.with(authentication(mockAuth)))
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.tradeId").value(tradeId))
@@ -220,7 +250,8 @@ class TradeControllerTest {
 	@Test
 	@DisplayName("Trade 상세 조회 실패 - 존재하지 않는 ID")
 	void getTrade_fail_notFound() throws Exception {
-		mockMvc.perform(get("/api/trades/99999"))
+		mockMvc.perform(get("/api/trades/99999")
+				.with(authentication(mockAuth)))
 			.andDo(print())
 			.andExpect(status().isNotFound());
 	}
@@ -229,6 +260,7 @@ class TradeControllerTest {
 	@DisplayName("Trade 목록 조회 성공")
 	void getTrades_success() throws Exception {
 		mockMvc.perform(post("/api/trades")
+			.with(authentication(mockAuth))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
 				{
@@ -240,6 +272,7 @@ class TradeControllerTest {
 				"""));
 
 		mockMvc.perform(post("/api/trades")
+			.with(authentication(mockAuth))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
 				{
@@ -250,7 +283,8 @@ class TradeControllerTest {
 				}
 				"""));
 
-		mockMvc.perform(get("/api/trades"))
+		mockMvc.perform(get("/api/trades")
+				.with(authentication(mockAuth)))
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.content").isArray())
@@ -262,6 +296,7 @@ class TradeControllerTest {
 	@DisplayName("Trade 목록 조회 - type 필터")
 	void getTrades_withTypeFilter() throws Exception {
 		mockMvc.perform(post("/api/trades")
+			.with(authentication(mockAuth))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
 				{
@@ -273,6 +308,7 @@ class TradeControllerTest {
 				"""));
 
 		mockMvc.perform(post("/api/trades")
+			.with(authentication(mockAuth))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
 				{
@@ -283,7 +319,8 @@ class TradeControllerTest {
 				}
 				"""));
 
-		mockMvc.perform(get("/api/trades?type=EXCHANGE"))
+		mockMvc.perform(get("/api/trades?type=EXCHANGE")
+				.with(authentication(mockAuth)))
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.content").isArray())
@@ -294,6 +331,7 @@ class TradeControllerTest {
 	@DisplayName("Trade 목록 조회 - status 필터")
 	void getTrades_withStatusFilter() throws Exception {
 		mockMvc.perform(post("/api/trades")
+			.with(authentication(mockAuth))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
 				{
@@ -304,7 +342,8 @@ class TradeControllerTest {
 				}
 				"""));
 
-		mockMvc.perform(get("/api/trades?status=ACTIVE"))
+		mockMvc.perform(get("/api/trades?status=ACTIVE")
+				.with(authentication(mockAuth)))
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.content").isArray())
@@ -316,6 +355,7 @@ class TradeControllerTest {
 	void getTrades_withPaging() throws Exception {
 		for (int i = 50; i < 55; i++) {
 			mockMvc.perform(post("/api/trades")
+				.with(authentication(mockAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(String.format("""
 					{
@@ -327,7 +367,8 @@ class TradeControllerTest {
 					""", i)));
 		}
 
-		mockMvc.perform(get("/api/trades?size=3"))
+		mockMvc.perform(get("/api/trades?size=3")
+				.with(authentication(mockAuth)))
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.content.length()").value(3))

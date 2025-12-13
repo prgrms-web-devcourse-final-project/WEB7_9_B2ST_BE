@@ -14,6 +14,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
+import com.back.b2st.domain.auth.error.AuthErrorCode;
+import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.jwt.dto.TokenInfo;
 import com.back.b2st.security.CustomUserDetails;
 import com.back.b2st.security.UserPrincipal;
@@ -51,19 +53,15 @@ public class JwtTokenProvider {
 
 		long now = (new Date()).getTime();
 
-		// Principal 타입에 따라 ID 추출 로직 분기
 		Object principal = authentication.getPrincipal();
 		Long memberId;
 
 		if (principal instanceof CustomUserDetails userDetails) {
-			// 초기 로그인 시점
 			memberId = userDetails.getId();
 		} else if (principal instanceof UserPrincipal userPrincipal) {
-			// 토큰 재발급 시점 (토큰에서 복원된 객체)
 			memberId = userPrincipal.getId();
 		} else {
-			// 예외 처리 (혹시 모를 상황)
-			throw new IllegalArgumentException("지원하지 않는 인증 객체입니다.");
+			throw new BusinessException(AuthErrorCode.UNSUPPORTED_TOKEN);
 		}
 
 		// Access Token 빌더
@@ -93,7 +91,7 @@ public class JwtTokenProvider {
 		Claims claims = parseClaims(accessToken);
 
 		if (claims.get("auth") == null) {
-			throw new RuntimeException("권한 정보가 없는 토큰입니다.");
+			throw new BusinessException(AuthErrorCode.EMPTY_CLAIMS);
 		}
 
 		Collection<? extends GrantedAuthority> authorities =
@@ -101,8 +99,6 @@ public class JwtTokenProvider {
 				.map(SimpleGrantedAuthority::new)
 				.collect(Collectors.toList());
 
-		// Claims에서 ID 꺼내서 UserPrincipal 생성
-		// DB 조회 없이 토큰 정보로만
 		Long userId = claims.get("id", Long.class);
 
 		UserPrincipal principal = UserPrincipal.builder()
@@ -115,20 +111,18 @@ public class JwtTokenProvider {
 	}
 
 	// 토큰 유효성 검증
-	public boolean validateToken(String token) {
+	public void validateToken(String token) {
 		try {
 			Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
-			return true;
 		} catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
-			log.info("잘못된 JWT 서명입니다.");
+			throw new io.jsonwebtoken.security.SignatureException("잘못된 JWT 서명입니다.");
 		} catch (ExpiredJwtException e) {
-			log.info("만료된 JWT 토큰입니다.");
+			throw new ExpiredJwtException(null, null, "만료된 JWT 토큰입니다.");
 		} catch (UnsupportedJwtException e) {
-			log.info("지원되지 않는 JWT 토큰입니다.");
+			throw new UnsupportedJwtException("지원되지 않는 JWT 토큰입니다.");
 		} catch (IllegalArgumentException e) {
-			log.info("JWT 토큰이 잘못되었습니다.");
+			throw new IllegalArgumentException("JWT 토큰이 잘못되었습니다.");
 		}
-		return false;
 	}
 
 	// 토큰 서명 검증
@@ -137,9 +131,9 @@ public class JwtTokenProvider {
 			Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
 			return true;
 		} catch (ExpiredJwtException e) {
-			// 만료된 토큰이라도 서명이 정상이면 true
 			return true;
 		} catch (Exception e) {
+			log.info("JWT 서명 검증 실패: {}", e.getMessage());
 			return false;
 		}
 	}

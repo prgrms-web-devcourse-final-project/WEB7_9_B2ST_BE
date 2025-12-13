@@ -29,18 +29,18 @@ public class AuthService {
 	@Transactional
 	public TokenInfo login(LoginRequest request) {
 		// Login ID/PW를 기반으로 Authentication 객체 생성
-		// 아직 인증되지 않은 상태
 		UsernamePasswordAuthenticationToken authenticationToken =
 			new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());
 
 		// 실제 검증 (사용자 비밀번호 체크)
-		// authenticate() 메서드가 실행될 때 CustomUserDetailsService.loadUserByUsername 실행됨
+		// authenticate() 실행 시 CustomUserDetailsService.loadUserByUsername 호출됨
+		// 실패 시 BadCredentialsException 발생 -> GlobalExceptionHandler가 처리
 		Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
 
 		// 인증 정보를 기반으로 JWT 토큰 생성
 		TokenInfo tokenInfo = jwtTokenProvider.generateToken(authentication);
 
-		// RefreshToken Redis 저장 (expirationTime 설정을 위해 RedisHash 사용)
+		// RefreshToken Redis 저장
 		refreshTokenRepository.save(new RefreshToken(authentication.getName(), tokenInfo.getRefreshToken()));
 
 		return tokenInfo;
@@ -49,32 +49,35 @@ public class AuthService {
 	@Transactional
 	public TokenInfo reissue(TokenReissueRequest request) {
 		// Refresh Token 검증
-		if (!jwtTokenProvider.validateToken(request.getRefreshToken())) {
+		// validateToken은 실패 시 예외를 던지므로, 이를 잡아서 '유효하지 않은 Refresh Token' 에러로 변환
+		try {
+			jwtTokenProvider.validateToken(request.getRefreshToken());
+		} catch (Exception e) {
 			throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
 		}
 
-		// Access Token 서명 검증
+		// Access Token 서명 검증 (만료 여부는 무시하고 서명만 확인)
 		if (!jwtTokenProvider.validateTokenSignature(request.getAccessToken())) {
 			throw new BusinessException(AuthErrorCode.INVALID_ACCESS_TOKEN);
 		}
 
-		// Access Token 에서 Authentication 객체 가져오기
+		// Access Token에서 Authentication 객체 추출 (만료된 토큰이어도 파싱 가능)
 		Authentication authentication = jwtTokenProvider.getAuthentication(request.getAccessToken());
 
-		// 이메일 추출
+		// 이메일 추출 (UserPrincipal 타입 체크)
 		String email;
 		Object principal = authentication.getPrincipal();
 		if (principal instanceof UserPrincipal userPrincipal) {
-			email = userPrincipal.getEmail(); // UserPrincipal이면 여기서 이메일 추출
+			email = userPrincipal.getEmail();
 		} else {
-			email = authentication.getName(); // 그 외의 경우(혹시 모를 호환성 있을까)
+			email = authentication.getName();
 		}
 
-		// Redis 에서 사용자의 Refresh Token 가져오기
+		// Redis에서 사용자의 Refresh Token 조회
 		RefreshToken refreshToken = refreshTokenRepository.findById(email)
 			.orElseThrow(() -> new BusinessException(AuthErrorCode.LOGGED_OUT_USER));
 
-		// Redis 의 토큰과 요청 보낸 토큰 일치 여부 확인
+		// Redis의 토큰과 요청받은 토큰 일치 여부 확인
 		if (!refreshToken.getToken().equals(request.getRefreshToken())) {
 			throw new BusinessException(AuthErrorCode.TOKEN_MISMATCH);
 		}

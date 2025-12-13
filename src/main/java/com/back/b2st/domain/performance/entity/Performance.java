@@ -1,10 +1,7 @@
 package com.back.b2st.domain.performance.entity;
 
-import java.time.LocalDateTime;
-
 import com.back.b2st.domain.venue.entity.Venue;
 import com.back.b2st.global.jpa.entity.BaseEntity;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,6 +19,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "performance")
@@ -44,7 +43,7 @@ public class Performance extends BaseEntity {
 	private Venue venue;	//공연장 FK
 
 	@Column(nullable = false, length = 200)
-	private String title;	//
+	private String title;	//공연제목
 
 	@Column(nullable = false, length = 50)
 	private String category;	//장르

@@ -12,6 +12,7 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -24,21 +25,21 @@ import lombok.NoArgsConstructor;
 		@Index(name = "idx_seats_venue", columnList = "venue_id"),
 		@Index(
 			name = "idx_seats_venue_section_row_number",
-			columnList = "venue_id, section_name, row_label, seat_number"
+			columnList = "venue_id, section, row_label, seat_number"
 		),
 		@Index(
 			name = "idx_seats_venue_section",
-			columnList = "venue_id, section_name"
+			columnList = "venue_id, section"
 		),
 		@Index(
 			name = "idx_seats_venue_section_row",
-			columnList = "venue_id, section_name, row_label"
+			columnList = "venue_id, section, row_label"
 		)
 	},
 	uniqueConstraints = {
 		@UniqueConstraint(
 			name = "uk_seats_venue_section_row_number",
-			columnNames = {"venue_id", "section_name", "row_label", "seat_number"}
+			columnNames = {"venue_id", "section", "row_label", "seat_number"}
 		)
 	}
 )
@@ -60,8 +61,8 @@ public class Seat extends BaseEntity {
 	// @Column(name = "section_id")
 	// private Long sectionId;
 
-	@Column(name = "section_name", nullable = false, length = 20)
-	private String sectionName;    // A구역 VIP
+	@Column(name = "section", nullable = false, length = 20)
+	private String section;    // A구역 VIP
 
 	@Column(name = "row_label", nullable = false, length = 5)
 	private String rowLabel;    // 1열, A
@@ -69,4 +70,16 @@ public class Seat extends BaseEntity {
 	@Column(name = "seat_number", nullable = false)
 	private Integer seatNumber;    // 7번
 
+	@Builder
+	public Seat(
+		Long venueId,
+		String section,
+		String rowLabel,
+		Integer seatNumber
+	) {
+		this.venueId = venueId;
+		this.section = section;
+		this.rowLabel = rowLabel;
+		this.seatNumber = seatNumber;
+	}
 }

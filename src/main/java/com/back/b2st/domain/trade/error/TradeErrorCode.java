@@ -24,7 +24,11 @@ public enum TradeErrorCode implements ErrorCode {
 	INVALID_EXCHANGE_PRICE(HttpStatus.BAD_REQUEST, "X411", "교환은 가격을 설정할 수 없습니다."),
 	INVALID_TRANSFER_PRICE(HttpStatus.BAD_REQUEST, "X412", "양도 가격은 필수입니다."),
 	CANNOT_UPDATE_EXCHANGE_TRADE(HttpStatus.BAD_REQUEST, "X413", "교환 게시글은 수정할 수 없습니다."),
-	CANNOT_DELETE_WITH_PENDING_REQUESTS(HttpStatus.BAD_REQUEST, "X414", "대기 중인 교환 신청이 있어 삭제할 수 없습니다.");
+	CANNOT_DELETE_WITH_PENDING_REQUESTS(HttpStatus.BAD_REQUEST, "X414", "대기 중인 교환 신청이 있어 삭제할 수 없습니다."),
+	CANNOT_REQUEST_OWN_TRADE(HttpStatus.BAD_REQUEST, "X415", "자신의 게시글에는 신청할 수 없습니다."),
+	DUPLICATE_TRADE_REQUEST(HttpStatus.BAD_REQUEST, "X416", "이미 신청한 게시글입니다."),
+	UNAUTHORIZED_TRADE_REQUEST_ACCESS(HttpStatus.FORBIDDEN, "X417", "해당 신청에 접근할 권한이 없습니다."),
+	TRADE_ALREADY_HAS_ACCEPTED_REQUEST(HttpStatus.BAD_REQUEST, "X418", "이미 수락된 신청이 있습니다.");
 
 	private final HttpStatus status;
 	private final String code;

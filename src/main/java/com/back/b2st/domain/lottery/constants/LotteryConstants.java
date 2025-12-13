@@ -1,4 +1,4 @@
-package com.back.b2st.domain.lottery.result.constants;
+package com.back.b2st.domain.lottery.constants;
 
 public class LotteryConstants {
 
@@ -6,5 +6,5 @@ public class LotteryConstants {
 	}
 
 	public static final int PAYMENT_DEADLINE_DAYS = 3;
-
+	public static final int MAX_LOTTERY_ENTRY_COUNT = 4;
 }

@@ -5,7 +5,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequest;
+import com.back.b2st.domain.trade.dto.request.UpdateTradeRequest;
 import com.back.b2st.domain.trade.dto.response.CreateTradeResponse;
 import com.back.b2st.domain.trade.dto.response.TradeResponse;
 import com.back.b2st.domain.trade.entity.TradeStatus;
@@ -35,8 +38,8 @@ public class TradeController {
 
 	@GetMapping
 	public ResponseEntity<BaseResponse<Page<TradeResponse>>> getTrades(
-		@RequestParam(required = false) TradeType type,
-		@RequestParam(required = false) TradeStatus status,
+		@RequestParam(value = "type", required = false) TradeType type,
+		@RequestParam(value = "status", required = false) TradeStatus status,
 		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
 	) {
 		Page<TradeResponse> response = tradeService.getTrades(type, status, pageable);
@@ -44,7 +47,7 @@ public class TradeController {
 	}
 
 	@GetMapping("/{tradeId}")
-	public ResponseEntity<BaseResponse<TradeResponse>> getTrade(@PathVariable Long tradeId) {
+	public ResponseEntity<BaseResponse<TradeResponse>> getTrade(@PathVariable("tradeId") Long tradeId) {
 		TradeResponse response = tradeService.getTrade(tradeId);
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
@@ -54,9 +57,27 @@ public class TradeController {
 		@Valid @RequestBody CreateTradeRequest request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
-		Long memberId = (userPrincipal != null) ? userPrincipal.getId() : 1L;
-		CreateTradeResponse response = tradeService.createTrade(request, memberId);
+		CreateTradeResponse response = tradeService.createTrade(request, userPrincipal.getId());
 
 		return ResponseEntity.ok(BaseResponse.success(response));
+	}
+
+	@PatchMapping("/{tradeId}")
+	public BaseResponse<Void> updateTrade(
+		@PathVariable("tradeId") Long tradeId,
+		@Valid @RequestBody UpdateTradeRequest request,
+		@CurrentUser UserPrincipal userPrincipal
+	) {
+		tradeService.updateTrade(tradeId, request, userPrincipal.getId());
+		return BaseResponse.success(null);
+	}
+
+	@DeleteMapping("/{tradeId}")
+	public BaseResponse<Void> deleteTrade(
+		@PathVariable("tradeId") Long tradeId,
+		@CurrentUser UserPrincipal userPrincipal
+	) {
+		tradeService.deleteTrade(tradeId, userPrincipal.getId());
+		return BaseResponse.success(null);
 	}
 }

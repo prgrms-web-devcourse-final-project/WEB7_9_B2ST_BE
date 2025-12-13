@@ -86,7 +86,6 @@ class JwtAuthenticationFilterTest {
 
 		// then
 		assertNull(SecurityContextHolder.getContext().getAuthentication()); // 인증 객체 없음
-		// [중요] Attribute에 에러 코드가 잘 들어갔는지 확인
 		assertEquals(AuthErrorCode.EXPIRED_TOKEN, request.getAttribute("exception"));
 	}
 

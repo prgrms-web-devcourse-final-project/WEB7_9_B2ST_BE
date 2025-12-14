@@ -97,33 +97,33 @@ public class TradeRequestService {
 
 	private void handleTransfer(Trade trade, TradeRequest tradeRequest) {
 		// 1. 기존 티켓을 TRANSFERRED 상태로 변경
-		Ticket oldTicket = ticketService.markTicketAsTransferred(trade.getTicketId());
+		Ticket oldTicket = ticketService.transferTicket(trade.getTicketId());
 
 		// 2. 신청자에게 새 티켓 생성 (원본 예약 정보 유지)
-		ticketService.createTransferredTicket(
+		ticketService.createTicket(
+			oldTicket.getReservationId(),
 			tradeRequest.getRequesterId(),
-			oldTicket.getSeatId(),
-			oldTicket.getReservationId()
+			oldTicket.getSeatId()
 		);
 	}
 
 	private void handleExchange(Trade trade, TradeRequest tradeRequest) {
 		// 1. 양쪽 티켓을 EXCHANGED 상태로 변경
-		Ticket ownerTicket = ticketService.markTicketAsExchanged(trade.getTicketId());
-		Ticket requesterTicket = ticketService.markTicketAsExchanged(tradeRequest.getRequesterTicketId());
+		Ticket ownerTicket = ticketService.exchangeTicket(trade.getTicketId());
+		Ticket requesterTicket = ticketService.exchangeTicket(tradeRequest.getRequesterTicketId());
 
 		// 2. 신청자에게 소유자의 좌석으로 새 티켓 생성
-		ticketService.createTransferredTicket(
+		ticketService.createTicket(
+			ownerTicket.getReservationId(),
 			tradeRequest.getRequesterId(),
-			ownerTicket.getSeatId(),
-			ownerTicket.getReservationId()
+			ownerTicket.getSeatId()
 		);
 
 		// 3. 소유자에게 신청자의 좌석으로 새 티켓 생성
-		ticketService.createTransferredTicket(
+		ticketService.createTicket(
+			requesterTicket.getReservationId(),
 			trade.getMemberId(),
-			requesterTicket.getSeatId(),
-			requesterTicket.getReservationId()
+			requesterTicket.getSeatId()
 		);
 	}
 

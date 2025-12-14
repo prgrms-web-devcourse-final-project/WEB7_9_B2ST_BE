@@ -63,6 +63,16 @@ public class TicketService {
 	@Transactional
 	public Ticket exchangeTicket(Long reservationId, Long memberId, Long seatId) {
 		Ticket ticket = getTicket(reservationId, memberId, seatId);
+		validateTicketIsTransferable(ticket);
+		ticket.exchange();
+
+		return ticket;
+	}
+
+	@Transactional
+	public Ticket exchangeTicket(Long ticketId) {
+		Ticket ticket = getTicketById(ticketId);
+		validateTicketIsTransferable(ticket);
 		ticket.exchange();
 
 		return ticket;
@@ -71,6 +81,16 @@ public class TicketService {
 	@Transactional
 	public Ticket transferTicket(Long reservationId, Long memberId, Long seatId) {
 		Ticket ticket = getTicket(reservationId, memberId, seatId);
+		validateTicketIsTransferable(ticket);
+		ticket.transfer();
+
+		return ticket;
+	}
+
+	@Transactional
+	public Ticket transferTicket(Long ticketId) {
+		Ticket ticket = getTicketById(ticketId);
+		validateTicketIsTransferable(ticket);
 		ticket.transfer();
 
 		return ticket;
@@ -81,33 +101,6 @@ public class TicketService {
 		Ticket ticket = getTicket(reservationId, memberId, seatId);
 		ticket.expire();
 
-		return ticket;
-	}
-
-	@Transactional
-	public Ticket createTransferredTicket(Long newMemberId, Long seatId, Long originalReservationId) {
-		// TODO QR코드 로직
-		Ticket newTicket = Ticket.builder()
-			.reservationId(originalReservationId)
-			.memberId(newMemberId)
-			.seatId(seatId)
-			.build();
-		return ticketRepository.save(newTicket);
-	}
-
-	@Transactional
-	public Ticket markTicketAsTransferred(Long ticketId) {
-		Ticket ticket = getTicketById(ticketId);
-		validateTicketIsTransferable(ticket);
-		ticket.transfer();
-		return ticket;
-	}
-
-	@Transactional
-	public Ticket markTicketAsExchanged(Long ticketId) {
-		Ticket ticket = getTicketById(ticketId);
-		validateTicketIsTransferable(ticket);
-		ticket.exchange();
 		return ticket;
 	}
 

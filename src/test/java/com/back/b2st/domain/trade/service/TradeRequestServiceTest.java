@@ -371,9 +371,9 @@ class TradeRequestServiceTest {
 		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
 		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
 			.willReturn(Collections.emptyList());
-		given(ticketService.markTicketAsExchanged(1L)).willReturn(ownerTicket);
-		given(ticketService.markTicketAsExchanged(10L)).willReturn(requesterTicket);
-		given(ticketService.createTransferredTicket(anyLong(), anyLong(), anyLong())).willReturn(ownerTicket);
+		given(ticketService.exchangeTicket(1L)).willReturn(ownerTicket);
+		given(ticketService.exchangeTicket(10L)).willReturn(requesterTicket);
+		given(ticketService.createTicket(anyLong(), anyLong(), anyLong())).willReturn(ownerTicket);
 
 		// when
 		tradeRequestService.acceptTradeRequest(tradeRequestId, memberId);
@@ -381,9 +381,9 @@ class TradeRequestServiceTest {
 		// then
 		assertThat(tradeRequest.getStatus()).isEqualTo(TradeRequestStatus.ACCEPTED);
 		assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
-		verify(ticketService).markTicketAsExchanged(1L);
-		verify(ticketService).markTicketAsExchanged(10L);
-		verify(ticketService, times(2)).createTransferredTicket(anyLong(), anyLong(), anyLong());
+		verify(ticketService).exchangeTicket(1L);
+		verify(ticketService).exchangeTicket(10L);
+		verify(ticketService, times(2)).createTicket(anyLong(), anyLong(), anyLong());
 	}
 
 	@Test
@@ -421,8 +421,8 @@ class TradeRequestServiceTest {
 		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
 		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
 			.willReturn(Collections.emptyList());
-		given(ticketService.markTicketAsTransferred(1L)).willReturn(ownerTicket);
-		given(ticketService.createTransferredTicket(200L, 1L, 1L)).willReturn(ownerTicket);
+		given(ticketService.transferTicket(1L)).willReturn(ownerTicket);
+		given(ticketService.createTicket(1L, 200L, 1L)).willReturn(ownerTicket);
 
 		// when
 		tradeRequestService.acceptTradeRequest(tradeRequestId, memberId);
@@ -430,8 +430,8 @@ class TradeRequestServiceTest {
 		// then
 		assertThat(tradeRequest.getStatus()).isEqualTo(TradeRequestStatus.ACCEPTED);
 		assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
-		verify(ticketService).markTicketAsTransferred(1L);
-		verify(ticketService).createTransferredTicket(200L, 1L, 1L);
+		verify(ticketService).transferTicket(1L);
+		verify(ticketService).createTicket(1L, 200L, 1L);
 	}
 
 	@Test

@@ -16,6 +16,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.service.TicketService;
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequestRequest;
 import com.back.b2st.domain.trade.dto.response.TradeRequestResponse;
 import com.back.b2st.domain.trade.entity.Trade;
@@ -39,6 +41,9 @@ class TradeRequestServiceTest {
 
 	@Mock
 	private TradeRepository tradeRepository;
+
+	@Mock
+	private TicketService ticketService;
 
 	@Test
 	@DisplayName("교환 신청 생성 성공")
@@ -350,9 +355,25 @@ class TradeRequestServiceTest {
 			.requesterTicketId(10L)
 			.build();
 
+		Ticket ownerTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		Ticket requesterTicket = Ticket.builder()
+			.reservationId(2L)
+			.memberId(200L)
+			.seatId(10L)
+			.build();
+
 		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
 		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
 			.willReturn(Collections.emptyList());
+		given(ticketService.getTicketById(1L)).willReturn(ownerTicket);
+		given(ticketService.getTicketById(10L)).willReturn(requesterTicket);
+		given(ticketService.exchangeTicket(anyLong(), anyLong(), anyLong())).willReturn(ownerTicket);
+		given(ticketService.createTicket(anyLong(), anyLong(), anyLong())).willReturn(ownerTicket);
 
 		// when
 		tradeRequestService.acceptTradeRequest(tradeRequestId, memberId);
@@ -360,6 +381,9 @@ class TradeRequestServiceTest {
 		// then
 		assertThat(tradeRequest.getStatus()).isEqualTo(TradeRequestStatus.ACCEPTED);
 		assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
+		verify(ticketService, times(2)).getTicketById(anyLong());
+		verify(ticketService, times(2)).exchangeTicket(anyLong(), anyLong(), anyLong());
+		verify(ticketService, times(2)).createTicket(anyLong(), anyLong(), anyLong());
 	}
 
 	@Test

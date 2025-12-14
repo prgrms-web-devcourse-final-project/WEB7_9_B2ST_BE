@@ -83,37 +83,4 @@ public class TicketService {
 
 		return ticket;
 	}
-
-	@Transactional
-	public Ticket createTransferredTicket(Long newMemberId, Long seatId, Long originalReservationId) {
-		// TODO QR코드 로직
-		Ticket newTicket = Ticket.builder()
-			.reservationId(originalReservationId)
-			.memberId(newMemberId)
-			.seatId(seatId)
-			.build();
-		return ticketRepository.save(newTicket);
-	}
-
-	@Transactional
-	public Ticket markTicketAsTransferred(Long ticketId) {
-		Ticket ticket = getTicketById(ticketId);
-		validateTicketIsTransferable(ticket);
-		ticket.transfer();
-		return ticket;
-	}
-
-	@Transactional
-	public Ticket markTicketAsExchanged(Long ticketId) {
-		Ticket ticket = getTicketById(ticketId);
-		validateTicketIsTransferable(ticket);
-		ticket.exchange();
-		return ticket;
-	}
-
-	private void validateTicketIsTransferable(Ticket ticket) {
-		if (ticket.getStatus() != TicketStatus.ISSUED) {
-			throw new BusinessException(TicketErrorCode.TICKET_NOT_TRANSFERABLE);
-		}
-	}
 }

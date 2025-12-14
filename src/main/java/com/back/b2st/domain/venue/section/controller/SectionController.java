@@ -21,7 +21,7 @@ public class SectionController {
 
 	private final SectionService sectionService;
 
-	@PostMapping("/admin/venue/{venueId}")
+	@PostMapping("/admin/venues/{venueId}/sections")
 	public BaseResponse<CreateSectionRes> createSection(
 		@PathVariable("venueId") Long venueId,
 		@Valid @RequestBody CreateSectionReq request

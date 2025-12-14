@@ -1,4 +1,4 @@
-package com.back.b2st.domain.venue.entity;
+package com.back.b2st.domain.venue.venue.entity;
 
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
@@ -19,9 +19,9 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SequenceGenerator(
-		name = "venue_id_gen",
-		sequenceName = "venue_seq",
-		allocationSize = 50
+	name = "venue_id_gen",
+	sequenceName = "venue_seq",
+	allocationSize = 50
 )
 public class Venue extends BaseEntity {
 
@@ -31,15 +31,15 @@ public class Venue extends BaseEntity {
 	private Long venueId;    // PK
 
 	@Column(nullable = false, length = 200)
-	private String name;	// 공연장 이름
+	private String name;    // 공연장 이름
 
 	@Column(name = "total_seats", nullable = false)
 	private Integer totalSeats;    // 총 좌석 수
 
 	@Builder
 	public Venue(
-			String name,
-			Integer totalSeats
+		String name,
+		Integer totalSeats
 	) {
 		this.name = name;
 		this.totalSeats = totalSeats;

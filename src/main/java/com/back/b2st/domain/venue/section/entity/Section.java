@@ -22,8 +22,8 @@ import lombok.NoArgsConstructor;
 	name = "sections",
 	uniqueConstraints = {
 		@UniqueConstraint(
-			name = "uk_section_venue_code",
-			columnNames = {"venue_id", "code"}
+			name = "uk_section_venue_name",
+			columnNames = {"venue_id", "section_name"}
 		)
 	}
 )
@@ -39,7 +39,7 @@ public class Section extends BaseEntity {
 	@Column(name = "section_id")
 	private Long id;
 
-	@Column(name = "venue_id")
+	@Column(name = "venue_id", nullable = false)
 	private Long venueId;
 
 	@Column(name = "section_name", nullable = false, length = 20)

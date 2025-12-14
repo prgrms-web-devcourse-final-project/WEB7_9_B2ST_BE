@@ -39,7 +39,7 @@ public class Section extends BaseEntity {
 	@Column(name = "section_id")
 	private Long id;
 
-	@Column(name = "venue_id")
+	@Column(name = "venue_id", nullable = false)
 	private Long venueId;
 
 	@Column(name = "section_name", nullable = false, length = 20)

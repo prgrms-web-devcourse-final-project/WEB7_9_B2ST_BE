@@ -17,13 +17,16 @@ public class SectionService {
 	private final SectionRepository sectionRepository;
 
 	public CreateSectionRes createSectionInfo(Long venueId, @Valid CreateSectionReq request) {
-		// todo: check venueId
-
+		validateVenueId(venueId);
 		Section section = Section.builder()
 			.venueId(venueId)
 			.sectionName(request.sectionName())
 			.build();
 
 		return new CreateSectionRes(sectionRepository.save(section));
+	}
+
+	private void validateVenueId(Long venueId) {
+		// todo: check venueId
 	}
 }

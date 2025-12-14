@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.entity.TicketStatus;
 import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -30,6 +31,11 @@ public class TicketService {
 
 	private Ticket getTicket(Long reservationId, Long memberId, Long seatId) {
 		return ticketRepository.findByReservationIdAndMemberIdAndSeatId(reservationId, memberId, seatId)
+			.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
+	}
+
+	public Ticket getTicketById(Long ticketId) {
+		return ticketRepository.findById(ticketId)
 			.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
 	}
 
@@ -76,5 +82,38 @@ public class TicketService {
 		ticket.expire();
 
 		return ticket;
+	}
+
+	@Transactional
+	public Ticket createTransferredTicket(Long newMemberId, Long seatId, Long originalReservationId) {
+		// TODO QR코드 로직
+		Ticket newTicket = Ticket.builder()
+			.reservationId(originalReservationId)
+			.memberId(newMemberId)
+			.seatId(seatId)
+			.build();
+		return ticketRepository.save(newTicket);
+	}
+
+	@Transactional
+	public Ticket markTicketAsTransferred(Long ticketId) {
+		Ticket ticket = getTicketById(ticketId);
+		validateTicketIsTransferable(ticket);
+		ticket.transfer();
+		return ticket;
+	}
+
+	@Transactional
+	public Ticket markTicketAsExchanged(Long ticketId) {
+		Ticket ticket = getTicketById(ticketId);
+		validateTicketIsTransferable(ticket);
+		ticket.exchange();
+		return ticket;
+	}
+
+	private void validateTicketIsTransferable(Ticket ticket) {
+		if (ticket.getStatus() != TicketStatus.ISSUED) {
+			throw new BusinessException(TicketErrorCode.TICKET_NOT_TRANSFERABLE);
+		}
 	}
 }

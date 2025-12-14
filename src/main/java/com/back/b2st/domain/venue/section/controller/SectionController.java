@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.back.b2st.domain.venue.constants.SectionApiPath;
 import com.back.b2st.domain.venue.section.dto.request.CreateSectionReq;
 import com.back.b2st.domain.venue.section.dto.response.CreateSectionRes;
 import com.back.b2st.domain.venue.section.service.SectionService;
@@ -21,7 +22,7 @@ public class SectionController {
 
 	private final SectionService sectionService;
 
-	@PostMapping("/admin/venues/{venueId}/sections")
+	@PostMapping(SectionApiPath.CREATE)
 	public BaseResponse<CreateSectionRes> createSection(
 		@PathVariable("venueId") Long venueId,
 		@Valid @RequestBody CreateSectionReq request

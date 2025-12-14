@@ -16,6 +16,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.entity.TicketStatus;
+import com.back.b2st.domain.ticket.service.TicketService;
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequestRequest;
 import com.back.b2st.domain.trade.dto.response.TradeRequestResponse;
 import com.back.b2st.domain.trade.entity.Trade;
@@ -39,6 +42,9 @@ class TradeRequestServiceTest {
 
 	@Mock
 	private TradeRepository tradeRepository;
+
+	@Mock
+	private TicketService ticketService;
 
 	@Test
 	@DisplayName("교환 신청 생성 성공")
@@ -325,7 +331,7 @@ class TradeRequestServiceTest {
 	}
 
 	@Test
-	@DisplayName("교환 신청 수락 성공")
+	@DisplayName("교환 신청 수락 성공 - EXCHANGE 타입")
 	void acceptTradeRequest_success() {
 		// given
 		Long tradeRequestId = 1L;
@@ -350,9 +356,24 @@ class TradeRequestServiceTest {
 			.requesterTicketId(10L)
 			.build();
 
+		Ticket ownerTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		Ticket requesterTicket = Ticket.builder()
+			.reservationId(2L)
+			.memberId(200L)
+			.seatId(10L)
+			.build();
+
 		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
 		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
 			.willReturn(Collections.emptyList());
+		given(ticketService.markTicketAsExchanged(1L)).willReturn(ownerTicket);
+		given(ticketService.markTicketAsExchanged(10L)).willReturn(requesterTicket);
+		given(ticketService.createTransferredTicket(anyLong(), anyLong(), anyLong())).willReturn(ownerTicket);
 
 		// when
 		tradeRequestService.acceptTradeRequest(tradeRequestId, memberId);
@@ -360,6 +381,57 @@ class TradeRequestServiceTest {
 		// then
 		assertThat(tradeRequest.getStatus()).isEqualTo(TradeRequestStatus.ACCEPTED);
 		assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
+		verify(ticketService).markTicketAsExchanged(1L);
+		verify(ticketService).markTicketAsExchanged(10L);
+		verify(ticketService, times(2)).createTransferredTicket(anyLong(), anyLong(), anyLong());
+	}
+
+	@Test
+	@DisplayName("교환 신청 수락 성공 - TRANSFER 타입")
+	void acceptTradeRequest_success_transfer() {
+		// given
+		Long tradeRequestId = 1L;
+		Long memberId = 100L;
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(1)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		TradeRequest tradeRequest = TradeRequest.builder()
+			.trade(trade)
+			.requesterId(200L)
+			.requesterTicketId(10L)
+			.build();
+
+		Ticket ownerTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
+			.willReturn(Collections.emptyList());
+		given(ticketService.markTicketAsTransferred(1L)).willReturn(ownerTicket);
+		given(ticketService.createTransferredTicket(200L, 1L, 1L)).willReturn(ownerTicket);
+
+		// when
+		tradeRequestService.acceptTradeRequest(tradeRequestId, memberId);
+
+		// then
+		assertThat(tradeRequest.getStatus()).isEqualTo(TradeRequestStatus.ACCEPTED);
+		assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
+		verify(ticketService).markTicketAsTransferred(1L);
+		verify(ticketService).createTransferredTicket(200L, 1L, 1L);
 	}
 
 	@Test

@@ -33,10 +33,14 @@ public class SectionService {
 		if (sectionRepository.existsByVenueIdAndSectionName(venueId, sectionName)) {
 			throw new BusinessException(SectionErrorCode.DUPLICATE_SECTION);
 		}
-		;
 	}
 
 	private void validateVenueId(Long venueId) {
 		// todo: check venueId
+	}
+
+	public Section getSection(Long sectionId) {
+		return sectionRepository.findById(sectionId)
+			.orElseThrow(() -> new BusinessException(SectionErrorCode.SECTION_NOT_FOUND));
 	}
 }

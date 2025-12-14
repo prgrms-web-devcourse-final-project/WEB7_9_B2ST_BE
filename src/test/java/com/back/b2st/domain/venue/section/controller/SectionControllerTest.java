@@ -43,8 +43,8 @@ class SectionControllerTest {
 					.content(requestBody)
 			)
 			.andDo(print())
-			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.id").value("1"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.venueId").value(param))
 			.andExpect(jsonPath("$.data.sectionName").value(sectionName))
 		;
 	}

@@ -8,10 +8,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequestRequest;
 import com.back.b2st.domain.trade.dto.response.TradeRequestResponse;
+import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.service.TicketService;
 import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeRequest;
 import com.back.b2st.domain.trade.entity.TradeRequestStatus;
 import com.back.b2st.domain.trade.entity.TradeStatus;
+import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
 import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.domain.trade.repository.TradeRequestRepository;
@@ -26,6 +29,7 @@ public class TradeRequestService {
 
 	private final TradeRequestRepository tradeRequestRepository;
 	private final TradeRepository tradeRepository;
+	private final TicketService ticketService;
 
 	@Transactional
 	public TradeRequestResponse createTradeRequest(Long tradeId, CreateTradeRequestRequest request,
@@ -78,6 +82,49 @@ public class TradeRequestService {
 
 		tradeRequest.accept();
 		trade.complete();
+
+		// 티켓 소유권 이전 처리
+		transferTicketOwnership(trade, tradeRequest);
+	}
+
+	private void transferTicketOwnership(Trade trade, TradeRequest tradeRequest) {
+		if (trade.getType() == TradeType.TRANSFER) {
+			handleTransfer(trade, tradeRequest);
+		} else if (trade.getType() == TradeType.EXCHANGE) {
+			handleExchange(trade, tradeRequest);
+		}
+	}
+
+	private void handleTransfer(Trade trade, TradeRequest tradeRequest) {
+		// 1. 기존 티켓을 TRANSFERRED 상태로 변경
+		Ticket oldTicket = ticketService.markTicketAsTransferred(trade.getTicketId());
+
+		// 2. 신청자에게 새 티켓 생성 (원본 예약 정보 유지)
+		ticketService.createTransferredTicket(
+			tradeRequest.getRequesterId(),
+			oldTicket.getSeatId(),
+			oldTicket.getReservationId()
+		);
+	}
+
+	private void handleExchange(Trade trade, TradeRequest tradeRequest) {
+		// 1. 양쪽 티켓을 EXCHANGED 상태로 변경
+		Ticket ownerTicket = ticketService.markTicketAsExchanged(trade.getTicketId());
+		Ticket requesterTicket = ticketService.markTicketAsExchanged(tradeRequest.getRequesterTicketId());
+
+		// 2. 신청자에게 소유자의 좌석으로 새 티켓 생성
+		ticketService.createTransferredTicket(
+			tradeRequest.getRequesterId(),
+			ownerTicket.getSeatId(),
+			ownerTicket.getReservationId()
+		);
+
+		// 3. 소유자에게 신청자의 좌석으로 새 티켓 생성
+		ticketService.createTransferredTicket(
+			trade.getMemberId(),
+			requesterTicket.getSeatId(),
+			requesterTicket.getReservationId()
+		);
 	}
 
 	@Transactional

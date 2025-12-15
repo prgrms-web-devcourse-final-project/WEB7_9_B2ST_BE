@@ -11,8 +11,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.reservation.dto.request.ReservationRequest;
-import com.back.b2st.domain.reservation.dto.response.ReservationResponse;
+import com.back.b2st.domain.reservation.dto.request.ReservationReq;
+import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.entity.ScheduleSeat;
 import com.back.b2st.domain.reservation.entity.SeatStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
@@ -56,10 +56,10 @@ class ReservationServiceV2Test {
 	@Test
 	void 예매_성공() {
 		// given
-		ReservationRequest request = new ReservationRequest(scheduleId, seatId);
+		ReservationReq request = new ReservationReq(scheduleId, seatId);
 
 		// when
-		ReservationResponse response = reservationService.createReservation(memberId, request);
+		ReservationRes response = reservationService.createReservation(memberId, request);
 
 		// then
 		assertThat(response.reservationId()).isNotNull();
@@ -76,7 +76,7 @@ class ReservationServiceV2Test {
 		ScheduleSeat seat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId).get();
 		seat.hold();
 
-		ReservationRequest request = new ReservationRequest(scheduleId, seatId);
+		ReservationReq request = new ReservationReq(scheduleId, seatId);
 
 		// when & then
 		assertThatThrownBy(() -> reservationService.createReservation(memberId, request))
@@ -90,7 +90,7 @@ class ReservationServiceV2Test {
 		ScheduleSeat seat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId).get();
 		seat.markSold();  // SOLD 상태로 변경
 
-		ReservationRequest request = new ReservationRequest(scheduleId, seatId);
+		ReservationReq request = new ReservationReq(scheduleId, seatId);
 
 		// when & then
 		assertThatThrownBy(() -> reservationService.createReservation(memberId, request))

@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.back.b2st.domain.reservation.dto.request.ReservationRequest;
-import com.back.b2st.domain.reservation.dto.response.ReservationResponse;
+import com.back.b2st.domain.reservation.dto.request.ReservationReq;
+import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.service.ReservationService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
@@ -27,32 +27,32 @@ public class ReservationController {
 
 	/** === 예매 생성 === */
 	@PostMapping
-	public BaseResponse<ReservationResponse> createReservation(
+	public BaseResponse<ReservationRes> createReservation(
 		@CurrentUser UserPrincipal user,
-		@RequestBody ReservationRequest request
+		@RequestBody ReservationReq request
 	) {
 		Long memberId = user.getId();
 
-		ReservationResponse response = reservationService.createReservation(memberId, request);
+		ReservationRes response = reservationService.createReservation(memberId, request);
 		return BaseResponse.success(response);
 	}
 
 	/** === 예매 단건 조회 === */
 	@GetMapping("/{reservationId}")
-	public BaseResponse<ReservationResponse> getReservation(
+	public BaseResponse<ReservationRes> getReservation(
 		@PathVariable Long reservationId
 	) {
-		ReservationResponse response = reservationService.getReservation(reservationId);
+		ReservationRes response = reservationService.getReservation(reservationId);
 		return BaseResponse.success(response);
 	}
 
 	/** === 본인의 모든 예매 조회 === */
 	@GetMapping("/me")
-	public BaseResponse<List<ReservationResponse>> getMyReservations(
+	public BaseResponse<List<ReservationRes>> getMyReservations(
 		@CurrentUser UserPrincipal user
 	) {
 		Long memberId = user.getId();
-		List<ReservationResponse> reservations = reservationService.getMyReservations(memberId);
+		List<ReservationRes> reservations = reservationService.getMyReservations(memberId);
 		return BaseResponse.success(reservations);
 	}
 }

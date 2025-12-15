@@ -12,8 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import com.back.b2st.domain.reservation.dto.request.ReservationRequest;
-import com.back.b2st.domain.reservation.dto.response.ReservationResponse;
+import com.back.b2st.domain.reservation.dto.request.ReservationReq;
+import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.entity.ScheduleSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
@@ -59,10 +59,10 @@ class ReservationServiceV1Test {
 	@DisplayName("예매 생성 성공 - 좌석 HOLD + Reservation 저장")
 	void createReservationSuccess() {
 		// given
-		ReservationRequest request = new ReservationRequest(performanceId, seatId);
+		ReservationReq request = new ReservationReq(performanceId, seatId);
 
 		// when
-		ReservationResponse response = reservationService.createReservation(memberId, request);
+		ReservationRes response = reservationService.createReservation(memberId, request);
 
 		// then
 		assertThat(response).isNotNull();

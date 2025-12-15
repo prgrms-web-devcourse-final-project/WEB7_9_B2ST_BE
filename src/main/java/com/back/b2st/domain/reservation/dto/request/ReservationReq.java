@@ -1,6 +1,6 @@
 package com.back.b2st.domain.reservation.dto.request;
 
-public record ReservationRequest(
+public record ReservationReq(
 	Long performanceId,
 	Long seatId
 ) {

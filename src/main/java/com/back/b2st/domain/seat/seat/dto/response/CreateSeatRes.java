@@ -10,8 +10,8 @@ public record CreateSeatRes(
 	String rowLabel,
 	Integer seatNumber
 ) {
-	public CreateSeatRes(Seat seat) {
-		this(
+	public static CreateSeatRes from(Seat seat) {
+		return new CreateSeatRes(
 			seat.getId(),
 			seat.getVenueId(),
 			seat.getSectionId(),

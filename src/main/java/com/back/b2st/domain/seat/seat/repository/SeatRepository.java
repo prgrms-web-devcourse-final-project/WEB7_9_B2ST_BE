@@ -8,4 +8,7 @@ import com.back.b2st.domain.seat.seat.entity.Seat;
 
 public interface SeatRepository extends JpaRepository<Seat, Long> {
 	List<Seat> findBySectionId(Long sectionId);
+
+	boolean existsByVenueIdAndSectionIdAndSectionNameAndRowLabelAndSeatNumber(
+		Long venueId, Long sectionId, String sectionName, String rowLabel, Integer seatNumber);
 }

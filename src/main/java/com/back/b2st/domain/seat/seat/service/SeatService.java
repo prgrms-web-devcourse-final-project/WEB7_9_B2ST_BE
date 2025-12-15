@@ -28,7 +28,8 @@ public class SeatService {
 	public CreateSeatRes createSeatInfo(Long venueId, CreateSeatReq request) {
 		// todo : venueId 검증
 		Section section = validateSectionId(request.sectionId());
-		// todo : 기등록 검증
+		validateSeatInfo(venueId, request.sectionId(), section.getSectionName(), request.rowLabel(),
+			request.seatNumber());
 
 		Seat seat = Seat.builder()
 			.venueId(venueId)
@@ -38,7 +39,15 @@ public class SeatService {
 			.seatNumber(request.seatNumber())
 			.build();
 
-		return new CreateSeatRes(seatRepository.save(seat));
+		return CreateSeatRes.from(seatRepository.save(seat));
+	}
+
+	private void validateSeatInfo(Long venueId, Long sectionId, String sectionName, String rowLabel,
+		Integer seatNumber) {
+		if (seatRepository.existsByVenueIdAndSectionIdAndSectionNameAndRowLabelAndSeatNumber(
+			venueId, sectionId, sectionName, rowLabel, seatNumber)) {
+			throw new BusinessException(SeatErrorCode.ALREADY_CREATE_SEAT);
+		}
 	}
 
 	private Section validateSectionId(Long sectionId) {

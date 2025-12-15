@@ -7,8 +7,8 @@ public record CreateSectionRes(
 	Long venueId,
 	String sectionName
 ) {
-	public CreateSectionRes(Section section) {
-		this(
+	public static CreateSectionRes form(Section section) {
+		return new CreateSectionRes(
 			section.getId(),
 			section.getVenueId(),
 			section.getSectionName()

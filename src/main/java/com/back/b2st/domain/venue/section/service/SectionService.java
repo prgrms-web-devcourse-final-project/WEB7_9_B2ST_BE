@@ -26,7 +26,7 @@ public class SectionService {
 			.sectionName(request.sectionName())
 			.build();
 
-		return new CreateSectionRes(sectionRepository.save(section));
+		return CreateSectionRes.form(sectionRepository.save(section));
 	}
 
 	private void validateSectionNotDuplicated(Long venueId, String sectionName) {

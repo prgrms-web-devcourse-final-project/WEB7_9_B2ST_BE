@@ -1,6 +1,5 @@
 package com.back.b2st.domain.auth.controller;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,20 +24,20 @@ public class AuthController {
 	private final AuthService authService;
 
 	@PostMapping("/login")
-	public ResponseEntity<BaseResponse<TokenInfo>> login(@Valid @RequestBody LoginRequest request) {
+	public BaseResponse<TokenInfo> login(@Valid @RequestBody LoginRequest request) {
 		TokenInfo tokenInfo = authService.login(request);
-		return ResponseEntity.ok(BaseResponse.success(tokenInfo));
+		return BaseResponse.success(tokenInfo);
 	}
 
 	@PostMapping("/reissue")
-	public ResponseEntity<BaseResponse<TokenInfo>> reissue(@Valid @RequestBody TokenReissueRequest request) {
+	public BaseResponse<TokenInfo> reissue(@Valid @RequestBody TokenReissueRequest request) {
 		TokenInfo tokenInfo = authService.reissue(request);
-		return ResponseEntity.ok(BaseResponse.success(tokenInfo));
+		return BaseResponse.success(tokenInfo);
 	}
 
 	@PostMapping("/logout")
-	public ResponseEntity<BaseResponse<Void>> logout(@CurrentUser UserPrincipal userPrincipal) {
+	public BaseResponse<Void> logout(@CurrentUser UserPrincipal userPrincipal) {
 		authService.logout(userPrincipal);
-		return ResponseEntity.ok(BaseResponse.success(null));
+		return BaseResponse.success(null);
 	}
 }

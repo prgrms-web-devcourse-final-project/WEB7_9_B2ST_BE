@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.back.b2st.global.jwt.JwtAuthenticationFilter;
@@ -22,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
 	private final JwtTokenProvider jwtTokenProvider;
+	private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+	private final AccessDeniedHandler jwtAccessDeniedHandler;
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -40,6 +43,11 @@ public class SecurityConfig {
 					"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"    // Swagger
 				).permitAll()
 				.anyRequest().authenticated()
+			)
+			.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+			.exceptionHandling(exception -> exception
+				.authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401 에러 처리
+				.accessDeniedHandler(jwtAccessDeniedHandler)
 			)
 			.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 

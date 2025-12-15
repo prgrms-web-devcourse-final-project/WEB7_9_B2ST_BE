@@ -33,7 +33,6 @@ import tools.jackson.databind.ObjectMapper;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-	// 컨테이너 설정 상속받음
 class AuthControllerTest extends AbstractContainerBaseTest {
 
 	@Autowired
@@ -53,14 +52,12 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 	@BeforeEach
 	void setup() {
-		// 테스트마다 Redis 비우기
 		refreshTokenRepository.deleteAll();
 	}
 
 	@Test
 	@DisplayName("통합: 로그인 성공 후 AccessToken 반환 및 Redis 저장 확인")
 	void login_integration_success() throws Exception {
-		// 회원 미리 생성 (H2 DB)
 		String email = "login@test.com";
 		String password = "Password123!";
 		Member member = Member.builder()
@@ -73,12 +70,10 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.build();
 		memberRepository.save(member);
 
-		// 로그인 요청 객체 생성
 		LoginRequest request = new LoginRequest();
 		ReflectionTestUtils.setField(request, "email", email);
 		ReflectionTestUtils.setField(request, "password", password);
 
-		// API 요청
 		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
@@ -86,19 +81,15 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.andExpect(jsonPath("$.data.accessToken").exists())
 			.andExpect(jsonPath("$.data.refreshToken").exists());
 
-		// Redis 검증: 실제 RefreshToken이 저장되었는지 확인
-		// RefreshToken 엔티티의 @Id는 email이므로 findById(email)로 조회
 		RefreshToken savedToken = refreshTokenRepository.findById(email).orElse(null);
-
 		assertThat(savedToken).isNotNull();
 		assertThat(savedToken.getToken()).isNotEmpty();
-		System.out.println(">>> Redis Saved Token: " + savedToken.getToken());
 	}
 
 	@Test
 	@DisplayName("통합: 로그인 실패 - 비밀번호 불일치")
 	void login_integration_fail_password() throws Exception {
-		// 회원 생성
+		// given
 		Member member = Member.builder()
 			.email("fail@test.com")
 			.password(passwordEncoder.encode("Password123!"))
@@ -108,17 +99,17 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.build();
 		memberRepository.save(member);
 
-		// 틀린 비밀번호 요청
 		LoginRequest request = new LoginRequest();
 		ReflectionTestUtils.setField(request, "email", "fail@test.com");
 		ReflectionTestUtils.setField(request, "password", "WrongPw123!");
 
-		// 요청 및 401/500 에러 확인
-		// Spring Security 기본 설정상 인증 실패는 401.
+		// when & then
 		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
-			.andExpect(status().isUnauthorized()); // 인증 실패
+			.andExpect(status().isUnauthorized()) // HTTP Header Status: 401
+			.andExpect(jsonPath("$.code").value(401))
+			.andExpect(jsonPath("$.message").value("이메일 또는 비밀번호가 일치하지 않습니다."));
 	}
 
 	@Test
@@ -126,7 +117,6 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 	void reissue_integration_success() throws Exception {
 		String email = "reissue@test.com";
 
-		// 회원 가입
 		Member member = Member.builder()
 			.email(email)
 			.password(passwordEncoder.encode("Password123!"))
@@ -136,7 +126,6 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.build();
 		memberRepository.save(member);
 
-		// 로그인 요청
 		LoginRequest loginRequest = new LoginRequest();
 		ReflectionTestUtils.setField(loginRequest, "email", email);
 		ReflectionTestUtils.setField(loginRequest, "password", "Password123!");
@@ -152,13 +141,11 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		Thread.sleep(1500);
 
-		// 재발급 요청 객체 생성
 		TokenReissueRequest reissueRequest = TokenReissueRequest.builder()
 			.accessToken(accessToken)
 			.refreshToken(refreshToken)
 			.build();
 
-		// API 실행 및 검증
 		mockMvc.perform(post("/auth/reissue").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(reissueRequest)))
 			.andDo(print())
@@ -166,19 +153,35 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.andExpect(jsonPath("$.data.accessToken").exists())
 			.andExpect(jsonPath("$.data.accessToken").isString());
 
-		// Redis 값 변경 확인
 		RefreshToken updatedRedisToken = refreshTokenRepository.findById(email).orElseThrow();
 		assertThat(updatedRedisToken.getToken()).isNotEqualTo(refreshToken);
 	}
 
 	@Test
+	@DisplayName("통합: 토큰 재발급 실패 - 유효하지 않은 Refresh Token")
+	void reissue_integration_fail_invalid_token() throws Exception {
+		// given
+		TokenReissueRequest reissueRequest = TokenReissueRequest.builder()
+			.accessToken("dummy_access_token")
+			.refreshToken("invalid_refresh_token_format")
+			.build();
+
+		// when & then
+		mockMvc.perform(post("/auth/reissue")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(reissueRequest)))
+			.andDo(print())
+			.andExpect(status().isUnauthorized()) // HTTP Header Status: 401
+			.andExpect(jsonPath("$.code").value(401))
+			.andExpect(jsonPath("$.message").value("유효하지 않은 리프레시 토큰입니다."));
+	}
+
+	@Test
 	@DisplayName("통합: 로그아웃 성공")
 	void logout_integration_success() throws Exception {
-		// 로그인 상태 가정
 		String email = "logout@test.com";
 		refreshTokenRepository.save(new RefreshToken(email, "someRefreshToken"));
 
-		// 로그인 토큰 발급
 		Member member = Member.builder()
 			.email(email)
 			.password(passwordEncoder.encode("Password123!"))
@@ -199,7 +202,6 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		String accessToken = objectMapper.readTree(loginResponse).path("data").path("accessToken").asText();
 
-		// 로그아웃 요청
 		mockMvc.perform(post("/auth/logout")
 				.header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON))

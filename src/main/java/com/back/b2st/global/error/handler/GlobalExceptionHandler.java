@@ -2,11 +2,14 @@ package com.back.b2st.global.error.handler;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.global.error.code.CommonErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -65,14 +68,22 @@ public class GlobalExceptionHandler {
 	/* =========================
             인증 관련 예외
             ========================= */
-	@ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
-	public ResponseEntity<BaseResponse<Void>> handleBadCredentials
-	(org.springframework.security.authentication.BadCredentialsException ex) {
-		log.error("BadCredentialsException: {}", ex.getMessage(), ex);
-
+	// 로그인 실패
+	@ExceptionHandler(BadCredentialsException.class)
+	public ResponseEntity<BaseResponse<Void>> handleBadCredentials(BadCredentialsException ex) {
+		log.error("BadCredentialsException: {}", ex.getMessage());
 		return ResponseEntity
-			.status(CommonErrorCode.UNAUTHORIZED.getStatus())
-			.body(BaseResponse.error(CommonErrorCode.UNAUTHORIZED)); // data = null
+			.status(AuthErrorCode.LOGIN_FAILED.getStatus())
+			.body(BaseResponse.error(AuthErrorCode.LOGIN_FAILED));
+	}
+
+	// 권한 부족
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<BaseResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
+		log.error("AccessDeniedException: {}", ex.getMessage());
+		return ResponseEntity
+			.status(CommonErrorCode.FORBIDDEN.getStatus())
+			.body(BaseResponse.error(CommonErrorCode.FORBIDDEN));
 	}
 
 	/* =========================

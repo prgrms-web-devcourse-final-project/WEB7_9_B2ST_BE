@@ -82,15 +82,15 @@ public class Member extends BaseEntity {
 		this.isVerified = isVerified;
 	}
 
+	public void updatePassword(String encodedPassword) {
+		this.password = encodedPassword;
+	}
+
 	public enum Role {
 		MEMBER, ADMIN
 	}
 
 	public enum Provider {
 		EMAIL, KAKAO
-	}
-
-	public void updatePassword(String encodedPassword) {
-		this.password = encodedPassword;
 	}
 }

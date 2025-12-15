@@ -91,7 +91,9 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		mockMvc.perform(get("/mypage/me")
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())
-			.andExpect(status().isForbidden());
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.code").value(401))
+			.andExpect(jsonPath("$.message").value("인증이 필요합니다."));
 	}
 
 	@Test

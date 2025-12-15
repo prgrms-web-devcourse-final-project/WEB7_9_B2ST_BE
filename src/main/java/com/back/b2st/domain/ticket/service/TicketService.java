@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.entity.TicketStatus;
 import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -30,6 +31,11 @@ public class TicketService {
 
 	private Ticket getTicket(Long reservationId, Long memberId, Long seatId) {
 		return ticketRepository.findByReservationIdAndMemberIdAndSeatId(reservationId, memberId, seatId)
+			.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
+	}
+
+	public Ticket getTicketById(Long ticketId) {
+		return ticketRepository.findById(ticketId)
 			.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
 	}
 

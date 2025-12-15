@@ -30,7 +30,7 @@ public class SeatService {
 		Seat seat = Seat.builder()
 			.venueId(venueId)
 			.sectionId(section.getId())
-			.section(section.getSectionName())
+			.sectionName(section.getSectionName())
 			.rowLabel(request.rowLabel())
 			.seatNumber(request.seatNumber())
 			.build();

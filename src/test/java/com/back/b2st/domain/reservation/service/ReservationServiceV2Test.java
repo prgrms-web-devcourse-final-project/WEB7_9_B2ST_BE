@@ -42,6 +42,9 @@ class ReservationServiceV2Test {
 
 	@BeforeEach
 	void setUp() {
+		reservationRepository.deleteAll();
+		scheduleSeatRepository.deleteAll();
+		
 		given(seatLockService.tryLock(any(), any(), any()))
 			.willReturn("LOCK_VALUE");
 

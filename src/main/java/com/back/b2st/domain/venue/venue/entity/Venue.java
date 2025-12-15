@@ -19,30 +19,23 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SequenceGenerator(
-	name = "venue_id_gen",
-	sequenceName = "venue_seq",
-	allocationSize = 50
+		name = "venue_id_gen",
+		sequenceName = "venue_seq",
+		allocationSize = 50
 )
 public class Venue extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "venue_id_gen")
 	@Column(name = "venue_id")
-	private Long venueId;    // PK
+	private Long venueId;
 
 	@Column(nullable = false, length = 200)
-	private String name;    // 공연장 이름
-
-	@Column(name = "total_seats", nullable = false)
-	private Integer totalSeats;    // 총 좌석 수
+	private String name;
 
 	@Builder
-	public Venue(
-		String name,
-		Integer totalSeats
-	) {
+	public Venue(String name) {
 		this.name = name;
-		this.totalSeats = totalSeats;
 	}
 }
 

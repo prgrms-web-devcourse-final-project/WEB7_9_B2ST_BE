@@ -23,6 +23,8 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 			Long performanceScheduleId
 	);
 
+	Optional<PerformanceSchedule> findByIdAndPerformance_PerformanceId(Long scheduleId, Long performanceId);
+
 	/**
 	 * 예매 오픈된 회차들 조회 (ex: 배치/운영용)
 	 */

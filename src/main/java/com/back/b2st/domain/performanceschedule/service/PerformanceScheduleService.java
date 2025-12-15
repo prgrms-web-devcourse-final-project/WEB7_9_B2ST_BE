@@ -1,5 +1,10 @@
 package com.back.b2st.domain.performanceschedule.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.dto.request.PerformanceScheduleCreateReq;
@@ -10,10 +15,8 @@ import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.error.PerformanceScheduleErrorCode;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.global.error.exception.BusinessException;
-import java.util.List;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,18 +28,19 @@ public class PerformanceScheduleService {
 
 	/**
 	 * 회차 생성 (관리자)
+	 * - performanceId는 URL Path를 단일 기준으로 사용한다.
 	 */
 	@Transactional
-	public PerformanceScheduleCreateRes createSchedule(PerformanceScheduleCreateReq request) {
-		Performance performance = performanceRepository.findById(request.performanceId())
+	public PerformanceScheduleCreateRes createSchedule(Long performanceId, PerformanceScheduleCreateReq request) {
+		Performance performance = performanceRepository.findById(performanceId)
 				.orElseThrow(() -> new BusinessException(PerformanceScheduleErrorCode.PERFORMANCE_NOT_FOUND));
 
-		// 시간/라운드 중복 방지 규칙은 후에 repository 기반으로 여기서 검증
-		// validateDuplicatedRoundNo(performance.getPerformanceId(), request.roundNo());
-		// validateDuplicatedStartAt(performance.getPerformanceId(), request.startAt());
-		//생성되는 회차의 bookingType이 BOOKING_ORDER(선착순)라면
-		// 해당 회차를 위한 Queue 설정 레코드도 자동으로 생성(추후구현)
+		// 시간/라운드 중복 방지 규칙은 추후 repository 기반으로 여기서 검증
+		// validateDuplicatedRoundNo(performanceId, request.roundNo());
+		// validateDuplicatedStartAt(performanceId, request.startAt());
 
+		// 생성되는 회차의 bookingType이 BOOKING_ORDER(선착순)라면
+		// 해당 회차를 위한 Queue 설정 레코드도 자동으로 생성 (추후 구현)
 
 		validateBookingTime(request);
 
@@ -70,11 +74,12 @@ public class PerformanceScheduleService {
 
 	/**
 	 * 회차 단건 조회
+	 * - (performanceId, scheduleId)로 조회하여 "해당 공연의 회차"가 맞는지까지 검증한다.
 	 */
-	public PerformanceScheduleDetailRes getSchedule(Long performanceScheduleId) {
-		PerformanceSchedule schedule = performanceScheduleRepository.findById(performanceScheduleId)
+	public PerformanceScheduleDetailRes getSchedule(Long performanceId, Long scheduleId) {
+		PerformanceSchedule schedule = performanceScheduleRepository
+				.findByPerformance_PerformanceIdAndPerformanceScheduleId(performanceId, scheduleId)
 				.orElseThrow(() -> new BusinessException(PerformanceScheduleErrorCode.SCHEDULE_NOT_FOUND));
-
 
 		return PerformanceScheduleDetailRes.from(schedule);
 	}

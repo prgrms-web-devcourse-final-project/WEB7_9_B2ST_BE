@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/performances")
+@RequestMapping("/api/performances")
 public class PerformanceController {
 
 	private final PerformanceService performanceService;

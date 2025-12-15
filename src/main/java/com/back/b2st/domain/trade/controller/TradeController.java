@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.back.b2st.domain.trade.api.TradeApi;
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequest;
 import com.back.b2st.domain.trade.dto.request.UpdateTradeRequest;
 import com.back.b2st.domain.trade.dto.response.CreateTradeResponse;
@@ -32,10 +33,11 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/trades")
 @RequiredArgsConstructor
-public class TradeController {
+public class TradeController implements TradeApi {
 
 	private final TradeService tradeService;
 
+	@Override
 	@GetMapping
 	public ResponseEntity<BaseResponse<Page<TradeResponse>>> getTrades(
 		@RequestParam(value = "type", required = false) TradeType type,
@@ -46,22 +48,24 @@ public class TradeController {
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
+	@Override
 	@GetMapping("/{tradeId}")
 	public ResponseEntity<BaseResponse<TradeResponse>> getTrade(@PathVariable("tradeId") Long tradeId) {
 		TradeResponse response = tradeService.getTrade(tradeId);
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
+	@Override
 	@PostMapping
 	public ResponseEntity<BaseResponse<CreateTradeResponse>> createTrade(
 		@Valid @RequestBody CreateTradeRequest request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
 		CreateTradeResponse response = tradeService.createTrade(request, userPrincipal.getId());
-
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
+	@Override
 	@PatchMapping("/{tradeId}")
 	public BaseResponse<Void> updateTrade(
 		@PathVariable("tradeId") Long tradeId,
@@ -72,6 +76,7 @@ public class TradeController {
 		return BaseResponse.success(null);
 	}
 
+	@Override
 	@DeleteMapping("/{tradeId}")
 	public BaseResponse<Void> deleteTrade(
 		@PathVariable("tradeId") Long tradeId,

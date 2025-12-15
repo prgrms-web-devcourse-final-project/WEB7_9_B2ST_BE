@@ -14,31 +14,31 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ReservationService {
 
-	private final SeatHoldService seatHoldService;
+	private final SeatSelectionService seatSelectionService;
 	private final ReservationRepository reservationRepository;
 
 	/** === 예매 생성 === */
 	@Transactional
 	public ReservationResponse createReservation(Long memberId, ReservationRequest request) {
 
-		// 1. 좌석 HOLD 진행
-		seatHoldService.holdSeat(request.performanceId(), request.seatId());
+		// 1. 락 + HOLD
+		seatSelectionService.selectSeat(memberId, request.performanceId(), request.seatId());
 
-		// 2. Reservation 엔티티 생성
+		// 2. Reservation 생성
 		Reservation reservation = Reservation.builder()
 			.performanceId(request.performanceId())
 			.memberId(memberId)
 			.seatId(request.seatId())
 			.build();
 
-		Reservation savedReservation = reservationRepository.save(reservation);
+		Reservation saved = reservationRepository.save(reservation);
 
 		// 3. Response 변환
 		return new ReservationResponse(
-			savedReservation.getId(),
-			savedReservation.getMemberId(),
-			savedReservation.getPerformanceId(),
-			savedReservation.getSeatId()
+			saved.getId(),
+			saved.getMemberId(),
+			saved.getPerformanceId(),
+			saved.getSeatId()
 		);
 	}
 

@@ -49,4 +49,11 @@ public class SeatService {
 			.orElseThrow(() -> new BusinessException(SeatErrorCode.SEAT_NOT_FOUND));
 		return new DetailSeatInfo(seat);
 	}
+
+	public DetailSeatInfo getSeatInfoBySectionId(Long sectionId) {
+		validateSectionId(sectionId);
+		Seat seat = seatRepository.findById(sectionId)
+			.orElseThrow(() -> new BusinessException(SeatErrorCode.SEAT_NOT_FOUND));
+		return new DetailSeatInfo(seat);
+	}
 }

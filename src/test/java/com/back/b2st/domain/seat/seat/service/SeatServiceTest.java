@@ -99,12 +99,15 @@ class SeatServiceTest {
 		int seatNumber = seat.getSeatNumber();
 
 		// when
-		List<SeatInfoRes> findSeat = seatService.getSeatInfoBySectionId(sectionId);
+		List<SeatInfoRes> seats = seatService.getSeatInfoBySectionId(sectionId);
 
 		// then
-		// assertThat(findSeat.sectionName()).isEqualTo(sectionName);
-		// assertThat(findSeat.rowLabel()).isEqualTo(rowLabel);
-		// assertThat(findSeat.seatNumber()).isEqualTo(seatNumber);
+		assertThat(seats).isNotEmpty();
+
+		SeatInfoRes findSeat = seats.get(0);
+		assertThat(findSeat.sectionName()).isEqualTo(sectionName);
+		assertThat(findSeat.rowLabel()).isEqualTo(rowLabel);
+		assertThat(findSeat.seatNumber()).isEqualTo(seatNumber);
 	}
 
 	@Test

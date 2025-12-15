@@ -1,4 +1,4 @@
-package com.back.b2st.domain.member.dto;
+package com.back.b2st.domain.member.dto.response;
 
 import com.back.b2st.domain.member.entity.Member;
 
@@ -7,7 +7,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class MyInfoResponse {
+public class MyInfoRes {
 	private Long memberId;
 	private String email;
 	private String name;
@@ -15,8 +15,8 @@ public class MyInfoResponse {
 
 	// todo: 환불 계좌 넣어놔야 함(아마 RefundAccount dto. dto네임은 dto대신 뭐로할지 생각 좀 해야할 것 같음)
 
-	public static MyInfoResponse from(Member member) {
-		return MyInfoResponse.builder()
+	public static MyInfoRes from(Member member) {
+		return MyInfoRes.builder()
 			.memberId(member.getId())
 			.email(member.getEmail())
 			.name(member.getName())

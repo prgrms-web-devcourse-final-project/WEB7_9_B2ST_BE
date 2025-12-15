@@ -13,8 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.back.b2st.domain.member.dto.RefundAccountReq;
-import com.back.b2st.domain.member.dto.RefundAccountRes;
+import com.back.b2st.domain.member.dto.request.RefundAccountReq;
+import com.back.b2st.domain.member.dto.response.RefundAccountRes;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.entity.RefundAccount;
 import com.back.b2st.domain.member.repository.MemberRepository;

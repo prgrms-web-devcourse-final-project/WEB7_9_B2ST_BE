@@ -17,7 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.member.dto.SignupRequest;
+import com.back.b2st.domain.member.dto.request.SignupReq;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -37,7 +37,7 @@ class MemberControllerTest {
 	@DisplayName("통합: 회원가입 성공")
 	void signup_integration_success() throws Exception {
 		// given
-		SignupRequest request = createSignupRequest("newuser@test.com", "StrongP@ss123", "신규유저");
+		SignupReq request = createSignupRequest("newuser@test.com", "StrongP@ss123", "신규유저");
 
 		// when & then
 		mockMvc.perform(post("/members/signup")
@@ -51,7 +51,7 @@ class MemberControllerTest {
 	@DisplayName("통합: 회원가입 실패 - 유효하지 않은 이메일 형식")
 	void signup_integration_fail_bad_email() throws Exception {
 		// given
-		SignupRequest request = createSignupRequest("bad-email", "StrongP@ss123", "신규유저");
+		SignupReq request = createSignupRequest("bad-email", "StrongP@ss123", "신규유저");
 
 		// when & then
 		mockMvc.perform(post("/members/signup")
@@ -65,7 +65,7 @@ class MemberControllerTest {
 	@DisplayName("통합: 회원가입 실패 - 비밀번호 규칙 미준수")
 	void signup_integration_fail_weak_password() throws Exception {
 		// given (특문 미포함)
-		SignupRequest request = createSignupRequest("user@test.com", "weakpassword1", "신규유저");
+		SignupReq request = createSignupRequest("user@test.com", "weakpassword1", "신규유저");
 
 		// when & then
 		mockMvc.perform(post("/members/signup")
@@ -75,8 +75,8 @@ class MemberControllerTest {
 			.andExpect(status().isBadRequest());
 	}
 
-	private SignupRequest createSignupRequest(String email, String pw, String name) {
-		SignupRequest request = new SignupRequest();
+	private SignupReq createSignupRequest(String email, String pw, String name) {
+		SignupReq request = new SignupReq();
 		ReflectionTestUtils.setField(request, "email", email);
 		ReflectionTestUtils.setField(request, "password", pw);
 		ReflectionTestUtils.setField(request, "name", name);

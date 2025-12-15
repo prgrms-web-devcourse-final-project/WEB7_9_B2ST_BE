@@ -1,4 +1,4 @@
-package com.back.b2st.domain.member.dto;
+package com.back.b2st.domain.member.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class PasswordChangeRequest {
+public class PasswordChangeReq {
 
 	@NotBlank(message = "현재 비밀번호를 입력해주세요.")
 	private String currentPassword;

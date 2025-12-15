@@ -1,4 +1,4 @@
-package com.back.b2st.domain.member.dto;
+package com.back.b2st.domain.member.dto.response;
 
 import com.back.b2st.domain.member.entity.RefundAccount;
 

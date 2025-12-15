@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.back.b2st.domain.member.dto.SignupRequest;
+import com.back.b2st.domain.member.dto.request.SignupReq;
 import com.back.b2st.domain.member.service.MemberService;
 import com.back.b2st.global.common.BaseResponse;
 
@@ -13,14 +13,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/members")
+@RequestMapping("/api/members")
 @RequiredArgsConstructor
 public class MemberController {
 
 	private final MemberService memberService;
 
 	@PostMapping("/signup")
-	public BaseResponse<Long> signup(@Valid @RequestBody SignupRequest request) {
+	public BaseResponse<Long> signup(@Valid @RequestBody SignupReq request) {
 		Long memberId = memberService.signup(request);
 		return BaseResponse.success(memberId);
 	}

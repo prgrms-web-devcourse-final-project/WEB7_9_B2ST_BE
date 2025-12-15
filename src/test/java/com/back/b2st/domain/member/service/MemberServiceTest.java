@@ -16,10 +16,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.back.b2st.domain.member.dto.PasswordChangeRequest;
-import com.back.b2st.domain.member.dto.SignupRequest;
+import com.back.b2st.domain.member.dto.request.PasswordChangeReq;
+import com.back.b2st.domain.member.dto.request.SignupReq;
 import com.back.b2st.domain.member.entity.Member;
+import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
@@ -37,7 +39,12 @@ class MemberServiceTest {
 	@DisplayName("회원가입 성공 테스트")
 	void signup_success() {
 		// given
-		SignupRequest request = createSignupRequest("test@email.com", "validPw123!", "tester");
+		SignupReq request = SignupReq.builder()
+			.email("test@email.com")
+			.password("validPw123!")
+			.name("tester")
+			.birth(LocalDate.of(2000, 1, 1))
+			.build();
 
 		// Mocking
 		given(memberRepository.existsByEmail(request.getEmail())).willReturn(false);
@@ -59,25 +66,19 @@ class MemberServiceTest {
 	@DisplayName("회원가입 실패 - 이메일 중복")
 	void signup_fail_duplicate_email() {
 		// given
-		SignupRequest request = createSignupRequest("duplicate@email.com", "pw", "name");
+		SignupReq request = SignupReq.builder()
+			.email("duplicate@email.com")
+			.password("pw")
+			.name("name")
+			.build();
 
 		// Mocking
 		given(memberRepository.existsByEmail(request.getEmail())).willReturn(true);
 
 		// when & then
-		assertThatThrownBy(() -> memberService.signup(request)).isInstanceOf(IllegalArgumentException.class)
-			.hasMessage("이미 가입된 이메일입니다.");
-	}
-
-	// 테스트용 DTO 생성 헬퍼 메서드
-	private SignupRequest createSignupRequest(String email, String pw, String name) {
-		SignupRequest request = new SignupRequest();
-		// Reflection
-		ReflectionTestUtils.setField(request, "email", email);
-		ReflectionTestUtils.setField(request, "password", pw);
-		ReflectionTestUtils.setField(request, "name", name);
-		ReflectionTestUtils.setField(request, "birth", LocalDate.of(2000, 1, 1));
-		return request;
+		assertThatThrownBy(() -> memberService.signup(request)).isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(MemberErrorCode.DUPLICATE_EMAIL);
 	}
 
 	@Test
@@ -87,7 +88,7 @@ class MemberServiceTest {
 		Long memberId = 1L;
 		Member member = Member.builder().password("encodedOldPw").build();
 
-		PasswordChangeRequest request = PasswordChangeRequest.builder()
+		PasswordChangeReq request = PasswordChangeReq.builder()
 			.currentPassword("oldPw")
 			.newPassword("newPw123!")
 			.build();
@@ -109,7 +110,7 @@ class MemberServiceTest {
 		// given
 		Long memberId = 1L;
 		Member member = Member.builder().password("encodedOldPw").build();
-		PasswordChangeRequest request = PasswordChangeRequest.builder()
+		PasswordChangeReq request = PasswordChangeReq.builder()
 			.currentPassword("wrongPw")
 			.newPassword("newPw123!")
 			.build();
@@ -119,7 +120,8 @@ class MemberServiceTest {
 
 		// when & then
 		assertThatThrownBy(() -> memberService.changePassword(memberId, request))
-			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessage("현재 비밀번호가 일치하지 않습니다.");
+			.isInstanceOf(BusinessException.class)
+			.extracting("errorCode")
+			.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
 	}
 }

@@ -3,8 +3,8 @@ package com.back.b2st.domain.member.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.member.dto.RefundAccountReq;
-import com.back.b2st.domain.member.dto.RefundAccountRes;
+import com.back.b2st.domain.member.dto.request.RefundAccountReq;
+import com.back.b2st.domain.member.dto.response.RefundAccountRes;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.entity.RefundAccount;
 import com.back.b2st.domain.member.error.MemberErrorCode;

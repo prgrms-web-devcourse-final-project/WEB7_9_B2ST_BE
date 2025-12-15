@@ -1,4 +1,4 @@
-package com.back.b2st.global.common.dto;
+package com.back.b2st.global.common.dto.response;
 
 import com.back.b2st.global.common.BankCode;
 

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.global.common.BankCode;
 import com.back.b2st.global.common.BaseResponse;
-import com.back.b2st.global.common.dto.BankRes;
+import com.back.b2st.global.common.dto.response.BankRes;
 
 @RestController
 @RequestMapping("/common")

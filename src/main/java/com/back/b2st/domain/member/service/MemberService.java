@@ -4,11 +4,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.member.dto.MyInfoResponse;
-import com.back.b2st.domain.member.dto.PasswordChangeRequest;
-import com.back.b2st.domain.member.dto.SignupRequest;
+import com.back.b2st.domain.member.dto.request.PasswordChangeReq;
+import com.back.b2st.domain.member.dto.request.SignupReq;
+import com.back.b2st.domain.member.dto.response.MyInfoRes;
 import com.back.b2st.domain.member.entity.Member;
+import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,9 +22,9 @@ public class MemberService {
 	private final PasswordEncoder passwordEncoder;
 
 	@Transactional
-	public Long signup(SignupRequest request) {
+	public Long signup(SignupReq request) {
 		if (memberRepository.existsByEmail(request.getEmail())) {
-			throw new IllegalArgumentException("이미 가입된 이메일입니다.");
+			throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);
 		}
 
 		// 비밀번호 암호화 및 엔티티 생성
@@ -42,23 +44,23 @@ public class MemberService {
 	}
 
 	@Transactional(readOnly = true)
-	public MyInfoResponse getMyInfo(Long memberId) {
+	public MyInfoRes getMyInfo(Long memberId) {
 		Member member = memberRepository.findById(memberId)
-			.orElseThrow(() -> new IllegalArgumentException("해당하는 회원 찾을 수 없습니다."));
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-		return MyInfoResponse.from(member);
+		return MyInfoRes.from(member);
 	}
 
-	public void changePassword(Long memberId, PasswordChangeRequest request) {
+	public void changePassword(Long memberId, PasswordChangeReq request) {
 		Member member = memberRepository.findById(memberId)
-			.orElseThrow(() -> new IllegalArgumentException("해당하는 회원 찾을 수 없습니다."));
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
 		if (!passwordEncoder.matches(request.getCurrentPassword(), member.getPassword())) {
-			throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+			throw new BusinessException(MemberErrorCode.PASSWORD_MISMATCH);
 		}
 
 		if (request.getNewPassword().equals(request.getCurrentPassword())) {
-			throw new IllegalArgumentException("새 비밀번호는 기존 비밀번호와 다르게 설정해야 합니다.");
+			throw new BusinessException(MemberErrorCode.SAME_PASSWORD);
 		}
 
 		member.updatePassword(passwordEncoder.encode(request.getNewPassword()));

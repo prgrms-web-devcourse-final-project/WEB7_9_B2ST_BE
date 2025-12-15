@@ -16,10 +16,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.trade.api.TradeApi;
-import com.back.b2st.domain.trade.dto.request.CreateTradeRequest;
-import com.back.b2st.domain.trade.dto.request.UpdateTradeRequest;
-import com.back.b2st.domain.trade.dto.response.CreateTradeResponse;
-import com.back.b2st.domain.trade.dto.response.TradeResponse;
+import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
+import com.back.b2st.domain.trade.dto.request.UpdateTradeReq;
+import com.back.b2st.domain.trade.dto.response.CreateTradeRes;
+import com.back.b2st.domain.trade.dto.response.TradeRes;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.service.TradeService;
@@ -39,29 +39,29 @@ public class TradeController implements TradeApi {
 
 	@Override
 	@GetMapping
-	public ResponseEntity<BaseResponse<Page<TradeResponse>>> getTrades(
+	public ResponseEntity<BaseResponse<Page<TradeRes>>> getTrades(
 		@RequestParam(value = "type", required = false) TradeType type,
 		@RequestParam(value = "status", required = false) TradeStatus status,
 		@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
 	) {
-		Page<TradeResponse> response = tradeService.getTrades(type, status, pageable);
+		Page<TradeRes> response = tradeService.getTrades(type, status, pageable);
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
 	@Override
 	@GetMapping("/{tradeId}")
-	public ResponseEntity<BaseResponse<TradeResponse>> getTrade(@PathVariable("tradeId") Long tradeId) {
-		TradeResponse response = tradeService.getTrade(tradeId);
+	public ResponseEntity<BaseResponse<TradeRes>> getTrade(@PathVariable("tradeId") Long tradeId) {
+		TradeRes response = tradeService.getTrade(tradeId);
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
 	@Override
 	@PostMapping
-	public ResponseEntity<BaseResponse<CreateTradeResponse>> createTrade(
-		@Valid @RequestBody CreateTradeRequest request,
+	public ResponseEntity<BaseResponse<CreateTradeRes>> createTrade(
+		@Valid @RequestBody CreateTradeReq request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
-		CreateTradeResponse response = tradeService.createTrade(request, userPrincipal.getId());
+		CreateTradeRes response = tradeService.createTrade(request, userPrincipal.getId());
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
@@ -69,7 +69,7 @@ public class TradeController implements TradeApi {
 	@PatchMapping("/{tradeId}")
 	public BaseResponse<Void> updateTrade(
 		@PathVariable("tradeId") Long tradeId,
-		@Valid @RequestBody UpdateTradeRequest request,
+		@Valid @RequestBody UpdateTradeReq request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
 		tradeService.updateTrade(tradeId, request, userPrincipal.getId());

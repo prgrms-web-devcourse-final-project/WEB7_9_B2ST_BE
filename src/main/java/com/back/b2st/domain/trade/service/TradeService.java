@@ -8,10 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.trade.dto.request.CreateTradeRequest;
-import com.back.b2st.domain.trade.dto.request.UpdateTradeRequest;
-import com.back.b2st.domain.trade.dto.response.CreateTradeResponse;
-import com.back.b2st.domain.trade.dto.response.TradeResponse;
+import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
+import com.back.b2st.domain.trade.dto.request.UpdateTradeReq;
+import com.back.b2st.domain.trade.dto.response.CreateTradeRes;
+import com.back.b2st.domain.trade.dto.response.TradeRes;
 import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeRequest;
 import com.back.b2st.domain.trade.entity.TradeRequestStatus;
@@ -32,14 +32,14 @@ public class TradeService {
 	private final TradeRepository tradeRepository;
 	private final TradeRequestRepository tradeRequestRepository;
 
-	public TradeResponse getTrade(Long tradeId) {
+	public TradeRes getTrade(Long tradeId) {
 		Trade trade = tradeRepository.findById(tradeId)
 			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
 
-		return TradeResponse.from(trade);
+		return TradeRes.from(trade);
 	}
 
-	public Page<TradeResponse> getTrades(TradeType type, TradeStatus status, Pageable pageable) {
+	public Page<TradeRes> getTrades(TradeType type, TradeStatus status, Pageable pageable) {
 		Page<Trade> trades;
 
 		if (type != null && status != null) {
@@ -52,11 +52,11 @@ public class TradeService {
 			trades = tradeRepository.findAll(pageable);
 		}
 
-		return trades.map(TradeResponse::from);
+		return trades.map(TradeRes::from);
 	}
 
 	@Transactional
-	public CreateTradeResponse createTrade(CreateTradeRequest request, Long memberId) {
+	public CreateTradeRes createTrade(CreateTradeReq request, Long memberId) {
 		validateTicketNotDuplicated(request.getTicketId());
 		validateTradeType(request);
 
@@ -81,7 +81,7 @@ public class TradeService {
 
 		try {
 			Trade savedTrade = tradeRepository.save(trade);
-			return new CreateTradeResponse(savedTrade);
+			return new CreateTradeRes(savedTrade);
 		} catch (DataIntegrityViolationException e) {
 			throw new BusinessException(TradeErrorCode.TICKET_ALREADY_REGISTERED);
 		}
@@ -99,7 +99,7 @@ public class TradeService {
 	}
 
 	@Transactional
-	public void updateTrade(Long tradeId, UpdateTradeRequest request, Long memberId) {
+	public void updateTrade(Long tradeId, UpdateTradeReq request, Long memberId) {
 		Trade trade = findTradeById(tradeId);
 
 		validateTradeOwner(trade, memberId);
@@ -125,7 +125,7 @@ public class TradeService {
 			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
 	}
 
-	private void validateTradeType(CreateTradeRequest request) {
+	private void validateTradeType(CreateTradeReq request) {
 		if (request.getType() == TradeType.EXCHANGE) {
 			if (request.getTotalCount() != 1) {
 				throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_COUNT);

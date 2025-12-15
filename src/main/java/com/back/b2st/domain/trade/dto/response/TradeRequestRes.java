@@ -10,7 +10,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class TradeRequestResponse {
+public class TradeRequestRes {
 
 	private Long tradeRequestId;
 	private Long tradeId;
@@ -20,8 +20,8 @@ public class TradeRequestResponse {
 	private LocalDateTime createdAt;
 	private LocalDateTime modifiedAt;
 
-	public static TradeRequestResponse from(TradeRequest tradeRequest) {
-		return TradeRequestResponse.builder()
+	public static TradeRequestRes from(TradeRequest tradeRequest) {
+		return TradeRequestRes.builder()
 			.tradeRequestId(tradeRequest.getId())
 			.tradeId(tradeRequest.getTrade().getId())
 			.requesterId(tradeRequest.getRequesterId())

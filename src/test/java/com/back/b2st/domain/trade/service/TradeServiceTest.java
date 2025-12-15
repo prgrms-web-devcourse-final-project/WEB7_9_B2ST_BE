@@ -16,9 +16,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import com.back.b2st.domain.trade.dto.request.CreateTradeRequest;
-import com.back.b2st.domain.trade.dto.request.UpdateTradeRequest;
-import com.back.b2st.domain.trade.dto.response.CreateTradeResponse;
+import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
+import com.back.b2st.domain.trade.dto.request.UpdateTradeReq;
+import com.back.b2st.domain.trade.dto.response.CreateTradeRes;
 import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeRequest;
 import com.back.b2st.domain.trade.entity.TradeRequestStatus;
@@ -45,7 +45,7 @@ class TradeServiceTest {
 	@DisplayName("교환 게시글 생성 성공")
 	void createExchangeTrade_success() {
 		// given
-		CreateTradeRequest request = new CreateTradeRequest(1L, TradeType.EXCHANGE, null, 1);
+		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, null, 1);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
@@ -67,7 +67,7 @@ class TradeServiceTest {
 		given(tradeRepository.save(any(Trade.class))).willReturn(mockTrade);
 
 		// when
-		CreateTradeResponse response = tradeService.createTrade(request, memberId);
+		CreateTradeRes response = tradeService.createTrade(request, memberId);
 
 		// then
 		assertThat(response.getType()).isEqualTo(TradeType.EXCHANGE);
@@ -80,7 +80,7 @@ class TradeServiceTest {
 	@DisplayName("양도 게시글 생성 성공")
 	void createTransferTrade_success() {
 		// given
-		CreateTradeRequest request = new CreateTradeRequest(1L, TradeType.TRANSFER, 50000, 2);
+		CreateTradeReq request = new CreateTradeReq(1L, TradeType.TRANSFER, 50000, 2);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
@@ -102,7 +102,7 @@ class TradeServiceTest {
 		given(tradeRepository.save(any(Trade.class))).willReturn(mockTrade);
 
 		// when
-		CreateTradeResponse response = tradeService.createTrade(request, memberId);
+		CreateTradeRes response = tradeService.createTrade(request, memberId);
 
 		// then
 		assertThat(response.getType()).isEqualTo(TradeType.TRANSFER);
@@ -115,7 +115,7 @@ class TradeServiceTest {
 	@DisplayName("티켓 중복 등록 실패")
 	void createTrade_fail_duplicateTicket() {
 		// given
-		CreateTradeRequest request = new CreateTradeRequest(1L, TradeType.EXCHANGE, null, 1);
+		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, null, 1);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
@@ -131,7 +131,7 @@ class TradeServiceTest {
 	@DisplayName("교환 - totalCount 검증 실패 (1개 초과)")
 	void createExchangeTrade_fail_invalidCount() {
 		// given
-		CreateTradeRequest request = new CreateTradeRequest(1L, TradeType.EXCHANGE, null, 2);
+		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, null, 2);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
@@ -147,7 +147,7 @@ class TradeServiceTest {
 	@DisplayName("교환 - price 검증 실패 (가격 설정)")
 	void createExchangeTrade_fail_invalidPrice() {
 		// given
-		CreateTradeRequest request = new CreateTradeRequest(1L, TradeType.EXCHANGE, 10000, 1);
+		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, 10000, 1);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
@@ -163,7 +163,7 @@ class TradeServiceTest {
 	@DisplayName("양도 - price 검증 실패 (가격 미설정)")
 	void createTransferTrade_fail_noPrice() {
 		// given
-		CreateTradeRequest request = new CreateTradeRequest(1L, TradeType.TRANSFER, null, 1);
+		CreateTradeReq request = new CreateTradeReq(1L, TradeType.TRANSFER, null, 1);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
@@ -179,7 +179,7 @@ class TradeServiceTest {
 	@DisplayName("양도 - price 검증 실패 (0원 이하)")
 	void createTransferTrade_fail_invalidPrice() {
 		// given
-		CreateTradeRequest request = new CreateTradeRequest(1L, TradeType.TRANSFER, 0, 1);
+		CreateTradeReq request = new CreateTradeReq(1L, TradeType.TRANSFER, 0, 1);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
@@ -195,7 +195,7 @@ class TradeServiceTest {
 	@DisplayName("동시성 문제로 중복 발생 시 예외 처리")
 	void createTrade_fail_dataIntegrityViolation() {
 		// given
-		CreateTradeRequest request = new CreateTradeRequest(1L, TradeType.EXCHANGE, null, 1);
+		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, null, 1);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
@@ -216,7 +216,7 @@ class TradeServiceTest {
 		// given
 		Long tradeId = 1L;
 		Long memberId = 100L;
-		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+		UpdateTradeReq request = new UpdateTradeReq(60000);
 
 		Trade trade = Trade.builder()
 			.memberId(memberId)
@@ -246,7 +246,7 @@ class TradeServiceTest {
 		// given
 		Long tradeId = 999L;
 		Long memberId = 100L;
-		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+		UpdateTradeReq request = new UpdateTradeReq(60000);
 
 		given(tradeRepository.findById(tradeId)).willReturn(Optional.empty());
 
@@ -263,7 +263,7 @@ class TradeServiceTest {
 		Long tradeId = 1L;
 		Long ownerId = 100L;
 		Long requesterId = 200L;
-		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+		UpdateTradeReq request = new UpdateTradeReq(60000);
 
 		Trade trade = Trade.builder()
 			.memberId(ownerId)
@@ -292,7 +292,7 @@ class TradeServiceTest {
 		// given
 		Long tradeId = 1L;
 		Long memberId = 100L;
-		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+		UpdateTradeReq request = new UpdateTradeReq(60000);
 
 		Trade trade = Trade.builder()
 			.memberId(memberId)
@@ -322,7 +322,7 @@ class TradeServiceTest {
 		// given
 		Long tradeId = 1L;
 		Long memberId = 100L;
-		UpdateTradeRequest request = new UpdateTradeRequest(60000);
+		UpdateTradeReq request = new UpdateTradeReq(60000);
 
 		Trade trade = Trade.builder()
 			.memberId(memberId)

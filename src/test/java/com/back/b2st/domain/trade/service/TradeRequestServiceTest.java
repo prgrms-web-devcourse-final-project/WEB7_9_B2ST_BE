@@ -18,8 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.service.TicketService;
-import com.back.b2st.domain.trade.dto.request.CreateTradeRequestRequest;
-import com.back.b2st.domain.trade.dto.response.TradeRequestResponse;
+import com.back.b2st.domain.trade.dto.request.CreateTradeRequestReq;
+import com.back.b2st.domain.trade.dto.response.TradeRequestRes;
 import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeRequest;
 import com.back.b2st.domain.trade.entity.TradeRequestStatus;
@@ -51,7 +51,7 @@ class TradeRequestServiceTest {
 		// given
 		Long tradeId = 1L;
 		Long requesterId = 200L;
-		CreateTradeRequestRequest request = new CreateTradeRequestRequest(10L);
+		CreateTradeRequestReq request = new CreateTradeRequestReq(10L);
 
 		Trade trade = Trade.builder()
 			.memberId(100L)
@@ -78,7 +78,7 @@ class TradeRequestServiceTest {
 		given(tradeRequestRepository.save(any(TradeRequest.class))).willReturn(tradeRequest);
 
 		// when
-		TradeRequestResponse response = tradeRequestService.createTradeRequest(tradeId, request, requesterId);
+		TradeRequestRes response = tradeRequestService.createTradeRequest(tradeId, request, requesterId);
 
 		// then
 		assertThat(response).isNotNull();
@@ -94,7 +94,7 @@ class TradeRequestServiceTest {
 		// given
 		Long tradeId = 999L;
 		Long requesterId = 200L;
-		CreateTradeRequestRequest request = new CreateTradeRequestRequest(10L);
+		CreateTradeRequestReq request = new CreateTradeRequestReq(10L);
 
 		given(tradeRepository.findById(tradeId)).willReturn(Optional.empty());
 
@@ -110,7 +110,7 @@ class TradeRequestServiceTest {
 		// given
 		Long tradeId = 1L;
 		Long requesterId = 200L;
-		CreateTradeRequestRequest request = new CreateTradeRequestRequest(10L);
+		CreateTradeRequestReq request = new CreateTradeRequestReq(10L);
 
 		Trade trade = Trade.builder()
 			.memberId(100L)
@@ -140,7 +140,7 @@ class TradeRequestServiceTest {
 		// given
 		Long tradeId = 1L;
 		Long requesterId = 100L;
-		CreateTradeRequestRequest request = new CreateTradeRequestRequest(10L);
+		CreateTradeRequestReq request = new CreateTradeRequestReq(10L);
 
 		Trade trade = Trade.builder()
 			.memberId(100L)
@@ -169,7 +169,7 @@ class TradeRequestServiceTest {
 		// given
 		Long tradeId = 1L;
 		Long requesterId = 200L;
-		CreateTradeRequestRequest request = new CreateTradeRequestRequest(10L);
+		CreateTradeRequestReq request = new CreateTradeRequestReq(10L);
 
 		Trade trade = Trade.builder()
 			.memberId(100L)
@@ -232,7 +232,7 @@ class TradeRequestServiceTest {
 		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
 
 		// when
-		TradeRequestResponse response = tradeRequestService.getTradeRequest(tradeRequestId);
+		TradeRequestRes response = tradeRequestService.getTradeRequest(tradeRequestId);
 
 		// then
 		assertThat(response).isNotNull();
@@ -287,7 +287,7 @@ class TradeRequestServiceTest {
 		given(tradeRequestRepository.findByTrade(trade)).willReturn(List.of(request1, request2));
 
 		// when
-		List<TradeRequestResponse> responses = tradeRequestService.getTradeRequestsByTrade(tradeId);
+		List<TradeRequestRes> responses = tradeRequestService.getTradeRequestsByTrade(tradeId);
 
 		// then
 		assertThat(responses).hasSize(2);
@@ -322,7 +322,7 @@ class TradeRequestServiceTest {
 		given(tradeRequestRepository.findByRequesterId(requesterId)).willReturn(List.of(request1));
 
 		// when
-		List<TradeRequestResponse> responses = tradeRequestService.getTradeRequestsByRequester(requesterId);
+		List<TradeRequestRes> responses = tradeRequestService.getTradeRequestsByRequester(requesterId);
 
 		// then
 		assertThat(responses).hasSize(1);

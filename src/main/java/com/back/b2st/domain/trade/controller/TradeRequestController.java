@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.trade.api.TradeRequestApi;
-import com.back.b2st.domain.trade.dto.request.CreateTradeRequestRequest;
-import com.back.b2st.domain.trade.dto.response.TradeRequestResponse;
+import com.back.b2st.domain.trade.dto.request.CreateTradeRequestReq;
+import com.back.b2st.domain.trade.dto.response.TradeRequestRes;
 import com.back.b2st.domain.trade.service.TradeRequestService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
@@ -32,12 +32,12 @@ public class TradeRequestController implements TradeRequestApi {
 
 	@Override
 	@PostMapping("/trades/{tradeId}/requests")
-	public ResponseEntity<BaseResponse<TradeRequestResponse>> createTradeRequest(
+	public ResponseEntity<BaseResponse<TradeRequestRes>> createTradeRequest(
 		@PathVariable("tradeId") Long tradeId,
-		@Valid @RequestBody CreateTradeRequestRequest request,
+		@Valid @RequestBody CreateTradeRequestReq request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
-		TradeRequestResponse response = tradeRequestService.createTradeRequest(
+		TradeRequestRes response = tradeRequestService.createTradeRequest(
 			tradeId,
 			request,
 			userPrincipal.getId()
@@ -47,16 +47,16 @@ public class TradeRequestController implements TradeRequestApi {
 
 	@Override
 	@GetMapping("/trade-requests/{tradeRequestId}")
-	public ResponseEntity<BaseResponse<TradeRequestResponse>> getTradeRequest(
+	public ResponseEntity<BaseResponse<TradeRequestRes>> getTradeRequest(
 		@PathVariable("tradeRequestId") Long tradeRequestId
 	) {
-		TradeRequestResponse response = tradeRequestService.getTradeRequest(tradeRequestId);
+		TradeRequestRes response = tradeRequestService.getTradeRequest(tradeRequestId);
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
 	@Override
 	@GetMapping("/trade-requests")
-	public ResponseEntity<BaseResponse<List<TradeRequestResponse>>> getTradeRequests(
+	public ResponseEntity<BaseResponse<List<TradeRequestRes>>> getTradeRequests(
 		@RequestParam(value = "tradeId", required = false) Long tradeId,
 		@RequestParam(value = "requesterId", required = false) Long requesterId
 	) {
@@ -64,7 +64,7 @@ public class TradeRequestController implements TradeRequestApi {
 			throw new IllegalArgumentException("tradeId 또는 requesterId 중 하나는 필수입니다.");
 		}
 
-		List<TradeRequestResponse> responses;
+		List<TradeRequestRes> responses;
 		if (tradeId != null) {
 			responses = tradeRequestService.getTradeRequestsByTrade(tradeId);
 		} else {

@@ -34,7 +34,7 @@ public class ReservationController {
 		Long memberId = user.getId();
 
 		ReservationRes response = reservationService.createReservation(memberId, request);
-		return BaseResponse.success(response);
+		return BaseResponse.created(response);
 	}
 
 	/** === 예매 단건 조회 === */

@@ -1,4 +1,4 @@
-package com.back.b2st.domain.venue.seat.seat.controller;
+package com.back.b2st.domain.seat.seat.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
@@ -15,8 +15,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.venue.seat.seat.error.SeatErrorCode;
-import com.back.b2st.domain.venue.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 

@@ -1,12 +1,12 @@
-package com.back.b2st.domain.venue.seat.seat.service;
+package com.back.b2st.domain.seat.seat.service;
 
 import org.springframework.stereotype.Service;
 
-import com.back.b2st.domain.venue.seat.seat.dto.request.CreateSeatReq;
-import com.back.b2st.domain.venue.seat.seat.dto.response.CreateSeatRes;
-import com.back.b2st.domain.venue.seat.seat.entity.Seat;
-import com.back.b2st.domain.venue.seat.seat.error.SeatErrorCode;
-import com.back.b2st.domain.venue.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.seat.seat.dto.request.CreateSeatReq;
+import com.back.b2st.domain.seat.seat.dto.response.CreateSeatRes;
+import com.back.b2st.domain.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.global.error.exception.BusinessException;

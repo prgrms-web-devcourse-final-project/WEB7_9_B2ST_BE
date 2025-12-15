@@ -1,4 +1,4 @@
-package com.back.b2st.domain.venue.seat.seat.dto.request;
+package com.back.b2st.domain.seat.seat.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 

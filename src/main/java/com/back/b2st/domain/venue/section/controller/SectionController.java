@@ -21,6 +21,7 @@ public class SectionController {
 
 	private final SectionService sectionService;
 
+	// 공연장 구역 정보 생성
 	@PostMapping("/admin/venues/{venueId}/sections")
 	public BaseResponse<CreateSectionRes> createSection(
 		@PathVariable("venueId") Long venueId,

@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.seat.seat.dto.request.CreateSeatReq;
 import com.back.b2st.domain.seat.seat.dto.response.CreateSeatRes;
+import com.back.b2st.domain.seat.seat.dto.response.DetailSeatInfo;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
@@ -24,7 +25,7 @@ public class SeatService {
 
 	public CreateSeatRes createSeatInfo(Long venueId, CreateSeatReq request) {
 		// todo : venueId 검증
-		Section section = validateSectionId(request);
+		Section section = validateSectionId(request.sectionId());
 		// todo : 기등록 검증
 
 		Seat seat = Seat.builder()
@@ -38,9 +39,14 @@ public class SeatService {
 		return new CreateSeatRes(seatRepository.save(seat));
 	}
 
-	private Section validateSectionId(CreateSeatReq request) {
-		return sectionRepository.findById(request.sectionId())
+	private Section validateSectionId(Long sectionId) {
+		return sectionRepository.findById(sectionId)
 			.orElseThrow(() -> new BusinessException(SeatErrorCode.SECTION_NOT_FOUND));
 	}
 
+	public DetailSeatInfo getSeatInfoBySeatId(Long seatId) {
+		Seat seat = seatRepository.findById(seatId)
+			.orElseThrow(() -> new BusinessException(SeatErrorCode.SEAT_NOT_FOUND));
+		return new DetailSeatInfo(seat);
+	}
 }

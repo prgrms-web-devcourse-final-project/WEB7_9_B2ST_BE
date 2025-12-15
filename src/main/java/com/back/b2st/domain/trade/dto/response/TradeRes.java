@@ -11,7 +11,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class TradeResponse {
+public class TradeRes {
 
 	private Long tradeId;
 	private Long memberId;
@@ -27,8 +27,8 @@ public class TradeResponse {
 	private String seatNumber;
 	private LocalDateTime createdAt;
 
-	public static TradeResponse from(Trade trade) {
-		return TradeResponse.builder()
+	public static TradeRes from(Trade trade) {
+		return TradeRes.builder()
 			.tradeId(trade.getId())
 			.memberId(trade.getMemberId())
 			.performanceId(trade.getPerformanceId())

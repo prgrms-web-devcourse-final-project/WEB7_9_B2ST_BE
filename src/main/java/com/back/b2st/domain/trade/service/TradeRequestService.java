@@ -10,8 +10,8 @@ import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.entity.TicketStatus;
 import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.service.TicketService;
-import com.back.b2st.domain.trade.dto.request.CreateTradeRequestRequest;
-import com.back.b2st.domain.trade.dto.response.TradeRequestResponse;
+import com.back.b2st.domain.trade.dto.request.CreateTradeRequestReq;
+import com.back.b2st.domain.trade.dto.response.TradeRequestRes;
 import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeRequest;
 import com.back.b2st.domain.trade.entity.TradeRequestStatus;
@@ -34,7 +34,7 @@ public class TradeRequestService {
 	private final TicketService ticketService;
 
 	@Transactional
-	public TradeRequestResponse createTradeRequest(Long tradeId, CreateTradeRequestRequest request,
+	public TradeRequestRes createTradeRequest(Long tradeId, CreateTradeRequestReq request,
 		Long requesterId) {
 		Trade trade = findTradeById(tradeId);
 
@@ -49,26 +49,26 @@ public class TradeRequestService {
 			.build();
 
 		TradeRequest savedRequest = tradeRequestRepository.save(tradeRequest);
-		return TradeRequestResponse.from(savedRequest);
+		return TradeRequestRes.from(savedRequest);
 	}
 
-	public TradeRequestResponse getTradeRequest(Long tradeRequestId) {
+	public TradeRequestRes getTradeRequest(Long tradeRequestId) {
 		TradeRequest tradeRequest = findTradeRequestById(tradeRequestId);
-		return TradeRequestResponse.from(tradeRequest);
+		return TradeRequestRes.from(tradeRequest);
 	}
 
-	public List<TradeRequestResponse> getTradeRequestsByTrade(Long tradeId) {
+	public List<TradeRequestRes> getTradeRequestsByTrade(Long tradeId) {
 		Trade trade = findTradeById(tradeId);
 		List<TradeRequest> requests = tradeRequestRepository.findByTrade(trade);
 		return requests.stream()
-			.map(TradeRequestResponse::from)
+			.map(TradeRequestRes::from)
 			.collect(Collectors.toList());
 	}
 
-	public List<TradeRequestResponse> getTradeRequestsByRequester(Long requesterId) {
+	public List<TradeRequestRes> getTradeRequestsByRequester(Long requesterId) {
 		List<TradeRequest> requests = tradeRequestRepository.findByRequesterId(requesterId);
 		return requests.stream()
-			.map(TradeRequestResponse::from)
+			.map(TradeRequestRes::from)
 			.collect(Collectors.toList());
 	}
 

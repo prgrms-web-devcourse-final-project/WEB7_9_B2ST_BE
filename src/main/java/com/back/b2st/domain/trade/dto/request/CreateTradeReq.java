@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class CreateTradeRequest {
+public class CreateTradeReq {
 
 	@NotNull(message = "티켓 ID는 필수입니다.")
 	private Long ticketId;
@@ -24,7 +24,7 @@ public class CreateTradeRequest {
 	private Integer totalCount;
 
 	// 테스트용 생성자
-	public CreateTradeRequest(Long ticketId, TradeType type, Integer price, Integer totalCount) {
+	public CreateTradeReq(Long ticketId, TradeType type, Integer price, Integer totalCount) {
 		this.ticketId = ticketId;
 		this.type = type;
 		this.price = price;

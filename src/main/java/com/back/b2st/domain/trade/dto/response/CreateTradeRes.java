@@ -7,7 +7,7 @@ import com.back.b2st.domain.trade.entity.TradeType;
 import lombok.Getter;
 
 @Getter
-public class CreateTradeResponse {
+public class CreateTradeRes {
 
 	private final Long tradeId;
 	private final TradeType type;
@@ -18,7 +18,7 @@ public class CreateTradeResponse {
 	private final Integer totalCount;
 	private final Integer price;
 
-	public CreateTradeResponse(Trade trade) {
+	public CreateTradeRes(Trade trade) {
 		this.tradeId = trade.getId();
 		this.type = trade.getType();
 		this.status = trade.getStatus();

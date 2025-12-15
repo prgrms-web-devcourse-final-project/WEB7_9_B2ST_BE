@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/schedules/{scheduleId}/seats")
+@RequestMapping("/api/schedules/{scheduleId}/seats")
 public class SeatSelectionController {
 
 	private final SeatHoldService seatHoldService;

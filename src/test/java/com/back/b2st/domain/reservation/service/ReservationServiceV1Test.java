@@ -1,6 +1,8 @@
 package com.back.b2st.domain.reservation.service;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -8,16 +10,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import com.back.b2st.domain.reservation.dto.request.ReservationRequest;
-import com.back.b2st.domain.reservation.dto.response.ReservationResponse;
+import com.back.b2st.domain.reservation.dto.request.ReservationReq;
+import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.entity.ScheduleSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class ReservationServiceTest {
+class ReservationServiceV1Test {
 
 	@Autowired
 	private ReservationService reservationService;
@@ -28,12 +31,18 @@ class ReservationServiceTest {
 	@Autowired
 	private ReservationRepository reservationRepository;
 
+	@MockitoBean
+	private SeatLockService seatLockService;
+
 	private final Long performanceId = 1001L;
 	private final Long seatId = 55L;
 	private final Long memberId = 999L;  // 가짜 회원 ID
 
 	@BeforeEach
 	void setUp() {
+		given(seatLockService.tryLock(any(), any(), any()))
+			.willReturn("LOCK_VALUE");
+
 		reservationRepository.deleteAll();
 		scheduleSeatRepository.deleteAll();
 
@@ -50,10 +59,10 @@ class ReservationServiceTest {
 	@DisplayName("예매 생성 성공 - 좌석 HOLD + Reservation 저장")
 	void createReservationSuccess() {
 		// given
-		ReservationRequest request = new ReservationRequest(performanceId, seatId);
+		ReservationReq request = new ReservationReq(performanceId, seatId);
 
 		// when
-		ReservationResponse response = reservationService.createReservation(memberId, request);
+		ReservationRes response = reservationService.createReservation(memberId, request);
 
 		// then
 		assertThat(response).isNotNull();
@@ -70,3 +79,4 @@ class ReservationServiceTest {
 		assertThat(updatedSeat.getStatus().name()).isEqualTo("HOLD");
 	}
 }
+

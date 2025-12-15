@@ -9,6 +9,8 @@ import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.reservation.entity.ScheduleSeat;
 import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.venue.section.entity.Section;
+import com.back.b2st.domain.venue.section.repository.SectionRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,13 +24,19 @@ public class DataInitializer implements CommandLineRunner {
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final ScheduleSeatRepository scheduleSeatRepository;
+	private final SectionRepository sectionRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
 		// 서버 재시작시 중복 생성 방지 차
+		initMemberData();
+		initSectionData();
+	}
+
+	private boolean initMemberData() {
 		if (memberRepository.count() > 0) {
 			log.info("[DataInit] 이미 계정 존재하여 초기화 스킵");
-			return;
+			return true;
 		}
 
 		log.info("[DataInit] 테스트 계정 데이터 생성");
@@ -76,5 +84,35 @@ public class DataInitializer implements CommandLineRunner {
 
 		scheduleSeatRepository.save(testSeat);
 		log.info("[DataInit] 테스트용 좌석 생성 완료 → scheduleId=1001, seatId=55");
+		return false;
+	}
+
+	private void initSectionData() {
+		if (sectionRepository.count() > 0) {
+			log.info("[DataInit] 등록 구역 존재하여 초기화 스킵");
+			return;
+		}
+
+		Section section1A = Section.builder()
+			.venueId(1L)
+			.sectionName("A")
+			.build();
+
+		Section section1B = Section.builder()
+			.venueId(1L)
+			.sectionName("B")
+			.build();
+
+		Section section2A = Section.builder()
+			.venueId(2L)
+			.sectionName("A")
+			.build();
+
+		Section section = sectionRepository.save(section1A);
+		sectionRepository.save(section1B);
+		sectionRepository.save(section2A);
+
+		log.info("[DataInit/Test] Section initialized. count=3 (venueId=1[A,B], venueId=2[A])");
+		log.info("[DataInit/Test] Section initialized. " + section.getId());
 	}
 }

@@ -1,5 +1,7 @@
 package com.back.b2st.domain.seat.seat.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.seat.seat.dto.request.CreateSeatReq;
@@ -9,7 +11,7 @@ import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
-import com.back.b2st.domain.venue.section.repository.SectionRepository;
+import com.back.b2st.domain.venue.section.service.SectionService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -21,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SeatService {
 
 	private final SeatRepository seatRepository;
-	private final SectionRepository sectionRepository;
+	private final SectionService sectionService;
 
 	public CreateSeatRes createSeatInfo(Long venueId, CreateSeatReq request) {
 		// todo : venueId 검증
@@ -40,8 +42,7 @@ public class SeatService {
 	}
 
 	private Section validateSectionId(Long sectionId) {
-		return sectionRepository.findById(sectionId)
-			.orElseThrow(() -> new BusinessException(SeatErrorCode.SECTION_NOT_FOUND));
+		return sectionService.getSection(sectionId);
 	}
 
 	public DetailSeatInfo getSeatInfoBySeatId(Long seatId) {
@@ -50,10 +51,15 @@ public class SeatService {
 		return new DetailSeatInfo(seat);
 	}
 
-	public DetailSeatInfo getSeatInfoBySectionId(Long sectionId) {
+	public List<DetailSeatInfo> getSeatInfoBySectionId(Long sectionId) {
 		validateSectionId(sectionId);
-		Seat seat = seatRepository.findById(sectionId)
-			.orElseThrow(() -> new BusinessException(SeatErrorCode.SEAT_NOT_FOUND));
-		return new DetailSeatInfo(seat);
+		List<Seat> seats = seatRepository.findBySectionId(sectionId);
+
+		return seats.stream()
+			.map(seat -> new DetailSeatInfo(
+				seat.getSectionName(),
+				seat.getRowLabel(),
+				seat.getSeatNumber()
+			)).toList();
 	}
 }

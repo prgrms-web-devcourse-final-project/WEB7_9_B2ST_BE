@@ -3,6 +3,8 @@ package com.back.b2st.domain.seat.seat.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,7 @@ import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
+import com.back.b2st.domain.venue.section.error.SectionErrorCode;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -77,9 +80,6 @@ class SeatServiceTest {
 	void getSeatInfoBySeatId_fail() {
 		// given
 		Long seatId = 99L;
-		String sectionName = section1A.getSectionName();
-		String rowLabel = seat.getRowLabel();
-		int seatNumber = seat.getSeatNumber();
 
 		// when
 		BusinessException e = assertThrows(BusinessException.class,
@@ -87,5 +87,37 @@ class SeatServiceTest {
 
 		// then
 		assertThat(e.getErrorCode()).isEqualTo(SeatErrorCode.SEAT_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("좌석조회 - 성공, 구역ID")
+	void getSeatInfoBySectionId_success() {
+		// given
+		Long sectionId = section1A.getId();
+		String sectionName = section1A.getSectionName();
+		String rowLabel = seat.getRowLabel();
+		int seatNumber = seat.getSeatNumber();
+
+		// when
+		List<DetailSeatInfo> findSeat = seatService.getSeatInfoBySectionId(sectionId);
+
+		// then
+		// assertThat(findSeat.sectionName()).isEqualTo(sectionName);
+		// assertThat(findSeat.rowLabel()).isEqualTo(rowLabel);
+		// assertThat(findSeat.seatNumber()).isEqualTo(seatNumber);
+	}
+
+	@Test
+	@DisplayName("좌석조회 - 실패, 구역ID")
+	void getSeatInfoBySectionId_fail() {
+		// given
+		Long sectionId = 99L;
+
+		// when
+		BusinessException e = assertThrows(BusinessException.class,
+			() -> seatService.getSeatInfoBySectionId(sectionId));
+
+		// then
+		assertThat(e.getErrorCode()).isEqualTo(SectionErrorCode.SECTION_NOT_FOUND);
 	}
 }

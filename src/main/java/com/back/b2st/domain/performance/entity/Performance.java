@@ -44,7 +44,7 @@ public class Performance extends BaseEntity {
 	private Venue venue;    //공연장 FK
 
 	@Column(nullable = false, length = 200)
-	private String title;    //
+	private String title;	//공연제목
 
 	@Column(nullable = false, length = 50)
 	private String category;    //장르

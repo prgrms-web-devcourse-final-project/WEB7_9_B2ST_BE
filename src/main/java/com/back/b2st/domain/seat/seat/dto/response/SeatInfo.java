@@ -2,13 +2,13 @@ package com.back.b2st.domain.seat.seat.dto.response;
 
 import com.back.b2st.domain.seat.seat.entity.Seat;
 
-public record DetailSeatInfo(
+public record SeatInfo(
 	String sectionName,
 	String rowLabel,
 	Integer seatNumber
 ) {
-	public DetailSeatInfo(Seat seat) {
-		this(
+	public static SeatInfo toDetail(Seat seat) {
+		return new SeatInfo(
 			seat.getSectionName(),
 			seat.getRowLabel(),
 			seat.getSeatNumber()

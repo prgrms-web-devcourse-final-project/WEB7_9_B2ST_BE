@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.seat.seat.dto.request.CreateSeatReq;
 import com.back.b2st.domain.seat.seat.dto.response.CreateSeatRes;
-import com.back.b2st.domain.seat.seat.dto.response.DetailSeatInfo;
+import com.back.b2st.domain.seat.seat.dto.response.SeatInfo;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
@@ -54,18 +54,18 @@ public class SeatService {
 		return sectionService.getSection(sectionId);
 	}
 
-	public DetailSeatInfo getSeatInfoBySeatId(Long seatId) {
+	public SeatInfo getSeatInfoBySeatId(Long seatId) {
 		Seat seat = seatRepository.findById(seatId)
 			.orElseThrow(() -> new BusinessException(SeatErrorCode.SEAT_NOT_FOUND));
-		return new DetailSeatInfo(seat);
+		return SeatInfo.toDetail(seat);
 	}
 
-	public List<DetailSeatInfo> getSeatInfoBySectionId(Long sectionId) {
+	public List<SeatInfo> getSeatInfoBySectionId(Long sectionId) {
 		validateSectionId(sectionId);
 		List<Seat> seats = seatRepository.findBySectionId(sectionId);
 
 		return seats.stream()
-			.map(seat -> new DetailSeatInfo(
+			.map(seat -> new SeatInfo(
 				seat.getSectionName(),
 				seat.getRowLabel(),
 				seat.getSeatNumber()

@@ -6,7 +6,7 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.back.b2st.domain.performanceSchedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 
 public interface PerformanceScheduleRepository extends JpaRepository<PerformanceSchedule, Long> {
 

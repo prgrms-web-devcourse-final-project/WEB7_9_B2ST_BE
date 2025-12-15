@@ -1,8 +1,8 @@
-package com.back.b2st.domain.performanceSchedule.entity;
+package com.back.b2st.domain.performanceschedule.entity;
 
 import com.back.b2st.domain.performance.entity.Performance;
-import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.global.jpa.entity.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,7 +15,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
+
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;

@@ -14,7 +14,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.venue.constants.SectionApiPath;
 import com.back.b2st.domain.venue.section.error.SectionErrorCode;
 
 @SpringBootTest
@@ -26,13 +25,12 @@ class SectionControllerTest {
 	@Autowired
 	private MockMvc mvc;
 
-	private String url = "/api";
+	private String createUrl = "/api/admin/venues/{venueId}/sections";
 
 	@Test
 	@DisplayName("구역생성_성공")
 	void createSection_success() throws Exception {
 		// given
-		url += SectionApiPath.CREATE;
 		Long param = 1L;
 
 		String sectionName = "A";
@@ -43,7 +41,7 @@ class SectionControllerTest {
 
 		// when & then
 		mvc.perform(
-				post(url, param)
+				post(createUrl, param)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -64,7 +62,6 @@ class SectionControllerTest {
 	@DisplayName("구역생성_성공")
 	void createSection_fail_duplicate() throws Exception {
 		// given
-		url += SectionApiPath.CREATE;
 		Long param = 1L;
 
 		String sectionName = "A";
@@ -75,7 +72,7 @@ class SectionControllerTest {
 
 		// when & then
 		mvc.perform(
-				post(url, param)
+				post(createUrl, param)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -86,7 +83,7 @@ class SectionControllerTest {
 		;
 
 		mvc.perform(
-				post(url, param)
+				post(createUrl, param)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)

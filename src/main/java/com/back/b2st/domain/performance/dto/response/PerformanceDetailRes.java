@@ -1,7 +1,7 @@
 package com.back.b2st.domain.performance.dto.response;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
-import com.back.b2st.domain.venue.entity.Venue;
+import com.back.b2st.domain.venue.venue.entity.Venue;
 import java.time.LocalDateTime;
 
 public record PerformanceDetailRes(

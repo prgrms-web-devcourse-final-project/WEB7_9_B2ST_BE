@@ -61,12 +61,7 @@ public class TradeController implements TradeApi {
 		@Valid @RequestBody CreateTradeReq request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
-<<<<<<< HEAD
 		CreateTradeRes response = tradeService.createTrade(request, userPrincipal.getId());
-
-=======
-		CreateTradeResponse response = tradeService.createTrade(request, userPrincipal.getId());
->>>>>>> origin/develop
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 

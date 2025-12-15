@@ -1,4 +1,4 @@
-package com.back.b2st.domain.venue.seat.seat.error;
+package com.back.b2st.domain.seat.seat.error;
 
 import org.springframework.http.HttpStatus;
 

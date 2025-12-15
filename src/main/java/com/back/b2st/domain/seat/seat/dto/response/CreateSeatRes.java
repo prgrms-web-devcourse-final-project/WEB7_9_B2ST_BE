@@ -1,6 +1,6 @@
-package com.back.b2st.domain.venue.seat.seat.dto.response;
+package com.back.b2st.domain.seat.seat.dto.response;
 
-import com.back.b2st.domain.venue.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.seat.entity.Seat;
 
 public record CreateSeatRes(
 	Long seatId,

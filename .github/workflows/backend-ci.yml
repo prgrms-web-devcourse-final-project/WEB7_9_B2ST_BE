@@ -1,0 +1,82 @@
+name: ✨ B2st Backend CI ✨
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      SPRING_PROFILES_ACTIVE: test
+
+    steps:
+      - name: ✨ Checkout repository
+        uses: actions/checkout@v5
+
+      - name: ✨ JDK 21 설정
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: ✨ Gradle Caching
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 🗂️ Make application-test.yml
+        run: |
+          mkdir -p ./src/main/resources
+          
+          echo "${{ secrets.APPLICATION_TEST_YML }}" > src/main/resources/application-test.yml
+
+      - name: ✨ Gradlew 권한 설정
+        run: chmod +x ./gradlew
+
+      - name: 🏗️ Gradle 빌드 및 테스트
+        run: ./gradlew build
+
+      - name: 📊 테스트 결과 업로드
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.run_number }}
+          path: |
+            build/reports/tests/test/
+            build/test-results/test/
+          retention-days: 7
+
+      - name: 📈 JaCoCo 커버리지 검증
+        run: ./gradlew jacocoTestCoverageVerification
+
+      - name: 💬 PR에 JaCoCo 커버리지 코멘트 추가
+        if: github.event_name == 'pull_request'
+        uses: madrapps/jacoco-report@v1.7.1
+        with:
+          paths: ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: 30
+          min-coverage-changed-files: 30
+          title: '📊 코드 커버리지 리포트'
+          update-comment: true
+
+      - name: 📊 JaCoCo 리포트 업로드
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-report-${{ github.run_number }}
+          path: |
+            build/reports/jacoco/
+            build/jacoco/
+          retention-days: 7

@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.back.b2st.domain.venue.constants.SeatApiPath;
 import com.back.b2st.domain.venue.seat.seat.dto.request.CreateSeatReq;
 import com.back.b2st.domain.venue.seat.seat.dto.response.CreateSeatRes;
 import com.back.b2st.domain.venue.seat.seat.service.SeatService;
@@ -22,7 +21,7 @@ public class SeatController {
 
 	private final SeatService seatService;
 
-	@PostMapping(SeatApiPath.CREATE)
+	@PostMapping("/admin/venues/{venueId}/seats")
 	public BaseResponse<CreateSeatRes> createSeat(
 		@PathVariable("venueId") Long venueId,
 		@Valid @RequestBody CreateSeatReq request

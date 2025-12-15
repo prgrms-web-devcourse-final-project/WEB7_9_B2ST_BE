@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.seat.seat.dto.response.SeatInfo;
+import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
@@ -67,7 +67,7 @@ class SeatServiceTest {
 		int seatNumber = seat.getSeatNumber();
 
 		// when
-		SeatInfo findSeat = seatService.getSeatInfoBySeatId(seatId);
+		SeatInfoRes findSeat = seatService.getSeatInfoBySeatId(seatId);
 
 		// then
 		assertThat(findSeat.sectionName()).isEqualTo(sectionName);
@@ -99,7 +99,7 @@ class SeatServiceTest {
 		int seatNumber = seat.getSeatNumber();
 
 		// when
-		List<SeatInfo> findSeat = seatService.getSeatInfoBySectionId(sectionId);
+		List<SeatInfoRes> findSeat = seatService.getSeatInfoBySectionId(sectionId);
 
 		// then
 		// assertThat(findSeat.sectionName()).isEqualTo(sectionName);

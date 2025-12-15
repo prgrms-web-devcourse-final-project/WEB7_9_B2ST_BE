@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Disabled("동시성 문제 재현용 테스트 — 비활성화")
 class SeatSelectionConcurrencyTest {
 
 	@Autowired

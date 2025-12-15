@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.back.b2st.domain.trade.api.TradeRequestApi;
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequestReq;
 import com.back.b2st.domain.trade.dto.response.TradeRequestRes;
 import com.back.b2st.domain.trade.service.TradeRequestService;
@@ -25,10 +26,11 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class TradeRequestController {
+public class TradeRequestController implements TradeRequestApi {
 
 	private final TradeRequestService tradeRequestService;
 
+	@Override
 	@PostMapping("/trades/{tradeId}/requests")
 	public ResponseEntity<BaseResponse<TradeRequestRes>> createTradeRequest(
 		@PathVariable("tradeId") Long tradeId,
@@ -43,6 +45,7 @@ public class TradeRequestController {
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
+	@Override
 	@GetMapping("/trade-requests/{tradeRequestId}")
 	public ResponseEntity<BaseResponse<TradeRequestRes>> getTradeRequest(
 		@PathVariable("tradeRequestId") Long tradeRequestId
@@ -51,6 +54,7 @@ public class TradeRequestController {
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 
+	@Override
 	@GetMapping("/trade-requests")
 	public ResponseEntity<BaseResponse<List<TradeRequestRes>>> getTradeRequests(
 		@RequestParam(value = "tradeId", required = false) Long tradeId,
@@ -70,6 +74,7 @@ public class TradeRequestController {
 		return ResponseEntity.ok(BaseResponse.success(responses));
 	}
 
+	@Override
 	@PatchMapping("/trade-requests/{tradeRequestId}/accept")
 	public BaseResponse<Void> acceptTradeRequest(
 		@PathVariable("tradeRequestId") Long tradeRequestId,
@@ -79,6 +84,7 @@ public class TradeRequestController {
 		return BaseResponse.success(null);
 	}
 
+	@Override
 	@PatchMapping("/trade-requests/{tradeRequestId}/reject")
 	public BaseResponse<Void> rejectTradeRequest(
 		@PathVariable("tradeRequestId") Long tradeRequestId,

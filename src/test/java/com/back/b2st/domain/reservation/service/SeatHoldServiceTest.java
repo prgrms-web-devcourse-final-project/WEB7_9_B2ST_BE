@@ -61,7 +61,7 @@ class SeatHoldServiceTest {
 		// given 해당 좌석 상태를 SOLD 로 설정
 		ScheduleSeat seat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
 			.orElseThrow();
-		seat.markSold(); // SOLD로 상태 변경
+		seat.sold(); // SOLD로 상태 변경
 
 		// when / then BusinessException 발생해야 함
 		BusinessException ex = assertThrows(

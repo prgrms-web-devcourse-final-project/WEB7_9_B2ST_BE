@@ -44,7 +44,7 @@ class ReservationServiceV2Test {
 	void setUp() {
 		reservationRepository.deleteAll();
 		scheduleSeatRepository.deleteAll();
-		
+
 		given(seatLockService.tryLock(any(), any(), any()))
 			.willReturn("LOCK_VALUE");
 
@@ -91,7 +91,7 @@ class ReservationServiceV2Test {
 	void SOLD_좌석이면_예매_실패() {
 		// given
 		ScheduleSeat seat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId).get();
-		seat.markSold();  // SOLD 상태로 변경
+		seat.sold();  // SOLD 상태로 변경
 
 		ReservationReq request = new ReservationReq(scheduleId, seatId);
 

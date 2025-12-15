@@ -64,7 +64,7 @@ public class ScheduleSeat extends BaseEntity {
 	}
 
 	/** SOLD(예매 확정) 상태로 변경 */
-	public void markSold() {
+	public void sold() {
 		this.status = SeatStatus.SOLD;
 	}
 

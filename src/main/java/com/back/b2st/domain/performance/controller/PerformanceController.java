@@ -1,7 +1,7 @@
 package com.back.b2st.domain.performance.controller;
 
-import com.back.b2st.domain.performance.dto.PerformanceDetailRes;
-import com.back.b2st.domain.performance.dto.PerformanceListRes;
+import com.back.b2st.domain.performance.dto.response.PerformanceDetailRes;
+import com.back.b2st.domain.performance.dto.response.PerformanceListRes;
 import com.back.b2st.domain.performance.service.PerformanceService;
 import com.back.b2st.global.common.BaseResponse;
 

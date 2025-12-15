@@ -1,4 +1,4 @@
-package com.back.b2st.domain.performance.dto;
+package com.back.b2st.domain.performance.dto.response;
 
 import java.time.LocalDateTime;
 

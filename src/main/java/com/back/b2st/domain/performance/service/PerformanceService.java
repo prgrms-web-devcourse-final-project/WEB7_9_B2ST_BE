@@ -1,7 +1,7 @@
 package com.back.b2st.domain.performance.service;
 
-import com.back.b2st.domain.performance.dto.PerformanceDetailRes;
-import com.back.b2st.domain.performance.dto.PerformanceListRes;
+import com.back.b2st.domain.performance.dto.response.PerformanceDetailRes;
+import com.back.b2st.domain.performance.dto.response.PerformanceListRes;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.global.error.code.CommonErrorCode;

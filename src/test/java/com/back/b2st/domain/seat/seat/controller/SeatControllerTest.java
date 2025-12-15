@@ -1,4 +1,4 @@
-package com.back.b2st.domain.venue.seat.seat.controller;
+package com.back.b2st.domain.seat.seat.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;

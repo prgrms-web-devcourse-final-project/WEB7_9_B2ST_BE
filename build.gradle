@@ -3,6 +3,7 @@ plugins {
     id 'org.springframework.boot' version '4.0.0'
     id 'io.spring.dependency-management' version '1.1.7'
     id 'checkstyle'
+    id 'jacoco'
 }
 
 group = 'com.back'
@@ -87,4 +88,75 @@ checkstyle {
 
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/*Dto.class',
+                    '**/*Dto$*.class',
+                    '**/*Request.class',
+                    '**/*Request$*.class',
+                    '**/*Response.class',
+                    '**/*Response$*.class',
+                    '**/config/**',
+                    '**/configuration/**',
+                    '**/exception/**',
+                    '**/*Application.class',
+                    '**/Q*.class',
+                    '**/entity/**',
+                    '**/domain/**/*Entity.class'
+            ])
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+
+    violationRules {
+        rule {
+            enabled = true
+            element = 'CLASS'
+
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.30  // 30%부터 시작, 점진적으로 0.50 -> 0.70으로 상향
+            }
+        }
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/*Dto.class',
+                    '**/*Dto$*.class',
+                    '**/*Request.class',
+                    '**/*Request$*.class',
+                    '**/*Response.class',
+                    '**/*Response$*.class',
+                    '**/config/**',
+                    '**/configuration/**',
+                    '**/exception/**',
+                    '**/*Application.class',
+                    '**/Q*.class',
+                    '**/entity/**',
+                    '**/domain/**/*Entity.class'
+            ])
+        }))
+    }
 }

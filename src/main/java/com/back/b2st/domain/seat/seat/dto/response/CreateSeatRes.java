@@ -15,7 +15,7 @@ public record CreateSeatRes(
 			seat.getId(),
 			seat.getVenueId(),
 			seat.getSectionId(),
-			seat.getSection(),
+			seat.getSectionName(),
 			seat.getRowLabel(),
 			seat.getSeatNumber()
 		);

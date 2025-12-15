@@ -27,6 +27,12 @@ import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
 import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.domain.trade.repository.TradeRequestRepository;
+import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.repository.TicketRepository;
+import com.back.b2st.domain.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +47,15 @@ class TradeServiceTest {
 	@Mock
 	private TradeRequestRepository tradeRequestRepository;
 
+	@Mock
+	private TicketRepository ticketRepository;
+
+	@Mock
+	private SeatRepository seatRepository;
+
+	@Mock
+	private ReservationRepository reservationRepository;
+
 	@Test
 	@DisplayName("교환 게시글 생성 성공")
 	void createExchangeTrade_success() {
@@ -51,6 +66,31 @@ class TradeServiceTest {
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
 			.willReturn(false);
 
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+
+		Seat mockSeat = Seat.builder()
+			.venueId(1L)
+			.sectionId(1L)
+			.sectionName("A구역")
+			.rowLabel("5열")
+			.seatNumber(12)
+			.build();
+
+		Reservation mockReservation = Reservation.builder()
+			.performanceId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
+		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
+
 		Trade mockTrade = Trade.builder()
 			.memberId(memberId)
 			.performanceId(1L)
@@ -59,9 +99,9 @@ class TradeServiceTest {
 			.type(TradeType.EXCHANGE)
 			.price(null)
 			.totalCount(1)
-			.section("A")
+			.section("A구역")
 			.row("5열")
-			.seatNumber("12석")
+			.seatNumber("12")
 			.build();
 
 		given(tradeRepository.save(any(Trade.class))).willReturn(mockTrade);
@@ -86,6 +126,31 @@ class TradeServiceTest {
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
 			.willReturn(false);
 
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+
+		Seat mockSeat = Seat.builder()
+			.venueId(1L)
+			.sectionId(1L)
+			.sectionName("A구역")
+			.rowLabel("5열")
+			.seatNumber(12)
+			.build();
+
+		Reservation mockReservation = Reservation.builder()
+			.performanceId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
+		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
+
 		Trade mockTrade = Trade.builder()
 			.memberId(memberId)
 			.performanceId(1L)
@@ -94,9 +159,9 @@ class TradeServiceTest {
 			.type(TradeType.TRANSFER)
 			.price(50000)
 			.totalCount(2)
-			.section("A")
+			.section("A구역")
 			.row("5열")
-			.seatNumber("12석")
+			.seatNumber("12")
 			.build();
 
 		given(tradeRepository.save(any(Trade.class))).willReturn(mockTrade);
@@ -200,6 +265,31 @@ class TradeServiceTest {
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
 			.willReturn(false);
+
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+
+		Seat mockSeat = Seat.builder()
+			.venueId(1L)
+			.sectionId(1L)
+			.sectionName("A구역")
+			.rowLabel("5열")
+			.seatNumber(12)
+			.build();
+
+		Reservation mockReservation = Reservation.builder()
+			.performanceId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
+		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
 
 		given(tradeRepository.save(any(Trade.class)))
 			.willThrow(new DataIntegrityViolationException("Unique constraint violation"));

@@ -5,6 +5,9 @@ import java.util.List;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +19,7 @@ import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
+import com.back.b2st.security.CustomUserDetails;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +61,14 @@ public class DataInitializer implements CommandLineRunner {
 			.isVerified(true)
 			.build();
 
+		Member savedAdmin = memberRepository.save(admin);
+
+		log.info("[DataInit] 관리자 계정 생성 완");
+		log.info("   - 관리자: admin@tt.com / 1234");
+
+		// SecurityContext에 admin 설정 (초기화용)
+		setAuthenticationContext(savedAdmin);
+
 		Member user1 = Member.builder()
 			.email("user1@tt.com")
 			.password(passwordEncoder.encode("1234"))
@@ -75,12 +87,10 @@ public class DataInitializer implements CommandLineRunner {
 			.isVerified(true)
 			.build();
 
-		memberRepository.save(admin);
 		memberRepository.save(user1);
 		memberRepository.save(user2);
 
 		log.info("[DataInit] 계정 생성 완");
-		log.info("   - 관리자: admin@tt.com / 1234");
 		log.info("   - 유저1 : user1@tt.com / 1234");
 		log.info("   - 유저2 : user2@tt.com / 1234");
 
@@ -97,6 +107,16 @@ public class DataInitializer implements CommandLineRunner {
 		scheduleSeatRepository.saveAll(List.of(testSeat1, testSeat2));
 		log.info("[DataInit] 테스트용 좌석 생성 완료 → scheduleId=1001, seatId=55");
 		return false;
+	}
+
+	private void setAuthenticationContext(Member admin) {
+		CustomUserDetails userDetails = new CustomUserDetails(admin);
+		Authentication auth = new UsernamePasswordAuthenticationToken(
+			userDetails,
+			null,
+			userDetails.getAuthorities()
+		);
+		SecurityContextHolder.getContext().setAuthentication(auth);
 	}
 
 	private void initSectionData() {

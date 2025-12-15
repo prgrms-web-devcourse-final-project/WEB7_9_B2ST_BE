@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.seat.seat.dto.response.DetailSeatInfo;
+import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
@@ -67,7 +67,7 @@ class SeatServiceTest {
 		int seatNumber = seat.getSeatNumber();
 
 		// when
-		DetailSeatInfo findSeat = seatService.getSeatInfoBySeatId(seatId);
+		SeatInfoRes findSeat = seatService.getSeatInfoBySeatId(seatId);
 
 		// then
 		assertThat(findSeat.sectionName()).isEqualTo(sectionName);
@@ -99,12 +99,15 @@ class SeatServiceTest {
 		int seatNumber = seat.getSeatNumber();
 
 		// when
-		List<DetailSeatInfo> findSeat = seatService.getSeatInfoBySectionId(sectionId);
+		List<SeatInfoRes> seats = seatService.getSeatInfoBySectionId(sectionId);
 
 		// then
-		// assertThat(findSeat.sectionName()).isEqualTo(sectionName);
-		// assertThat(findSeat.rowLabel()).isEqualTo(rowLabel);
-		// assertThat(findSeat.seatNumber()).isEqualTo(seatNumber);
+		assertThat(seats).isNotEmpty();
+
+		SeatInfoRes findSeat = seats.get(0);
+		assertThat(findSeat.sectionName()).isEqualTo(sectionName);
+		assertThat(findSeat.rowLabel()).isEqualTo(rowLabel);
+		assertThat(findSeat.seatNumber()).isEqualTo(seatNumber);
 	}
 
 	@Test

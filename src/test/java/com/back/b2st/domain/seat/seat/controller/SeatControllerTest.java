@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.error.SectionErrorCode;
@@ -131,6 +132,43 @@ class SeatControllerTest {
 			.andDo(print())
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.message").value(SectionErrorCode.SECTION_NOT_FOUND.getMessage()))
+		;
+	}
+
+	@Test
+	@DisplayName("좌석생성_실패_중복")
+	void createSeat_fail_duplicate() throws Exception {
+		// given
+		Long param = 1L;
+
+		String rowLabel = "2";
+		Long sectionId = section.getId();
+		int seatNumber = 7;
+
+		String requestBody = "{"
+			+ "\"sectionId\": " + sectionId + ","
+			+ "\"rowLabel\": \"" + rowLabel + "\","
+			+ "\"seatNumber\": " + seatNumber
+			+ "}";
+
+		// when & then
+		mvc.perform(
+				post(createUrl, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
+			.andExpect(status().isOk())
+		;
+
+		mvc.perform(
+				post(createUrl, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.message").value(SeatErrorCode.ALREADY_CREATE_SEAT.getMessage()))
 		;
 	}
 

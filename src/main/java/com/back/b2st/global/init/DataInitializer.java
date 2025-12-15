@@ -1,5 +1,7 @@
 package com.back.b2st.global.init;
 
+import java.util.List;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -69,12 +71,17 @@ public class DataInitializer implements CommandLineRunner {
 		log.info("   - 유저1 : user1@tt.com / 1234");
 		log.info("   - 유저2 : user2@tt.com / 1234");
 
-		ScheduleSeat testSeat = ScheduleSeat.builder()
+		ScheduleSeat testSeat1 = ScheduleSeat.builder()
 			.scheduleId(1001L)
 			.seatId(55L)
 			.build();
 
-		scheduleSeatRepository.save(testSeat);
+		ScheduleSeat testSeat2 = ScheduleSeat.builder()
+			.scheduleId(1000L)
+			.seatId(54L)
+			.build();
+
+		scheduleSeatRepository.saveAll(List.of(testSeat1, testSeat2));
 		log.info("[DataInit] 테스트용 좌석 생성 완료 → scheduleId=1001, seatId=55");
 	}
 }

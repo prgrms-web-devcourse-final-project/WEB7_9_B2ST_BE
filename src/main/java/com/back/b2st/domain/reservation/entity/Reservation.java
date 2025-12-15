@@ -1,5 +1,7 @@
 package com.back.b2st.domain.reservation.entity;
 
+import java.time.LocalDateTime;
+
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -41,6 +43,12 @@ public class Reservation extends BaseEntity {
 	@Column(name = "seat_id", nullable = false)
 	private Long seatId;    // 좌석 FK
 
+	@Column(name = "canceled_at")
+	private LocalDateTime canceledAt;
+
+	@Column(name = "completed_at")
+	private LocalDateTime completedAt;
+
 	/** === 예매 상태 === */
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
@@ -59,7 +67,17 @@ public class Reservation extends BaseEntity {
 	}
 
 	/** === 상태 변경 === */
-	public void markPaid() {
+	public void paid() {
 		this.status = ReservationStatus.PAID;
+	}
+
+	public void cancel() {
+		this.status = ReservationStatus.CANCELED;
+		this.canceledAt = LocalDateTime.now();
+	}
+
+	public void complete() {
+		this.status = ReservationStatus.COMPLETED;
+		this.completedAt = LocalDateTime.now();
 	}
 }

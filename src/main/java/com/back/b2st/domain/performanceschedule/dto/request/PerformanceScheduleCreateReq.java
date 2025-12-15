@@ -11,8 +11,8 @@ import jakarta.validation.constraints.NotNull;
  * 공연 회차 생성 요청 DTO
  */
 public record PerformanceScheduleCreateReq(
-		@NotNull
-		Long performanceId,
+		//@NotNull
+		//Long performanceId,
 
 		@NotNull
 		LocalDateTime startAt,

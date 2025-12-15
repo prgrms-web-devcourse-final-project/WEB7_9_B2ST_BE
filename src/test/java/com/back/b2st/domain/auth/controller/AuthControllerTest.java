@@ -87,7 +87,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@DisplayName("통합: 로그인 실패 - 비밀번호 불일치 (에러 코드 A401 확인)")
+	@DisplayName("통합: 로그인 실패 - 비밀번호 불일치")
 	void login_integration_fail_password() throws Exception {
 		// given
 		Member member = Member.builder()
@@ -107,10 +107,9 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
-			.andExpect(status().isUnauthorized()) // 401 확인
-			// A401 코드 검증
-			.andExpect(jsonPath("$.code").value("A401"))
-			.andExpect(jsonPath("$.message").exists());
+			.andExpect(status().isUnauthorized()) // HTTP Header Status: 401
+			.andExpect(jsonPath("$.code").value(401))
+			.andExpect(jsonPath("$.message").value("이메일 또는 비밀번호가 일치하지 않습니다."));
 	}
 
 	@Test
@@ -159,10 +158,9 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@DisplayName("통합: 토큰 재발급 실패 - 유효하지 않은 Refresh Token (에러 코드 A402 확인)")
+	@DisplayName("통합: 토큰 재발급 실패 - 유효하지 않은 Refresh Token")
 	void reissue_integration_fail_invalid_token() throws Exception {
 		// given
-		// 토큰 형식이 아예 틀린 값 (Provider에서 파싱하다 에러 발생 -> Service catch -> A402 throw -> Handler 처리)
 		TokenReissueRequest reissueRequest = TokenReissueRequest.builder()
 			.accessToken("dummy_access_token")
 			.refreshToken("invalid_refresh_token_format")
@@ -173,9 +171,9 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(reissueRequest)))
 			.andDo(print())
-			.andExpect(status().isUnauthorized()) // 401 확인
-			// A402 확인
-			.andExpect(jsonPath("$.code").value("A402"));
+			.andExpect(status().isUnauthorized()) // HTTP Header Status: 401
+			.andExpect(jsonPath("$.code").value(401))
+			.andExpect(jsonPath("$.message").value("유효하지 않은 리프레시 토큰입니다."));
 	}
 
 	@Test

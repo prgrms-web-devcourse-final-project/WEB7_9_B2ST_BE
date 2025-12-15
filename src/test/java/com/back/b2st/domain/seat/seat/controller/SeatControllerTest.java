@@ -15,9 +15,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
+import com.back.b2st.domain.venue.section.error.SectionErrorCode;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 
 import jakarta.persistence.EntityManager;
@@ -130,7 +130,7 @@ class SeatControllerTest {
 			)
 			.andDo(print())
 			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.message").value(SeatErrorCode.SECTION_NOT_FOUND.getMessage()))
+			.andExpect(jsonPath("$.message").value(SectionErrorCode.SECTION_NOT_FOUND.getMessage()))
 		;
 	}
 

@@ -32,10 +32,6 @@ import lombok.NoArgsConstructor;
 			columnList = "venue_id, section_id, section_name"
 		),
 		@Index(
-			name = "idx_seats_venue_section_row_number",
-			columnList = "venue_id, section_id, section_name, row_label, seat_number"
-		),
-		@Index(
 			name = "idx_seats_section",
 			columnList = "section_id, section_name"
 		)

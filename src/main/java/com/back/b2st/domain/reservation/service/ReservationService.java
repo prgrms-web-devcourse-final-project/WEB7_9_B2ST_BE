@@ -23,43 +23,45 @@ public class ReservationService {
 
 	private final ReservationRepository reservationRepository;
 	private final ScheduleSeatRepository scheduleSeatRepository;
+
+	private final SeatLockService seatLockService;
+	private final SeatHoldService seatHoldService;
 	private final SeatHoldTokenService seatHoldTokenService;
-	private final ScheduleSeatService scheduleSeatService;
 
 	/** === 예매 생성 === */
 	@Transactional
 	public ReservationRes createReservation(Long memberId, ReservationReq request) {
 
-		// 1. HOLD 소유권 검증
-		seatHoldTokenService.validateOwnership(
-			request.scheduleId(),
-			request.seatId(),
-			memberId
-		);
+		Long scheduleId = request.scheduleId();
+		Long seatId = request.seatId();
 
-		// 2. 좌석 상태 검증
-		scheduleSeatService.getHoldSeatOrThrow(
-			request.scheduleId(),
-			request.seatId()
-		);
+		// 1. 락 걸기
+		String lockValue = seatLockService.tryLock(scheduleId, seatId, memberId);
 
-		// 3. 중복 예매 방지
-		validateNotAlreadyReserved(
-			request.scheduleId(),
-			request.seatId()
-		);
+		if (lockValue == null) {
+			throw new BusinessException(ReservationErrorCode.SEAT_LOCK_FAILED);
+		}
 
-		// 4. Reservation 생성
-		Reservation reservation = request.toEntity(memberId);
-		Reservation saved = reservationRepository.save(reservation);
+		try {
+			// 2. AVAILABLE → HOLD
+			seatHoldService.holdSeat(scheduleId, seatId);
 
-		// 5. Redis HOLD 제거
-		seatHoldTokenService.remove(
-			request.scheduleId(),
-			request.seatId()
-		);
+			// 3. Redis HOLD TTL 저장
+			seatHoldTokenService.save(scheduleId, seatId, memberId);
 
-		return ReservationRes.from(saved);
+			// 4. 중복 예매 방지
+			validateNotAlreadyReserved(request.scheduleId(), request.seatId());
+
+			// 5. Reservation 생성
+			Reservation reservation = request.toEntity(memberId);
+			Reservation saved = reservationRepository.save(reservation);
+
+			return ReservationRes.from(saved);
+
+		} finally {
+			seatLockService.unlock(scheduleId, seatId, lockValue);
+		}
+
 	}
 
 	/** === 예매 취소 (일단 결제 완료 시 취소 불가) === */

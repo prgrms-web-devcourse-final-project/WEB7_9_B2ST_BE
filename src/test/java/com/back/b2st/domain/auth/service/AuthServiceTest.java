@@ -1,3 +1,5 @@
+package com.back.b2st.domain.auth.service;
+
 import static com.back.b2st.domain.auth.service.AuthTestRequestBuilder.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -18,7 +20,6 @@ import com.back.b2st.domain.auth.dto.request.TokenReissueReq;
 import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
-import com.back.b2st.domain.auth.service.AuthService;
 import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.jwt.JwtTokenProvider;
 import com.back.b2st.global.jwt.dto.response.TokenInfo;
@@ -53,11 +54,6 @@ class AuthServiceTest {
 			.willReturn(authentication);
 		given(authentication.getName()).willReturn("test@test.com");
 
-		// TokenInfo expectedToken = TokenInfo.builder()
-		// 	.grantType("Bearer")
-		// 	.accessToken("access")
-		// 	.refreshToken("refresh")
-		// 	.build();
 		TokenInfo expectedToken = new TokenInfo("Bearer", "access", "refresh");
 		given(jwtTokenProvider.generateToken(authentication)).willReturn(expectedToken);
 

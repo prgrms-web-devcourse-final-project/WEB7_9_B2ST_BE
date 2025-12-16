@@ -20,6 +20,8 @@ import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.error.SectionErrorCode;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
+import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 
 import jakarta.persistence.EntityManager;
 
@@ -35,6 +37,8 @@ class SeatControllerTest {
 	private SeatRepository seatRepository;
 	@Autowired
 	private SectionRepository sectionRepository;
+	@Autowired
+	private VenueRepository venueRepository;
 	@Autowired
 	EntityManager em;
 
@@ -73,7 +77,12 @@ class SeatControllerTest {
 	@DisplayName("좌석생성_성공")
 	void createSeat_success() throws Exception {
 		// given
-		Long param = 1L;
+		Venue venue = venueRepository.save(
+			Venue.builder()
+				.name("잠실실내체육관")
+				.build());
+
+		Long param = venue.getVenueId();
 
 		String rowLabel = "2";
 		Long sectionId = section.getId();
@@ -105,13 +114,41 @@ class SeatControllerTest {
 	@DisplayName("좌석생성_실패_공연장")
 	void createSeat_fail_venud() throws Exception {
 		// todo : venue Repo
+		// given
+		Long param = 999L;
+
+		String rowLabel = "2";
+		Long sectionId = 999L;
+		int seatNumber = 7;
+
+		String requestBody = "{"
+			+ "\"sectionId\": " + sectionId + ","
+			+ "\"rowLabel\": \"" + rowLabel + "\","
+			+ "\"seatNumber\": " + seatNumber
+			+ "}";
+
+		// when & then
+		mvc.perform(
+				post(createUrl, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.message").value(SeatErrorCode.VENUE_NOT_FOUND.getMessage()))
+		;
 	}
 
 	@Test
 	@DisplayName("좌석생성_실패_구역")
 	void createSeat_fail_section() throws Exception {
 		// given
-		Long param = 1L;
+		Venue venue = venueRepository.save(
+			Venue.builder()
+				.name("잠실실내체육관")
+				.build());
+
+		Long param = venue.getVenueId();
 
 		String rowLabel = "2";
 		Long sectionId = 999L;
@@ -139,7 +176,12 @@ class SeatControllerTest {
 	@DisplayName("좌석생성_실패_중복")
 	void createSeat_fail_duplicate() throws Exception {
 		// given
-		Long param = 1L;
+		Venue venue = venueRepository.save(
+			Venue.builder()
+				.name("잠실실내체육관")
+				.build());
+
+		Long param = venue.getVenueId();
 
 		String rowLabel = "2";
 		Long sectionId = section.getId();

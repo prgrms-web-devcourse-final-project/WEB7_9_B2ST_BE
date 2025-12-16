@@ -86,7 +86,7 @@ class TicketServiceTest {
 
 		// Create test reservation
 		Reservation reservation = Reservation.builder()
-			.performanceId(1L)
+			.scheduleId(1L)
 			.memberId(savedMember.getId())
 			.seatId(savedSeat.getId())
 			.build();
@@ -203,7 +203,7 @@ class TicketServiceTest {
 	void 티켓취소_양도티켓취소불가() {
 		// given
 		ticketService.transferTicket(rId, mId, sId);
-		
+
 		// when
 		BusinessException e = assertThrows(BusinessException.class,
 			() -> ticketService.cancelTicket(rId, mId, sId));

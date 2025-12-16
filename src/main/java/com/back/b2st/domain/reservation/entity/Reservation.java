@@ -44,7 +44,7 @@ public class Reservation extends BaseEntity {
 	private Long id;    // PK
 
 	@Column(name = "schedule_id", nullable = false)
-	private Long scheduleId;    // 회차 FK
+	private Long scheduleId;    // 회차 FK (PerformanceSchedule = schedule 엔티티)
 
 	@Column(name = "member_id", nullable = false)
 	private Long memberId;    // 예매자 FK

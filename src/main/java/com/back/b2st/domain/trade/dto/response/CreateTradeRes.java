@@ -4,28 +4,27 @@ import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 
-import lombok.Getter;
+public record CreateTradeRes(
+	Long tradeId,
+	TradeType type,
+	TradeStatus status,
+	String section,
+	String row,
+	String seatNumber,
+	Integer totalCount,
+	Integer price
+) {
 
-@Getter
-public class CreateTradeRes {
-
-	private final Long tradeId;
-	private final TradeType type;
-	private final TradeStatus status;
-	private final String section;
-	private final String row;
-	private final String seatNumber;
-	private final Integer totalCount;
-	private final Integer price;
-
-	public CreateTradeRes(Trade trade) {
-		this.tradeId = trade.getId();
-		this.type = trade.getType();
-		this.status = trade.getStatus();
-		this.section = trade.getSection();
-		this.row = trade.getRow();
-		this.seatNumber = trade.getSeatNumber();
-		this.totalCount = trade.getTotalCount();
-		this.price = trade.getPrice();
+	public static CreateTradeRes from(Trade trade) {
+		return new CreateTradeRes(
+			trade.getId(),
+			trade.getType(),
+			trade.getStatus(),
+			trade.getSection(),
+			trade.getRow(),
+			trade.getSeatNumber(),
+			trade.getTotalCount(),
+			trade.getPrice()
+		);
 	}
 }

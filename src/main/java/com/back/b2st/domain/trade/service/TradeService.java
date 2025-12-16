@@ -24,6 +24,7 @@ import com.back.b2st.domain.trade.entity.TradeRequestStatus;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
+import com.back.b2st.domain.trade.mapper.TradeMapper;
 import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.domain.trade.repository.TradeRequestRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -67,12 +68,12 @@ public class TradeService {
 	@Transactional
 	public List<CreateTradeRes> createTrade(CreateTradeReq request, Long memberId) {
 		// 교환은 1개만 가능
-		if (request.getType() == TradeType.EXCHANGE && request.getTicketIds().size() != 1) {
+		if (request.type() == TradeType.EXCHANGE && request.ticketIds().size() != 1) {
 			throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_COUNT);
 		}
 
 		// 양도는 1개 이상 가능
-		if (request.getType() == TradeType.TRANSFER && request.getTicketIds().isEmpty()) {
+		if (request.type() == TradeType.TRANSFER && request.ticketIds().isEmpty()) {
 			throw new BusinessException(TradeErrorCode.INVALID_TICKET_COUNT);
 		}
 
@@ -80,7 +81,7 @@ public class TradeService {
 
 		List<CreateTradeRes> results = new java.util.ArrayList<>();
 
-		for (Long ticketId : request.getTicketIds()) {
+		for (Long ticketId : request.ticketIds()) {
 			validateTicketNotDuplicated(ticketId);
 
 			// Ticket 조회
@@ -100,29 +101,11 @@ public class TradeService {
 			Reservation reservation = reservationRepository.findById(ticket.getReservationId())
 				.orElseThrow(() -> new BusinessException(TradeErrorCode.TICKET_NOT_OWNED));
 
-			// 실제 데이터 사용
-			String section = seat.getSectionName();
-			String row = seat.getRowLabel();
-			String seatNumber = seat.getSeatNumber().toString();
-			Long performanceId = reservation.getPerformanceId();
-			Long scheduleId = 1L;  // 회차 연결 전까지 하드코딩 유지
-
-			Trade trade = Trade.builder()
-				.memberId(memberId)
-				.performanceId(performanceId)
-				.scheduleId(scheduleId)
-				.ticketId(ticketId)
-				.type(request.getType())
-				.price(request.getPrice())
-				.totalCount(request.getTicketIds().size())  // 전체 티켓 개수
-				.section(section)
-				.row(row)
-				.seatNumber(seatNumber)
-				.build();
+		Trade trade = TradeMapper.toEntity(request, ticket, seat, reservation, memberId);
 
 			try {
 				Trade savedTrade = tradeRepository.save(trade);
-				results.add(new CreateTradeRes(savedTrade));
+				results.add(CreateTradeRes.from(savedTrade));
 			} catch (DataIntegrityViolationException e) {
 				throw new BusinessException(TradeErrorCode.TICKET_ALREADY_REGISTERED);
 			}
@@ -150,7 +133,7 @@ public class TradeService {
 		validateTradeIsActive(trade);
 		validateTradeIsTransfer(trade);
 
-		trade.updatePrice(request.getPrice());
+		trade.updatePrice(request.price());
 	}
 
 	@Transactional
@@ -170,12 +153,12 @@ public class TradeService {
 	}
 
 	private void validateTradeType(CreateTradeReq request) {
-		if (request.getType() == TradeType.EXCHANGE) {
-			if (request.getPrice() != null) {
+		if (request.type() == TradeType.EXCHANGE) {
+			if (request.price() != null) {
 				throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_PRICE);
 			}
-		} else if (request.getType() == TradeType.TRANSFER) {
-			if (request.getPrice() == null || request.getPrice() <= 0) {
+		} else if (request.type() == TradeType.TRANSFER) {
+			if (request.price() == null || request.price() <= 0) {
 				throw new BusinessException(TradeErrorCode.INVALID_TRANSFER_PRICE);
 			}
 		}

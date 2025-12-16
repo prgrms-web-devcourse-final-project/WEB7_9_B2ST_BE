@@ -111,9 +111,9 @@ class TradeServiceTest {
 
 		// then
 		assertThat(response).hasSize(1);
-		assertThat(response.get(0).getType()).isEqualTo(TradeType.EXCHANGE);
-		assertThat(response.get(0).getTotalCount()).isEqualTo(1);
-		assertThat(response.get(0).getPrice()).isNull();
+		assertThat(response.get(0).type()).isEqualTo(TradeType.EXCHANGE);
+		assertThat(response.get(0).totalCount()).isEqualTo(1);
+		assertThat(response.get(0).price()).isNull();
 		verify(tradeRepository).save(any(Trade.class));
 	}
 
@@ -172,9 +172,9 @@ class TradeServiceTest {
 
 		// then
 		assertThat(response).hasSize(1);
-		assertThat(response.get(0).getType()).isEqualTo(TradeType.TRANSFER);
-		assertThat(response.get(0).getPrice()).isEqualTo(50000);
-		assertThat(response.get(0).getTotalCount()).isEqualTo(1);
+		assertThat(response.get(0).type()).isEqualTo(TradeType.TRANSFER);
+		assertThat(response.get(0).price()).isEqualTo(50000);
+		assertThat(response.get(0).totalCount()).isEqualTo(1);
 		verify(tradeRepository).save(any(Trade.class));
 	}
 

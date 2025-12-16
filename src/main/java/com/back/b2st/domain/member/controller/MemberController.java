@@ -22,6 +22,6 @@ public class MemberController {
 	@PostMapping("/signup")
 	public BaseResponse<Long> signup(@Valid @RequestBody SignupReq request) {
 		Long memberId = memberService.signup(request);
-		return BaseResponse.success(memberId);
+		return BaseResponse.created(memberId);
 	}
 }

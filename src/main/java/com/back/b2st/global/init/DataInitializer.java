@@ -185,12 +185,12 @@ public class DataInitializer implements CommandLineRunner {
 			.sectionName("A")
 			.build();
 
-		Section section = sectionRepository.save(section1A);
-		sectionRepository.save(section1B);
+		Section sectionA = sectionRepository.save(section1A);
+		Section sectionB = sectionRepository.save(section1B);
 		sectionRepository.save(section2A);
 
 		log.info("[DataInit/Test] Section initialized. count=3 (venueId=1[A,B], venueId=2[A])");
-		log.info("[DataInit/Test] Section initialized. " + section.getId());
+		log.info("[DataInit/Test] Section initialized. " + sectionA.getId());
 	}
 
 	private void initSectData() {
@@ -199,17 +199,33 @@ public class DataInitializer implements CommandLineRunner {
 			return;
 		}
 		Long venueId = venue.getVenueId();
-		Section section1A = sectionRepository.findByVenueId(venueId).getFirst();
+		List<Section> sections = sectionRepository.findByVenueId(venueId);
+		Section section1A = sections.get(0);
+		Section section1B = sections.get(1);
 
 		List<Seat> seats = new ArrayList<>();
 
-		for (int row = 1; row <= 5; row++) {
+		for (int row = 1; row <= 3; row++) {
 			for (int number = 1; number <= 5; number++) {
 				seats.add(
 					Seat.builder()
 						.venueId(venueId)
 						.sectionId(section1A.getId())
-						.sectionName(section1A.getSectionName())
+						.sectionName("A")
+						.rowLabel(String.valueOf(row))
+						.seatNumber(number)
+						.build()
+				);
+			}
+		}
+
+		for (int row = 1; row <= 3; row++) {
+			for (int number = 1; number <= 5; number++) {
+				seats.add(
+					Seat.builder()
+						.venueId(venueId)
+						.sectionId(section1A.getId())
+						.sectionName("B")
 						.rowLabel(String.valueOf(row))
 						.seatNumber(number)
 						.build()

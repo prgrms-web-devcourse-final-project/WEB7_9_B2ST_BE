@@ -1,5 +1,6 @@
 package com.back.b2st.global.init;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,12 +14,17 @@ import org.springframework.stereotype.Component;
 
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.entity.PerformanceStatus;
+import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.reservation.entity.ScheduleSeat;
 import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
+import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.security.CustomUserDetails;
 
 import lombok.RequiredArgsConstructor;
@@ -35,19 +41,25 @@ public class DataInitializer implements CommandLineRunner {
 	private final ScheduleSeatRepository scheduleSeatRepository;
 	private final SectionRepository sectionRepository;
 	private final SeatRepository seatRepository;
+	private final VenueRepository venueRepository;
+	private final PerformanceRepository performanceRepository;
+
+	private Venue venue;
+	private Performance performance;
 
 	@Override
 	public void run(String... args) throws Exception {
 		// 서버 재시작시 중복 생성 방지 차
 		initMemberData();
+		initPerformance();
 		initSectionData();
 		initSectData();
 	}
 
-	private boolean initMemberData() {
+	private void initMemberData() {
 		if (memberRepository.count() > 0) {
 			log.info("[DataInit] 이미 계정 존재하여 초기화 스킵");
-			return true;
+			return;
 		}
 
 		log.info("[DataInit] 테스트 계정 데이터 생성");
@@ -106,7 +118,6 @@ public class DataInitializer implements CommandLineRunner {
 
 		scheduleSeatRepository.saveAll(List.of(testSeat1, testSeat2));
 		log.info("[DataInit] 테스트용 좌석 생성 완료 → scheduleId=1001, seatId=55");
-		return false;
 	}
 
 	private void setAuthenticationContext(Member admin) {
@@ -119,13 +130,44 @@ public class DataInitializer implements CommandLineRunner {
 		SecurityContextHolder.getContext().setAuthentication(auth);
 	}
 
+	// 공연장 - 공연 데이터 생성
+	private void initPerformance() {
+		if (!(venueRepository.count() > 0)) {
+			Venue venue1 = Venue.builder()
+				.name("잠실실내체육관")
+				.build();
+
+			venue = venueRepository.save(venue1);
+		} else {
+			log.info("[DataInit] 장소 데이터 초기화 스킵");
+		}
+
+		if (!(performanceRepository.count() < 0)) {
+			Performance performance1 = Performance.builder()
+				.venue(venue)
+				.title("2024 아이유 콘서트 - HEREH WORLD TOUR")
+				.category("콘서트")
+				.posterUrl("")
+				.description("아이유의 월드투어 서울 공연입니다. 최고의 무대와 감동을 선사합니다.")
+				.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
+				.endDate(LocalDateTime.of(2024, 12, 22, 21, 0))
+				.status(PerformanceStatus.ON_SALE)
+				.build();
+
+			performance = performanceRepository.save(performance1);
+		} else {
+			log.info("[DataInit] 공연 데이터 초기화 스킵");
+		}
+
+	}
+
 	private void initSectionData() {
 		if (sectionRepository.count() > 0) {
 			log.info("[DataInit] 구역 데이터 초기화 스킵");
 			return;
 		}
 
-		Long venueId1 = 1L;
+		Long venueId1 = venue.getVenueId();
 		Long venueId2 = 2L;
 
 		Section section1A = Section.builder()
@@ -156,7 +198,7 @@ public class DataInitializer implements CommandLineRunner {
 			log.info("[DataInit] 좌석 데이터 초기화 스킵");
 			return;
 		}
-		Long venueId = 1L;
+		Long venueId = venue.getVenueId();
 		Section section1A = sectionRepository.findByVenueId(venueId).getFirst();
 
 		List<Seat> seats = new ArrayList<>();

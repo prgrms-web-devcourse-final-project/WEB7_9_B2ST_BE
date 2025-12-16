@@ -55,12 +55,12 @@ class SeatServiceTest {
 			.sectionName("A")
 			.build();
 
-		sectionRepository.save(section1A);
+		Section section = sectionRepository.save(section1A);
 
 		seat = Seat.builder()
 			.venueId(venue.getVenueId())
-			.sectionId(section1A.getId())
-			.sectionName(section1A.getSectionName())
+			.sectionId(section.getId())
+			.sectionName(section.getSectionName())
 			.rowLabel("1")
 			.seatNumber(7)
 			.build();

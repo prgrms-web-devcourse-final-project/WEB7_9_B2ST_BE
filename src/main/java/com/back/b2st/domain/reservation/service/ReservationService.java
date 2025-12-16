@@ -32,7 +32,7 @@ public class ReservationService {
 	@Transactional
 	public ReservationRes createReservation(Long memberId, ReservationReq request) {
 
-		Long scheduleId = request.scheduleId();
+		Long scheduleId = request.performanceId();
 		Long seatId = request.seatId();
 
 		// 1. 락 걸기
@@ -50,7 +50,7 @@ public class ReservationService {
 			seatHoldTokenService.save(scheduleId, seatId, memberId);
 
 			// 4. 중복 예매 방지
-			validateNotAlreadyReserved(request.scheduleId(), request.seatId());
+			validateNotAlreadyReserved(request.performanceId(), request.seatId());
 
 			// 5. Reservation 생성
 			Reservation reservation = request.toEntity(memberId);
@@ -146,7 +146,7 @@ public class ReservationService {
 
 	// === 중복 예매 방지 로직 ===
 	private void validateNotAlreadyReserved(Long scheduleId, Long seatId) {
-		if (reservationRepository.existsByScheduleIdAndSeatId(scheduleId, seatId)) {
+		if (reservationRepository.existsByPerformanceIdAndSeatId(scheduleId, seatId)) {
 			throw new BusinessException(ReservationErrorCode.SEAT_ALREADY_SOLD);
 		}
 	}

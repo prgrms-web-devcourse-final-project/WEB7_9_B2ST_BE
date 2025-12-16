@@ -14,5 +14,5 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 	List<Reservation> findAllByMemberId(Long memberId);
 
 	/** 좌석 중복 예매 방지 */
-	boolean existsByScheduleIdAndSeatId(Long scheduleId, Long seatId);
+	boolean existsByPerformanceIdAndSeatId(Long performanceId, Long seatId);
 }

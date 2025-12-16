@@ -13,7 +13,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,7 +39,7 @@ class MemberControllerTest {
 		SignupReq request = createSignupRequest("newuser@test.com", "StrongP@ss123", "신규유저");
 
 		// when & then
-		mockMvc.perform(post("/members/signup")
+		mockMvc.perform(post("/api/members/signup")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
@@ -54,7 +53,7 @@ class MemberControllerTest {
 		SignupReq request = createSignupRequest("bad-email", "StrongP@ss123", "신규유저");
 
 		// when & then
-		mockMvc.perform(post("/members/signup")
+		mockMvc.perform(post("/api/members/signup")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
@@ -68,7 +67,7 @@ class MemberControllerTest {
 		SignupReq request = createSignupRequest("user@test.com", "weakpassword1", "신규유저");
 
 		// when & then
-		mockMvc.perform(post("/members/signup")
+		mockMvc.perform(post("/api/members/signup")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
@@ -76,11 +75,12 @@ class MemberControllerTest {
 	}
 
 	private SignupReq createSignupRequest(String email, String pw, String name) {
-		SignupReq request = new SignupReq();
-		ReflectionTestUtils.setField(request, "email", email);
-		ReflectionTestUtils.setField(request, "password", pw);
-		ReflectionTestUtils.setField(request, "name", name);
-		ReflectionTestUtils.setField(request, "birth", LocalDate.of(1990, 1, 1));
-		return request;
+		return new SignupReq(
+			email,
+			pw,
+			name,
+			"010-1234-5678",
+			LocalDate.of(1990, 1, 1)
+		);
 	}
 }

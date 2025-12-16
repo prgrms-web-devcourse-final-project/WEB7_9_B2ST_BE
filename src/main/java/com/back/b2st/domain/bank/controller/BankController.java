@@ -1,4 +1,4 @@
-package com.back.b2st.global.common.controller;
+package com.back.b2st.domain.bank.controller;
 
 import java.util.Arrays;
 import java.util.List;
@@ -8,13 +8,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.back.b2st.global.common.BankCode;
+import com.back.b2st.domain.bank.BankCode;
+import com.back.b2st.domain.bank.dto.response.BankRes;
 import com.back.b2st.global.common.BaseResponse;
-import com.back.b2st.global.common.dto.response.BankRes;
 
 @RestController
-@RequestMapping("/common")
-public class CommonController {
+@RequestMapping("/api")
+public class BankController {
 
 	@GetMapping("/banks")
 	public BaseResponse<List<BankRes>> getBankList() {

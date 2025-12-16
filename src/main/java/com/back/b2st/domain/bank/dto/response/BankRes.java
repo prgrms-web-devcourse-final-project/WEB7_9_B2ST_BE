@@ -1,6 +1,6 @@
-package com.back.b2st.global.common.dto.response;
+package com.back.b2st.domain.bank.dto.response;
 
-import com.back.b2st.global.common.BankCode;
+import com.back.b2st.domain.bank.BankCode;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

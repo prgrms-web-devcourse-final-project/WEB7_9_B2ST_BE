@@ -1,6 +1,6 @@
 package com.back.b2st.domain.member.entity;
 
-import com.back.b2st.global.common.BankCode;
+import com.back.b2st.domain.bank.BankCode;
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;

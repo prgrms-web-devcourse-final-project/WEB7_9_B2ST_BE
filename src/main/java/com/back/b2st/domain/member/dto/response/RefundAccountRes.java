@@ -3,16 +3,14 @@ package com.back.b2st.domain.member.dto.response;
 import com.back.b2st.domain.member.entity.RefundAccount;
 
 import lombok.Builder;
-import lombok.Getter;
 
-@Getter
 @Builder
-public class RefundAccountRes {
-
-	private String bankCode;
-	private String bankName;
-	private String accountNumber;
-	private String holderName;
+public record RefundAccountRes(
+	String bankCode,
+	String bankName,
+	String accountNumber,
+	String holderName
+) {
 
 	public static RefundAccountRes from(RefundAccount entity) {
 		return RefundAccountRes.builder()

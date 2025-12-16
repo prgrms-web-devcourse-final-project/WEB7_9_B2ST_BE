@@ -1,4 +1,4 @@
-package com.back.b2st.global.common;
+package com.back.b2st.domain.bank;
 
 import java.util.Arrays;
 

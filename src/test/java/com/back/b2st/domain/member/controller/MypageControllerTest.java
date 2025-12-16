@@ -18,13 +18,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.LoginRequest;
+import com.back.b2st.domain.bank.BankCode;
 import com.back.b2st.domain.member.dto.request.PasswordChangeReq;
 import com.back.b2st.domain.member.dto.request.RefundAccountReq;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.member.repository.RefundAccountRepository;
-import com.back.b2st.global.common.BankCode;
 import com.back.b2st.global.test.AbstractContainerBaseTest;
 
 import tools.jackson.databind.JsonNode;
@@ -80,7 +80,7 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		String accessToken = jsonNode.path("data").path("accessToken").asText();
 
 		// 내 정보 조회 요청
-		mockMvc.perform(get("/mypage/me").header("Authorization", "Bearer " + accessToken) // 토큰 필수
+		mockMvc.perform(get("/api/mypage/me").header("Authorization", "Bearer " + accessToken) // 토큰 필수
 				.contentType(MediaType.APPLICATION_JSON)).andDo(print()).andExpect(status().isOk())
 			// 응답 검증
 			.andExpect(jsonPath("$.data.email").value(email)).andExpect(jsonPath("$.data.name").value("마이페이지"));
@@ -89,7 +89,7 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 	@Test
 	@DisplayName("통합: 내 정보 조회 실패 - 토큰 없음")
 	void getMyInfo_fail_no_token() throws Exception {
-		mockMvc.perform(get("/mypage/me").contentType(MediaType.APPLICATION_JSON))
+		mockMvc.perform(get("/api/mypage/me").contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value(401))
@@ -115,13 +115,10 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		String accessToken = getAccessToken(email, oldPw);
 
 		// 변경 요청 빌더로 생성
-		PasswordChangeReq request = PasswordChangeReq.builder()
-			.currentPassword(oldPw)
-			.newPassword("NewPass123!")
-			.build();
+		PasswordChangeReq request = buildPasswordChangeRequest(oldPw, "NewPass123!");
 
 		// API 호출
-		mockMvc.perform(patch("/mypage/password").header("Authorization", "Bearer " + accessToken)
+		mockMvc.perform(patch("/api/mypage/password").header("Authorization", "Bearer " + accessToken)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(request))).andDo(print()).andExpect(status().isOk());
 
@@ -151,10 +148,9 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		String accessToken = getAccessToken(email, oldPw);
 
 		// 틀린 현재 비밀번호로 요청
-		PasswordChangeReq request = PasswordChangeReq.builder().currentPassword("WrongPass123!") // 틀린 비번
-			.newPassword("NewPass123!").build();
+		PasswordChangeReq request = buildPasswordChangeRequest("WrongPass123!", "NewPass123!");
 
-		mockMvc.perform(patch("/mypage/password").header("Authorization", "Bearer " + accessToken)
+		mockMvc.perform(patch("/api/mypage/password").header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
@@ -181,12 +177,9 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		String accessToken = getAccessToken(email, oldPw);
 
 		// 현재 비번과 새 비번을 똑같이 요청
-		PasswordChangeReq request = PasswordChangeReq.builder()
-			.currentPassword(oldPw)
-			.newPassword(oldPw)
-			.build();
+		PasswordChangeReq request = buildPasswordChangeRequest(oldPw, oldPw);
 
-		mockMvc.perform(patch("/mypage/password").header("Authorization", "Bearer " + accessToken)
+		mockMvc.perform(patch("/api/mypage/password").header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
@@ -213,19 +206,15 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		String accessToken = getAccessToken(email, password);
 
 		// 계좌 등록 요청
-		RefundAccountReq request = RefundAccountReq.builder()
-			.bankCode(BankCode.WOORI)
-			.accountNumber("100212345678")
-			.holderName("계좌주인")
-			.build();
+		RefundAccountReq request = buildRefundAccountRequest(BankCode.WOORI, "100212345678", "계좌주인");
 
 		// 생성
-		mockMvc.perform(post("/mypage/account").header("Authorization", "Bearer " + accessToken)
+		mockMvc.perform(post("/api/mypage/account").header("Authorization", "Bearer " + accessToken)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(request))).andDo(print()).andExpect(status().isOk());
 
 		// 조회
-		mockMvc.perform(get("/mypage/account").header("Authorization", "Bearer " + accessToken)
+		mockMvc.perform(get("/api/mypage/account").header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())
 			.andExpect(status().isOk())
@@ -250,25 +239,20 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		memberRepository.save(member);
 		String accessToken = getAccessToken(email, password);
 
-		RefundAccountReq initRequest = RefundAccountReq.builder()
-			.bankCode(BankCode.K_BANK)
-			.accountNumber("1111")
-			.holderName("수정맨")
-			.build();
+		RefundAccountReq initRequest = buildRefundAccountRequest(BankCode.K_BANK, "1111", "수정맨");
 
-		mockMvc.perform(post("/mypage/account").header("Authorization", "Bearer " + accessToken)
+		mockMvc.perform(post("/api/mypage/account").header("Authorization", "Bearer " + accessToken)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(initRequest)));
 
 		// 계좌 수정 요청
-		RefundAccountReq updateRequest = RefundAccountReq.builder().bankCode(BankCode.CITY).accountNumber("2222") // 변경됨
-			.holderName("수정맨").build();
+		RefundAccountReq updateRequest = buildRefundAccountRequest(BankCode.CITY, "2222", "수정맨");
 
-		mockMvc.perform(post("/mypage/account").header("Authorization", "Bearer " + accessToken)
+		mockMvc.perform(post("/api/mypage/account").header("Authorization", "Bearer " + accessToken)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(updateRequest))).andDo(print()).andExpect(status().isOk());
 
-		mockMvc.perform(get("/mypage/account").header("Authorization", "Bearer " + accessToken))
+		mockMvc.perform(get("/api/mypage/account").header("Authorization", "Bearer " + accessToken))
 			.andExpect(jsonPath("$.data.bankCode").value("027"))
 			.andExpect(jsonPath("$.data.bankName").value("한국씨티은행"))
 			.andExpect(jsonPath("$.data.accountNumber").value("2222"));
@@ -300,12 +284,12 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			    }
 			""";
 
-		mockMvc.perform(post("/mypage/account").header("Authorization", "Bearer " + accessToken)
+		mockMvc.perform(post("/api/mypage/account").header("Authorization", "Bearer " + accessToken)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(requestJson)).andDo(print()).andExpect(status().isOk());
 
 		// 조회 검증
-		mockMvc.perform(get("/mypage/account").header("Authorization", "Bearer " + accessToken)
+		mockMvc.perform(get("/api/mypage/account").header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())
 			.andExpect(status().isOk())
@@ -325,5 +309,14 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 
 		JsonNode jsonNode = objectMapper.readTree(response);
 		return jsonNode.path("data").path("accessToken").asText();
+	}
+
+	private PasswordChangeReq buildPasswordChangeRequest(String oldPassword, String newPassword) throws Exception {
+		return new PasswordChangeReq(oldPassword, newPassword);
+	}
+
+	private RefundAccountReq buildRefundAccountRequest(BankCode bankCode, String accountNumber,
+		String holderName) throws Exception {
+		return new RefundAccountReq(bankCode, accountNumber, holderName);
 	}
 }

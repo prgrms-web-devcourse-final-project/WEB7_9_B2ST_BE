@@ -60,7 +60,7 @@ class SeatServiceTest {
 		seat = Seat.builder()
 			.venueId(venue.getVenueId())
 			.sectionId(section.getId())
-			.sectionName(section.getSectionName())
+			.sectionName("A")
 			.rowLabel("1")
 			.seatNumber(7)
 			.build();
@@ -139,7 +139,7 @@ class SeatServiceTest {
 	@DisplayName("좌석조회 - 성공, 공연장")
 	void getSeatInfoByVenueId_success() {
 		// given
-		String sectionName = section1A.getSectionName();
+		String sectionName = "A";
 		String rowLabel = seat.getRowLabel();
 		int seatNumber = seat.getSeatNumber();
 

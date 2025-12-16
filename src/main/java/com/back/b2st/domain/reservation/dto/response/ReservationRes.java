@@ -7,7 +7,7 @@ import com.back.b2st.domain.reservation.entity.Reservation;
 public record ReservationRes(
 	Long reservationId,
 	Long memberId,
-	Long performanceId,
+	Long scheduleId,
 	Long seatId,
 	String reservationStatus
 ) {
@@ -15,7 +15,7 @@ public record ReservationRes(
 		return new ReservationRes(
 			reservation.getId(),
 			reservation.getMemberId(),
-			reservation.getPerformanceId(),
+			reservation.getScheduleId(),
 			reservation.getSeatId(),
 			reservation.getStatus().name()
 		);

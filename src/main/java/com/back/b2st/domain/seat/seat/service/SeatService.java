@@ -74,6 +74,7 @@ public class SeatService {
 	}
 
 	// 조회 - 공연장 id
+	// todo seatInfo 만들어서 필요한 정보만 받아오도록 쿼리 작성
 	public List<SeatInfoRes> getSeatInfoByVenueId(Long venudId) {
 		validateSectionId(venudId);
 		List<Seat> seats = seatRepository.findBySectionId(venudId);

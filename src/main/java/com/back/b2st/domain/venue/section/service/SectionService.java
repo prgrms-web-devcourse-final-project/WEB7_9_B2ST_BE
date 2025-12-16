@@ -58,6 +58,7 @@ public class SectionService {
 	// 구역 정보 조회 - 공연장 Id
 	public SectionInfoRes getSectionByVenueId(Long venueId) {
 		validateVenueId(venueId);
+		// todo section 만 조회하는 거, 세부까지 들고오는 거 나누기?
 		List<Section> sections = sectionRepository.findByVenueId(venueId);
 
 		return SectionInfoRes.from(venueId, sections);

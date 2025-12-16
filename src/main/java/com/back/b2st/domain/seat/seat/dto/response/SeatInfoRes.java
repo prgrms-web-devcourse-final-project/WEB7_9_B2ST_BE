@@ -6,14 +6,16 @@ public record SeatInfoRes(
 	Long seatId,
 	String sectionName,
 	String rowLabel,
-	Integer seatNumber
+	Integer seatNumber,
+	String grade
 ) {
 	public static SeatInfoRes toDetail(Seat seat) {
 		return new SeatInfoRes(
 			seat.getId(),
 			seat.getSectionName(),
 			seat.getRowLabel(),
-			seat.getSeatNumber()
+			seat.getSeatNumber(),
+			"VIP"   // 임시
 		);
 	}
 }

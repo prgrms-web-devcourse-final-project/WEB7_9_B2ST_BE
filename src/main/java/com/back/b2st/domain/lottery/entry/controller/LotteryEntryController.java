@@ -15,30 +15,43 @@ import com.back.b2st.domain.lottery.entry.dto.response.SectionLayoutRes;
 import com.back.b2st.domain.lottery.entry.service.LotteryEntryService;
 import com.back.b2st.global.common.BaseResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping
 @RequiredArgsConstructor
+@Tag(name = "Lottery", description = "추첨 예매 API")
 public class LotteryEntryController {
 
 	private final LotteryEntryService lotteryEntryService;
 
-	// TODO : performaces나 예매 Controller로 이동 예정
-	// 구역별 좌석 조회
+	@Operation(
+		summary = "구역별 좌석 배치 조회",
+		description = "공연 ID로 추첨 예매에 사용되는 구역별 좌석 배치 정보를 조회"
+	)
 	@GetMapping("/api/performances/{performanceId}/lottery/section")
 	public BaseResponse<List<SectionLayoutRes>> getSeatLayout(
+		@Parameter(description = "공연 ID", example = "1")
 		@PathVariable("performanceId") Long performanceId
 	) {
 		return BaseResponse.success(lotteryEntryService.getSeatLayout(performanceId));
 	}
 
-	// TODO : performaces나 예매 Controller로 이동 예정
-	// 추첨 응모 생성
+	@Operation(
+		summary = "추첨 응모 생성",
+		description = "공연에 대해 추첨 예매 응모를 생성 - 로그인 사용자만 가능"
+	)
 	@PostMapping("/api/performances/{performanceId}/lottery/entry")
 	public BaseResponse<LotteryEntryInfo> registerLotteryEntry(
+		@Parameter(description = "공연 ID", example = "1")
 		@PathVariable("performanceId") Long performanceId,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			description = "추첨 응모 요청 정보 ", required = true
+		)
 		@Valid @RequestBody RegisterLotteryEntryReq request
 	) {
 		return BaseResponse.created(lotteryEntryService.createLotteryEntry(performanceId, request));

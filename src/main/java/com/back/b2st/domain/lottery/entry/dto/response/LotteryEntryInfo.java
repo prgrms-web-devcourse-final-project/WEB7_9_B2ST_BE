@@ -11,8 +11,8 @@ public record LotteryEntryInfo(
 	Integer quantity,
 	String status
 ) {
-	public LotteryEntryInfo(LotteryEntry entry) {
-		this(
+	public static LotteryEntryInfo from(LotteryEntry entry) {
+		return new LotteryEntryInfo(
 			entry.getId(),
 			entry.getMemberId(),
 			entry.getPerformanceId(),

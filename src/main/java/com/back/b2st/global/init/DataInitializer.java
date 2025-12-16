@@ -17,6 +17,9 @@ import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.ScheduleSeat;
 import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
@@ -43,9 +46,11 @@ public class DataInitializer implements CommandLineRunner {
 	private final SeatRepository seatRepository;
 	private final VenueRepository venueRepository;
 	private final PerformanceRepository performanceRepository;
+	private final PerformanceScheduleRepository performanceScheduleRepository;
 
 	private Venue venue;
 	private Performance performance;
+	private PerformanceSchedule performanceSchedule;
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -133,28 +138,35 @@ public class DataInitializer implements CommandLineRunner {
 	// 공연장 - 공연 데이터 생성
 	private void initPerformance() {
 		if (!(venueRepository.count() > 0)) {
-			Venue venue1 = Venue.builder()
+			venue = venueRepository.save(Venue.builder()
 				.name("잠실실내체육관")
-				.build();
-
-			venue = venueRepository.save(venue1);
+				.build());
 		} else {
 			log.info("[DataInit] 장소 데이터 초기화 스킵");
 		}
 
 		if (!(performanceRepository.count() < 0)) {
-			Performance performance1 = Performance.builder()
+			performance = performanceRepository.save(Performance.builder()
 				.venue(venue)
 				.title("2024 아이유 콘서트 - HEREH WORLD TOUR")
 				.category("콘서트")
 				.posterUrl("")
-				.description("아이유의 월드투어 서울 공연입니다. 최고의 무대와 감동을 선사합니다.")
+				.description(null)
 				.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
 				.endDate(LocalDateTime.of(2024, 12, 22, 21, 0))
 				.status(PerformanceStatus.ON_SALE)
-				.build();
+				.build());
 
-			performance = performanceRepository.save(performance1);
+			// 회차
+			performanceSchedule = performanceScheduleRepository.save(
+				PerformanceSchedule.builder()
+					.performance(performance)
+					.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
+					.roundNo(1)
+					.bookingType(BookingType.LOTTERY)
+					.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
+					.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
+					.build());
 		} else {
 			log.info("[DataInit] 공연 데이터 초기화 스킵");
 		}

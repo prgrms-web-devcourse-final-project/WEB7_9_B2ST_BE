@@ -9,7 +9,7 @@ public record SeatInfoRes(
 	Integer seatNumber,
 	String grade
 ) {
-	public static SeatInfoRes toDetail(Seat seat) {
+	public static SeatInfoRes from(Seat seat) {
 		return new SeatInfoRes(
 			seat.getId(),
 			seat.getSectionName(),

@@ -215,8 +215,8 @@ class LotteryEntryControllerTest {
 					.content(requestBody)
 			)
 			.andDo(print())
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.INVALID_PERFORMANCE_INFO.getMessage()));
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.PERFORMANCE_NOT_FOUND.getMessage()));
 	}
 
 	@Test
@@ -245,9 +245,8 @@ class LotteryEntryControllerTest {
 					.content(requestBody)
 			)
 			.andDo(print())
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.code").value(400))
-			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.INVALID_MEMBER_INFO.getMessage()))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.MEMBER_NOT_FOUND.getMessage()))
 		;
 	}
 
@@ -277,8 +276,8 @@ class LotteryEntryControllerTest {
 					.content(requestBody)
 			)
 			.andDo(print())
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.INVALID_SCHEDULE_INFO.getMessage()));
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.SCHEDULE_NOT_FOUND.getMessage()));
 	}
 
 	@Test

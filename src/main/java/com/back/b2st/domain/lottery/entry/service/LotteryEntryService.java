@@ -57,7 +57,7 @@ public class LotteryEntryService {
 			.build();
 
 		try {
-			return new LotteryEntryInfo(lotteryEntryRepository.save(lotteryEntry));
+			return LotteryEntryInfo.from(lotteryEntryRepository.save(lotteryEntry));
 		} catch (DataAccessException e) {
 			throw new BusinessException(LotteryEntryErrorCode.CREATE_ENTRY_FAILED);
 		}
@@ -66,7 +66,7 @@ public class LotteryEntryService {
 	// 공연장 검증 후 장소 확인
 	private Long validatePerformance(Long performanceId) {
 		Performance performance = performanceRepository.findById(performanceId)
-			.orElseThrow(() -> new BusinessException(LotteryEntryErrorCode.INVALID_PERFORMANCE_INFO));
+			.orElseThrow(() -> new BusinessException(LotteryEntryErrorCode.PERFORMANCE_NOT_FOUND));
 
 		return performance.getVenue().getVenueId();
 	}
@@ -74,7 +74,7 @@ public class LotteryEntryService {
 	// 고객 검증
 	private void validateMember(Long memberId) {
 		if (!memberRepository.existsById(memberId)) {
-			throw new BusinessException(LotteryEntryErrorCode.INVALID_MEMBER_INFO);
+			throw new BusinessException(LotteryEntryErrorCode.MEMBER_NOT_FOUND);
 		}
 	}
 
@@ -82,7 +82,7 @@ public class LotteryEntryService {
 	private void validateSchedule(Long scheduleId, Long performanceId) {
 		if (!(performanceScheduleRepository.existsByPerformanceScheduleIdAndPerformance_PerformanceId(
 			scheduleId, performanceId))) {
-			throw new BusinessException(LotteryEntryErrorCode.INVALID_SCHEDULE_INFO);
+			throw new BusinessException(LotteryEntryErrorCode.SCHEDULE_NOT_FOUND);
 		}
 	}
 

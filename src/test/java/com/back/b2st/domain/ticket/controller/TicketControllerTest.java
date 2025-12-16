@@ -97,7 +97,7 @@ class TicketControllerTest {
 			Seat savedSeat = seatRepository.save(seat);
 
 			Reservation reservation = Reservation.builder()
-				.scheduleId(1L)
+				.performanceId(1L)
 				.memberId(savedMember.getId())
 				.seatId(savedSeat.getId())
 				.build();

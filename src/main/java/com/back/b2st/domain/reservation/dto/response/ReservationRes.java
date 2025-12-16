@@ -15,7 +15,7 @@ public record ReservationRes(
 		return new ReservationRes(
 			reservation.getId(),
 			reservation.getMemberId(),
-			reservation.getScheduleId(),
+			reservation.getPerformanceId(),
 			reservation.getSeatId(),
 			reservation.getStatus().name()
 		);

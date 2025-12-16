@@ -86,7 +86,7 @@ public class ReservationService {
 
 		// 좌석 AVAILABLE로 복구
 		scheduleSeatRepository
-			.findByScheduleIdAndSeatId(reservation.getScheduleId(), reservation.getSeatId())
+			.findByScheduleIdAndSeatId(reservation.getPerformanceId(), reservation.getSeatId())
 			.ifPresent(ScheduleSeat::release);
 	}
 
@@ -117,7 +117,7 @@ public class ReservationService {
 
 		// 좌석 SOLD 변경
 		scheduleSeatRepository
-			.findByScheduleIdAndSeatId(reservation.getScheduleId(), reservation.getSeatId())
+			.findByScheduleIdAndSeatId(reservation.getPerformanceId(), reservation.getSeatId())
 			.ifPresent(ScheduleSeat::sold);
 	}
 

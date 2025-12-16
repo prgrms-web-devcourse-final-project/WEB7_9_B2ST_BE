@@ -137,7 +137,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 			Seat savedSeat = seatRepository.save(seat);
 
 			Reservation reservation = Reservation.builder()
-				.scheduleId(1L)
+				.performanceId(1L)
 				.memberId(testMemberId)
 				.seatId(savedSeat.getId())
 				.build();

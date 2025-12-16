@@ -44,7 +44,7 @@ public class Reservation extends BaseEntity {
 	private Long id;    // PK
 
 	@Column(name = "schedule_id", nullable = false)
-	private Long scheduleId;    // 회차 FK (PerformanceSchedule = schedule 엔티티)
+	private Long performanceId;    // 회차 FK (PerformanceSchedule = schedule 엔티티)
 
 	@Column(name = "member_id", nullable = false)
 	private Long memberId;    // 예매자 FK
@@ -65,11 +65,11 @@ public class Reservation extends BaseEntity {
 
 	@Builder
 	public Reservation(
-		Long scheduleId,
+		Long performanceId,
 		Long memberId,
 		Long seatId
 	) {
-		this.scheduleId = scheduleId;
+		this.performanceId = performanceId;
 		this.memberId = memberId;
 		this.seatId = seatId;
 		this.status = ReservationStatus.PENDING;

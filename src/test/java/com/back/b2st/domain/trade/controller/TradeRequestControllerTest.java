@@ -203,7 +203,7 @@ class TradeRequestControllerTest {
 			.findFirst()
 			.orElseThrow();
 		Reservation reservation = reservationRepository.save(Reservation.builder()
-			.scheduleId(1L)
+			.performanceId(1L)
 			.memberId(memberId)
 			.seatId(seat.getId())
 			.build());

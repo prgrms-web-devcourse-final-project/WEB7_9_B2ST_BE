@@ -11,8 +11,10 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,7 +23,14 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "reservation")
+@Table(name = "reservation",
+	indexes = {
+		@Index(name = "idx_reservation_member", columnList = "member_id")
+	},
+	uniqueConstraints = {
+		@UniqueConstraint(name = "uk_reservation_performance_seat", columnNames = {"performance_id", "seat_id"})
+	}
+)
 @SequenceGenerator(
 	name = "reservation_id_gen",
 	sequenceName = "reservation_seq",
@@ -35,7 +44,7 @@ public class Reservation extends BaseEntity {
 	private Long id;    // PK
 
 	@Column(name = "performance_id", nullable = false)
-	private Long performanceId;    // 공연 FK
+	private Long performanceId;    // 회차 FK PerformanceSchedule = schedule TODO: 변수명..
 
 	@Column(name = "member_id", nullable = false)
 	private Long memberId;    // 예매자 FK

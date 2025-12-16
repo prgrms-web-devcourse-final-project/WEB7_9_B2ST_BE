@@ -7,7 +7,7 @@ import com.back.b2st.domain.reservation.entity.Reservation;
 public record ReservationRes(
 	Long reservationId,
 	Long memberId,
-	Long performanceId,
+	Long scheduleId, //TODO: 변수명 수정
 	Long seatId,
 	String reservationStatus
 ) {

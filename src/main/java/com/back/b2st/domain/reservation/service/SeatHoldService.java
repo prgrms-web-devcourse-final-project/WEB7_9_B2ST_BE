@@ -22,7 +22,8 @@ public class SeatHoldService {
 	public void holdSeat(Long scheduleId, Long seatId) {
 
 		// 1. 좌석 조회
-		ScheduleSeat seat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
+		ScheduleSeat seat = scheduleSeatRepository
+			.findByScheduleIdAndSeatId(scheduleId, seatId)
 			.orElseThrow(() -> new BusinessException(ReservationErrorCode.SEAT_NOT_FOUND));
 
 		// 2. SOLD 좌석 확인

@@ -203,7 +203,7 @@ class TicketServiceTest {
 	void 티켓취소_양도티켓취소불가() {
 		// given
 		ticketService.transferTicket(rId, mId, sId);
-		
+
 		// when
 		BusinessException e = assertThrows(BusinessException.class,
 			() -> ticketService.cancelTicket(rId, mId, sId));

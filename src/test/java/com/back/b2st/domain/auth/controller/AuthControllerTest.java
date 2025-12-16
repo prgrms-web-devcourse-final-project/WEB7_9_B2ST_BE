@@ -73,7 +73,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		LoginReq request = buildLoginRequest(email, password);
 
-		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+		mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
 			.andExpect(status().isOk())
@@ -101,7 +101,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		LoginReq request = buildLoginRequest("fail@test.com", "WrongPw123!");
 
 		// when & then
-		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+		mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
 			.andExpect(status().isUnauthorized()) // HTTP Header Status: 401
@@ -125,7 +125,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		LoginReq loginRequest = buildLoginRequest(email, "Password123!");
 
-		String responseBody = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+		String responseBody = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(loginRequest))).andReturn().getResponse().getContentAsString();
 
 		JsonNode rootNode = objectMapper.readTree(responseBody);
@@ -138,7 +138,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		TokenReissueReq reissueRequest = new TokenReissueReq(accessToken, refreshToken);
 
-		mockMvc.perform(post("/auth/reissue").contentType(MediaType.APPLICATION_JSON)
+		mockMvc.perform(post("/api/auth/reissue").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(reissueRequest)))
 			.andDo(print())
 			.andExpect(status().isOk())
@@ -156,7 +156,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 		TokenReissueReq reissueRequest = new TokenReissueReq("dummy_access_token", "invalid_refresh_token_format");
 
 		// when & then
-		mockMvc.perform(post("/auth/reissue")
+		mockMvc.perform(post("/api/auth/reissue")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(reissueRequest)))
 			.andDo(print())
@@ -182,14 +182,14 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		LoginReq loginRequest = buildLoginRequest(email, "Password123!");
 
-		String loginResponse = mockMvc.perform(post("/auth/login")
+		String loginResponse = mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(loginRequest)))
 			.andReturn().getResponse().getContentAsString();
 
 		String accessToken = objectMapper.readTree(loginResponse).path("data").path("accessToken").asText();
 
-		mockMvc.perform(post("/auth/logout")
+		mockMvc.perform(post("/api/auth/logout")
 				.header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())

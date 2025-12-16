@@ -71,7 +71,7 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		// 토큰 발급
 		LoginReq loginRequest = buildLoginRequest(email, "Password123!");
 
-		String loginResponse = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+		String loginResponse = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(loginRequest))).andReturn().getResponse().getContentAsString();
 
 		// 토큰 추출
@@ -305,7 +305,7 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 	private String getAccessToken(String email, String password) throws Exception {
 		LoginReq loginRequest = buildLoginRequest(email, password);
 
-		String response = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+		String response = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(loginRequest))).andReturn().getResponse().getContentAsString();
 
 		JsonNode jsonNode = objectMapper.readTree(response);

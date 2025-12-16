@@ -1,14 +1,8 @@
 package com.back.b2st.global.jwt.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-
-@Builder
-@Getter
-@AllArgsConstructor
-public class TokenInfo {
-	private String grantType;   // Bearer
-	private String accessToken;
-	private String refreshToken;
+public record TokenInfo(
+	String grantType, // Bearer
+	String accessToken,
+	String refreshToken
+) {
 }

@@ -53,19 +53,20 @@ class AuthServiceTest {
 			.willReturn(authentication);
 		given(authentication.getName()).willReturn("test@test.com");
 
-		TokenInfo expectedToken = TokenInfo.builder()
-			.grantType("Bearer")
-			.accessToken("access")
-			.refreshToken("refresh")
-			.build();
+		// TokenInfo expectedToken = TokenInfo.builder()
+		// 	.grantType("Bearer")
+		// 	.accessToken("access")
+		// 	.refreshToken("refresh")
+		// 	.build();
+		TokenInfo expectedToken = new TokenInfo("Bearer", "access", "refresh");
 		given(jwtTokenProvider.generateToken(authentication)).willReturn(expectedToken);
 
 		// when
 		TokenInfo result = authService.login(request);
 
 		// then
-		assertThat(result.getAccessToken()).isEqualTo("access");
-		assertThat(result.getRefreshToken()).isEqualTo("refresh");
+		assertThat(result.accessToken()).isEqualTo("access");
+		assertThat(result.refreshToken()).isEqualTo("refresh");
 		verify(refreshTokenRepository).save(any(RefreshToken.class));
 	}
 
@@ -88,18 +89,15 @@ class AuthServiceTest {
 		RefreshToken storedToken = new RefreshToken("test@test.com", "validRefresh");
 		given(refreshTokenRepository.findById("test@test.com")).willReturn(java.util.Optional.of(storedToken));
 
-		TokenInfo newToken = TokenInfo.builder()
-			.accessToken("newAccess")
-			.refreshToken("newRefresh")
-			.build();
+		TokenInfo newToken = new TokenInfo("Bearer", "newAccess", "newRefresh");
 		given(jwtTokenProvider.generateToken(authentication)).willReturn(newToken);
 
 		// when
 		TokenInfo result = authService.reissue(request);
 
 		// then
-		assertThat(result.getAccessToken()).isEqualTo("newAccess");
-		assertThat(result.getRefreshToken()).isEqualTo("newRefresh");
+		assertThat(result.accessToken()).isEqualTo("newAccess");
+		assertThat(result.refreshToken()).isEqualTo("newRefresh");
 		verify(refreshTokenRepository).save(any(RefreshToken.class));
 	}
 

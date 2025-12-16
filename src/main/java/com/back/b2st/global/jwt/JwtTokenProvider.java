@@ -84,11 +84,7 @@ public class JwtTokenProvider {
 			.signWith(key)
 			.compact();
 
-		return TokenInfo.builder()
-			.grantType("Bearer")
-			.accessToken(accessToken)
-			.refreshToken(refreshToken)
-			.build();
+		return new TokenInfo("Bearer", accessToken, refreshToken);
 	}
 
 	// 토큰에서 인증 정보 조회 로직

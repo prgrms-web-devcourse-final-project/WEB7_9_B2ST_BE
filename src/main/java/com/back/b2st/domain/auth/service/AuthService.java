@@ -41,7 +41,7 @@ public class AuthService {
 		TokenInfo tokenInfo = jwtTokenProvider.generateToken(authentication);
 
 		// RefreshToken Redis 저장
-		refreshTokenRepository.save(new RefreshToken(authentication.getName(), tokenInfo.getRefreshToken()));
+		refreshTokenRepository.save(new RefreshToken(authentication.getName(), tokenInfo.refreshToken()));
 
 		return tokenInfo;
 	}
@@ -79,7 +79,7 @@ public class AuthService {
 		TokenInfo newToken = jwtTokenProvider.generateToken(authentication);
 
 		// Refresh Token Redis 업데이트
-		refreshTokenRepository.save(new RefreshToken(email, newToken.getRefreshToken()));
+		refreshTokenRepository.save(new RefreshToken(email, newToken.refreshToken()));
 
 		return newToken;
 	}

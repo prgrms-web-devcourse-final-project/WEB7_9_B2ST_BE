@@ -1,5 +1,6 @@
 package com.back.b2st.domain.auth.controller;
 
+import static com.back.b2st.domain.auth.service.AuthTestRequestBuilder.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
@@ -14,13 +15,13 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.auth.dto.LoginRequest;
-import com.back.b2st.domain.auth.dto.TokenReissueRequest;
+import com.back.b2st.domain.auth.dto.request.LoginReq;
+import com.back.b2st.domain.auth.dto.request.TokenReissueReq;
 import com.back.b2st.domain.auth.entity.RefreshToken;
+import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
@@ -70,11 +71,9 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.build();
 		memberRepository.save(member);
 
-		LoginRequest request = new LoginRequest();
-		ReflectionTestUtils.setField(request, "email", email);
-		ReflectionTestUtils.setField(request, "password", password);
+		LoginReq request = buildLoginRequest(email, password);
 
-		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+		mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
 			.andExpect(status().isOk())
@@ -99,17 +98,15 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.build();
 		memberRepository.save(member);
 
-		LoginRequest request = new LoginRequest();
-		ReflectionTestUtils.setField(request, "email", "fail@test.com");
-		ReflectionTestUtils.setField(request, "password", "WrongPw123!");
+		LoginReq request = buildLoginRequest("fail@test.com", "WrongPw123!");
 
 		// when & then
-		mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+		mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request)))
 			.andDo(print())
 			.andExpect(status().isUnauthorized()) // HTTP Header Status: 401
-			.andExpect(jsonPath("$.code").value(401))
-			.andExpect(jsonPath("$.message").value("이메일 또는 비밀번호가 일치하지 않습니다."));
+			.andExpect(jsonPath("$.code").value(AuthErrorCode.LOGIN_FAILED.getStatus().value()))
+			.andExpect(jsonPath("$.message").value(AuthErrorCode.LOGIN_FAILED.getMessage()));
 	}
 
 	@Test
@@ -126,11 +123,9 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.build();
 		memberRepository.save(member);
 
-		LoginRequest loginRequest = new LoginRequest();
-		ReflectionTestUtils.setField(loginRequest, "email", email);
-		ReflectionTestUtils.setField(loginRequest, "password", "Password123!");
+		LoginReq loginRequest = buildLoginRequest(email, "Password123!");
 
-		String responseBody = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+		String responseBody = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(loginRequest))).andReturn().getResponse().getContentAsString();
 
 		JsonNode rootNode = objectMapper.readTree(responseBody);
@@ -141,12 +136,9 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		Thread.sleep(1500);
 
-		TokenReissueRequest reissueRequest = TokenReissueRequest.builder()
-			.accessToken(accessToken)
-			.refreshToken(refreshToken)
-			.build();
+		TokenReissueReq reissueRequest = new TokenReissueReq(accessToken, refreshToken);
 
-		mockMvc.perform(post("/auth/reissue").contentType(MediaType.APPLICATION_JSON)
+		mockMvc.perform(post("/api/auth/reissue").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(reissueRequest)))
 			.andDo(print())
 			.andExpect(status().isOk())
@@ -161,19 +153,16 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("통합: 토큰 재발급 실패 - 유효하지 않은 Refresh Token")
 	void reissue_integration_fail_invalid_token() throws Exception {
 		// given
-		TokenReissueRequest reissueRequest = TokenReissueRequest.builder()
-			.accessToken("dummy_access_token")
-			.refreshToken("invalid_refresh_token_format")
-			.build();
+		TokenReissueReq reissueRequest = new TokenReissueReq("dummy_access_token", "invalid_refresh_token_format");
 
 		// when & then
-		mockMvc.perform(post("/auth/reissue")
+		mockMvc.perform(post("/api/auth/reissue")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(reissueRequest)))
 			.andDo(print())
 			.andExpect(status().isUnauthorized()) // HTTP Header Status: 401
-			.andExpect(jsonPath("$.code").value(401))
-			.andExpect(jsonPath("$.message").value("유효하지 않은 리프레시 토큰입니다."));
+			.andExpect(jsonPath("$.code").value(AuthErrorCode.INVALID_TOKEN.getStatus().value()))
+			.andExpect(jsonPath("$.message").value(AuthErrorCode.INVALID_TOKEN.getMessage()));
 	}
 
 	@Test
@@ -191,18 +180,16 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.build();
 		memberRepository.save(member);
 
-		LoginRequest loginRequest = new LoginRequest();
-		ReflectionTestUtils.setField(loginRequest, "email", email);
-		ReflectionTestUtils.setField(loginRequest, "password", "Password123!");
+		LoginReq loginRequest = buildLoginRequest(email, "Password123!");
 
-		String loginResponse = mockMvc.perform(post("/auth/login")
+		String loginResponse = mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(loginRequest)))
 			.andReturn().getResponse().getContentAsString();
 
 		String accessToken = objectMapper.readTree(loginResponse).path("data").path("accessToken").asText();
 
-		mockMvc.perform(post("/auth/logout")
+		mockMvc.perform(post("/api/auth/logout")
 				.header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())

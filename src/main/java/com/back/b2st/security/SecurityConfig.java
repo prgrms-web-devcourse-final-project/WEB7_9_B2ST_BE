@@ -9,7 +9,6 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.back.b2st.global.jwt.JwtAuthenticationFilter;
@@ -24,7 +23,7 @@ public class SecurityConfig {
 
 	private final JwtTokenProvider jwtTokenProvider;
 	private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-	private final AccessDeniedHandler jwtAccessDeniedHandler;
+	private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -39,7 +38,7 @@ public class SecurityConfig {
 
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(
-					"/api/members/signup", "/auth/**", "/h2-console/**", "/error", "/api/banks",
+					"/api/members/signup", "/api/auth/**", "/h2-console/**", "/error", "/api/banks",
 					"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"    // Swagger
 				).permitAll()
 				.anyRequest().authenticated()
@@ -47,7 +46,7 @@ public class SecurityConfig {
 			.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
 			.exceptionHandling(exception -> exception
 				.authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401 에러 처리
-				.accessDeniedHandler(jwtAccessDeniedHandler)
+				.accessDeniedHandler(jwtAccessDeniedHandler) // 403 에러 처리
 			)
 			.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 

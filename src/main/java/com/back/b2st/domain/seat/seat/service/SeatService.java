@@ -29,7 +29,7 @@ public class SeatService {
 
 	// 생성
 	public CreateSeatRes createSeatInfo(Long venueId, CreateSeatReq request) {
-		// todo : venueId 검증
+		validateVenueId(venueId);
 		Section section = validateSectionId(request.sectionId());
 		validateSeatInfo(venueId, request.sectionId(), section.getSectionName(), request.rowLabel(),
 			request.seatNumber());

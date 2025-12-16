@@ -247,7 +247,7 @@ class LotteryEntryControllerTest {
 			.andDo(print())
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value(400))
-			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.INVALID_MEMBER_INFO.getMessage()))
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.MEMBER_INFO_NOT_FOUND.getMessage()))
 		;
 	}
 
@@ -278,7 +278,7 @@ class LotteryEntryControllerTest {
 			)
 			.andDo(print())
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.INVALID_SCHEDULE_INFO.getMessage()));
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.SCHEDULE_NOT_FOUND.getMessage()));
 	}
 
 	@Test

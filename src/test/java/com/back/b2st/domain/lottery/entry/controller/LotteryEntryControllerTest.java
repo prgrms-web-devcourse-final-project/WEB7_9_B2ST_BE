@@ -4,6 +4,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,18 @@ import com.back.b2st.domain.lottery.constants.LotteryConstants;
 import com.back.b2st.domain.lottery.entry.error.LotteryEntryErrorCode;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.entity.PerformanceStatus;
+import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.venue.section.entity.Section;
+import com.back.b2st.domain.venue.section.repository.SectionRepository;
+import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
@@ -33,8 +47,22 @@ class LotteryEntryControllerTest {
 	private PasswordEncoder passwordEncoder;
 	@Autowired
 	private MemberRepository memberRepository;
+	@Autowired
+	private PerformanceRepository performanceRepository;
+	@Autowired
+	private VenueRepository venueRepository;
+	@Autowired
+	private SectionRepository sectionRepository;
+	@Autowired
+	private SeatRepository seatRepository;
+	@Autowired
+	private PerformanceScheduleRepository performanceScheduleRepository;
 
 	private Member tMember;
+	private Performance performance;
+	private Section section;
+	private Seat seat;
+	private PerformanceSchedule performanceSchedule;
 
 	@BeforeEach
 	void setUp() {
@@ -48,6 +76,59 @@ class LotteryEntryControllerTest {
 			.build();
 
 		tMember = memberRepository.save(user1);
+
+		Venue venue = venueRepository.save(Venue.builder()
+			.name("잠실실내체육관")
+			.build());
+
+		performance = performanceRepository.save(Performance.builder()
+			.venue(venue)
+			.title("2024 아이유 콘서트 - HEREH WORLD TOUR")
+			.category("콘서트")
+			.posterUrl("")
+			.description(null)
+			.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
+			.endDate(LocalDateTime.of(2024, 12, 22, 21, 0))
+			.status(PerformanceStatus.ON_SALE)
+			.build());
+
+		// Section 생성 추가
+		section = sectionRepository.save(Section.builder()
+			.venueId(venue.getVenueId())
+			.sectionName("A")
+			.build());
+
+		// Seat 생성 추가
+		seat = seatRepository.save(Seat.builder()
+			.venueId(venue.getVenueId())
+			.sectionId(section.getId())
+			.sectionName("A")
+			.rowLabel("8")
+			.seatNumber(7)
+			.build());
+
+		performanceSchedule = performanceScheduleRepository.save(
+			PerformanceSchedule.builder()
+				.performance(performance)
+				.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
+				.roundNo(1)
+				.bookingType(BookingType.LOTTERY)
+				.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
+				.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
+				.build());
+	}
+
+	record TestRequest(Long memberId, Long scheduleId, Long seatGradeId, Integer quantity) {
+		String toJson() {
+			return String.format("""
+				{
+				    "memberId": %d,
+				    "scheduleId": %d,
+				    "seatGradeId": %d,
+				    "quantity": %d
+				}
+				""", memberId, scheduleId, seatGradeId, quantity);
+		}
 	}
 
 	@Test
@@ -55,7 +136,7 @@ class LotteryEntryControllerTest {
 	void getSeatInfo_success() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/section";
-		Long param = 1L;
+		Long param = performance.getPerformanceId();
 
 		// when & then
 		mvc.perform(
@@ -64,10 +145,10 @@ class LotteryEntryControllerTest {
 			)
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.seatId").value("1"))
-			.andExpect(jsonPath("$.data.sectionName").value("A"))
-			.andExpect(jsonPath("$.data.rowLabel").value("8"))
-			.andExpect(jsonPath("$.data.seatNumber").value("7"))
+			.andExpect(jsonPath("$.data").isArray())
+			.andExpect(jsonPath("$.data[0].sectionName").value("A"))
+			.andExpect(jsonPath("$.data[0].grades[0].grade").value("VIP"))    // todo grade 관련 수정시 작업
+			.andExpect(jsonPath("$.data[0].grades[0].rows[0]").value("8"));
 		;
 	}
 
@@ -76,10 +157,10 @@ class LotteryEntryControllerTest {
 	void registerLotteryEntry_success() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/entry";
-		Long param = 1L;
+		Long param = performance.getPerformanceId();
 
 		Long memberId = tMember.getId();
-		Long scheduleId = 2L;
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		Long seatGradeId = 3L;
 		int quantity = 4;
 
@@ -111,7 +192,31 @@ class LotteryEntryControllerTest {
 	@Test
 	@DisplayName("추첨응모_실패_공연")
 	void registerLotteryEntry_fail_performance() throws Exception {
-		// TODO: repo 연결 후 테스트 INVALID_PERFORMANCE_INFO
+		// given
+		String url = "/api/performances/{performanceId}/lottery/entry";
+		Long param = 999L;
+
+		Long memberId = tMember.getId();
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
+		Long seatGradeId = 3L;
+		int quantity = 4;
+
+		String requestBody = "{"
+			+ "\"memberId\": " + memberId + ","
+			+ "\"scheduleId\": " + scheduleId + ","
+			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"quantity\": " + quantity
+			+ "}";
+
+		// when & then
+		mvc.perform(
+				post(url, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.INVALID_PERFORMANCE_INFO.getMessage()));
 	}
 
 	@Test
@@ -119,7 +224,7 @@ class LotteryEntryControllerTest {
 	void registerLotteryEntry_fail_member() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/entry";
-		Long param = 1L;
+		Long param = performance.getPerformanceId();
 
 		Long memberId = 99999999L;
 		Long scheduleId = 2L;
@@ -149,7 +254,31 @@ class LotteryEntryControllerTest {
 	@Test
 	@DisplayName("추첨응모_실패_회차")
 	void registerLotteryEntry_fail_schedule() throws Exception {
-		// TODO : Repo 연결 후 테스트
+		// given
+		String url = "/api/performances/{performanceId}/lottery/entry";
+		Long param = performance.getPerformanceId();
+
+		Long memberId = tMember.getId();
+		Long scheduleId = 999L;
+		Long seatGradeId = 3L;
+		int quantity = 4;
+
+		String requestBody = "{"
+			+ "\"memberId\": " + memberId + ","
+			+ "\"scheduleId\": " + scheduleId + ","
+			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"quantity\": " + quantity
+			+ "}";
+
+		// when & then
+		mvc.perform(
+				post(url, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.INVALID_SCHEDULE_INFO.getMessage()));
 	}
 
 	@Test
@@ -163,7 +292,7 @@ class LotteryEntryControllerTest {
 	void registerLotteryEntry_fail_quantityZero() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/entry";
-		Long param = 1L;
+		Long param = performance.getPerformanceId();
 
 		Long memberId = tMember.getId();
 		Long scheduleId = 2L;
@@ -195,7 +324,7 @@ class LotteryEntryControllerTest {
 	void registerLotteryEntry_fail_quantity() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/entry";
-		Long param = 1L;
+		Long param = performance.getPerformanceId();
 
 		Long memberId = tMember.getId();
 		;
@@ -228,10 +357,10 @@ class LotteryEntryControllerTest {
 	void registerLotteryEntry_fail_duplicate() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/entry";
-		Long param = 1L;
+		Long param = performance.getPerformanceId();
 
 		Long memberId = tMember.getId();
-		Long scheduleId = 2L;
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		Long seatGradeId = 3L;
 		int quantity = 4;
 

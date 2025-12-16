@@ -1,4 +1,4 @@
-package com.back.b2st.global.common.controller;
+package com.back.b2st.domain.bank.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
@@ -20,7 +20,7 @@ import com.back.b2st.global.test.AbstractContainerBaseTest;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class CommonControllerTest extends AbstractContainerBaseTest {
+class BankControllerTest extends AbstractContainerBaseTest {
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -29,7 +29,7 @@ class CommonControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("통합: 은행 목록 조회 성공 - Enum 데이터가 JSON으로 변환되는지")
 	void getBankList_success() throws Exception {
 		// when & then
-		mockMvc.perform(get("/common/banks")
+		mockMvc.perform(get("/api/banks")
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())
 			.andExpect(status().isOk())

@@ -13,13 +13,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.back.b2st.domain.member.dto.RefundAccountReq;
-import com.back.b2st.domain.member.dto.RefundAccountRes;
+import com.back.b2st.domain.bank.BankCode;
+import com.back.b2st.domain.member.dto.request.RefundAccountReq;
+import com.back.b2st.domain.member.dto.response.RefundAccountRes;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.entity.RefundAccount;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.member.repository.RefundAccountRepository;
-import com.back.b2st.global.common.BankCode;
 
 @ExtendWith(MockitoExtension.class)
 public class RefundAccountServiceTest {
@@ -38,11 +38,7 @@ public class RefundAccountServiceTest {
 	void saveAccount_create_success() {
 		// given
 		Long memberId = 1L;
-		RefundAccountReq request = RefundAccountReq.builder()
-			.bankCode(BankCode.KB)
-			.accountNumber("1234")
-			.holderName("홍길동")
-			.build();
+		RefundAccountReq request = buildRefundAccountReq();
 
 		Member member = Member.builder().build();
 
@@ -61,18 +57,14 @@ public class RefundAccountServiceTest {
 	void saveAccount_update_success() {
 		// given
 		Long memberId = 1L;
-		RefundAccountReq request = RefundAccountReq.builder()
-			.bankCode(BankCode.SHINHAN)
-			.accountNumber("5678")
-			.holderName("홍길동")
-			.build();
+		RefundAccountReq request = buildRefundAccountReq();
 
 		Member member = Member.builder().build();
 		// 기존 계좌 존재 (국민/1234)
 		RefundAccount existingAccount = RefundAccount.builder()
 			.member(member)
 			.bankCode(BankCode.KB)
-			.accountNumber("1234")
+			.accountNumber("1234567")
 			.holderName("홍길동")
 			.build();
 
@@ -85,7 +77,7 @@ public class RefundAccountServiceTest {
 		// then
 		// 객체 내부 값이 변경되었는지 확인 (Dirty Checking)
 		assertThat(existingAccount.getBankCode()).isEqualTo(BankCode.SHINHAN);
-		assertThat(existingAccount.getAccountNumber()).isEqualTo("5678");
+		assertThat(existingAccount.getAccountNumber()).isEqualTo(request.accountNumber());
 	}
 
 	@Test
@@ -97,7 +89,7 @@ public class RefundAccountServiceTest {
 		RefundAccount account = RefundAccount.builder()
 			.member(member)
 			.bankCode(BankCode.KB)
-			.accountNumber("1234")
+			.accountNumber("1234567")
 			.holderName("홍길동")
 			.build();
 
@@ -109,6 +101,14 @@ public class RefundAccountServiceTest {
 
 		// then
 		assertThat(response).isNotNull();
-		assertThat(response.getAccountNumber()).isEqualTo("1234");
+		assertThat(response.accountNumber()).isEqualTo(account.getAccountNumber());
+	}
+
+	private RefundAccountReq buildRefundAccountReq() {
+		return new RefundAccountReq(
+			BankCode.SHINHAN,
+			"5678901",
+			"홍길동"
+		);
 	}
 }

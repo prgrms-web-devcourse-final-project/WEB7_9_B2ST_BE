@@ -25,6 +25,7 @@ import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.member.repository.RefundAccountRepository;
+import com.back.b2st.global.error.code.CommonErrorCode;
 import com.back.b2st.global.test.AbstractContainerBaseTest;
 
 import tools.jackson.databind.JsonNode;
@@ -81,9 +82,12 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 
 		// 내 정보 조회 요청
 		mockMvc.perform(get("/api/mypage/me").header("Authorization", "Bearer " + accessToken) // 토큰 필수
-				.contentType(MediaType.APPLICATION_JSON)).andDo(print()).andExpect(status().isOk())
+				.contentType(MediaType.APPLICATION_JSON))
+			.andDo(print())
+			.andExpect(status().isOk())
 			// 응답 검증
-			.andExpect(jsonPath("$.data.email").value(email)).andExpect(jsonPath("$.data.name").value("마이페이지"));
+			.andExpect(jsonPath("$.data.email").value(email))
+			.andExpect(jsonPath("$.data.name").value(member.getName()));
 	}
 
 	@Test
@@ -93,7 +97,7 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.andDo(print())
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value(401))
-			.andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+			.andExpect(jsonPath("$.message").value(CommonErrorCode.UNAUTHORIZED.getMessage()));
 	}
 
 	@Test
@@ -126,7 +130,7 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		Member updatedMember = memberRepository.findByEmail(email).orElseThrow();
 		// matches(raw, encoded)
 		if (!passwordEncoder.matches("NewPass123!", updatedMember.getPassword())) {
-			throw new IllegalStateException("비밀번호가 DB에 제대로 업데이트되지 않았습니다.");
+			throw new IllegalStateException("테스트 일회용 예외: 비밀번호가 DB에 제대로 업데이트되지 않았습니다.");
 		}
 	}
 
@@ -218,9 +222,9 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.bankCode").value("020"))
-			.andExpect(jsonPath("$.data.bankName").value("우리은행"))
-			.andExpect(jsonPath("$.data.accountNumber").value("100212345678"));
+			.andExpect(jsonPath("$.data.bankCode").value(request.bankCode().getCode()))
+			.andExpect(jsonPath("$.data.bankName").value(request.bankCode().getDescription()))
+			.andExpect(jsonPath("$.data.accountNumber").value(request.accountNumber()));
 	}
 
 	@Test
@@ -239,23 +243,23 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		memberRepository.save(member);
 		String accessToken = getAccessToken(email, password);
 
-		RefundAccountReq initRequest = buildRefundAccountRequest(BankCode.K_BANK, "1111", "수정맨");
+		RefundAccountReq initRequest = buildRefundAccountRequest(BankCode.K_BANK, "1111111", "수정맨");
 
 		mockMvc.perform(post("/api/mypage/account").header("Authorization", "Bearer " + accessToken)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(initRequest)));
 
 		// 계좌 수정 요청
-		RefundAccountReq updateRequest = buildRefundAccountRequest(BankCode.CITY, "2222", "수정맨");
+		RefundAccountReq updateRequest = buildRefundAccountRequest(BankCode.CITY, "2222222", "수정맨");
 
 		mockMvc.perform(post("/api/mypage/account").header("Authorization", "Bearer " + accessToken)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(updateRequest))).andDo(print()).andExpect(status().isOk());
 
 		mockMvc.perform(get("/api/mypage/account").header("Authorization", "Bearer " + accessToken))
-			.andExpect(jsonPath("$.data.bankCode").value("027"))
-			.andExpect(jsonPath("$.data.bankName").value("한국씨티은행"))
-			.andExpect(jsonPath("$.data.accountNumber").value("2222"));
+			.andExpect(jsonPath("$.data.bankCode").value(updateRequest.bankCode().getCode()))
+			.andExpect(jsonPath("$.data.bankName").value(updateRequest.bankCode().getDescription()))
+			.andExpect(jsonPath("$.data.accountNumber").value(updateRequest.accountNumber()));
 	}
 
 	@Test
@@ -289,12 +293,13 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.content(requestJson)).andDo(print()).andExpect(status().isOk());
 
 		// 조회 검증
+		BankCode expectedBank = BankCode.KB;
 		mockMvc.perform(get("/api/mypage/account").header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.bankCode").value("004"))
-			.andExpect(jsonPath("$.data.bankName").value("KB국민은행"))
+			.andExpect(jsonPath("$.data.bankCode").value(expectedBank.getCode()))
+			.andExpect(jsonPath("$.data.bankName").value(expectedBank.getDescription()))
 			.andExpect(jsonPath("$.data.accountNumber").value("123456789"));
 	}
 

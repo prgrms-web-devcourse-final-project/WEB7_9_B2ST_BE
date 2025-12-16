@@ -8,6 +8,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
 import com.back.b2st.domain.trade.dto.request.UpdateTradeReq;
 import com.back.b2st.domain.trade.dto.response.CreateTradeRes;
@@ -31,6 +37,9 @@ public class TradeService {
 
 	private final TradeRepository tradeRepository;
 	private final TradeRequestRepository tradeRequestRepository;
+	private final TicketRepository ticketRepository;
+	private final SeatRepository seatRepository;
+	private final ReservationRepository reservationRepository;
 
 	public TradeRes getTrade(Long tradeId) {
 		Trade trade = tradeRepository.findById(tradeId)
@@ -56,35 +65,70 @@ public class TradeService {
 	}
 
 	@Transactional
-	public CreateTradeRes createTrade(CreateTradeReq request, Long memberId) {
-		validateTicketNotDuplicated(request.getTicketId());
+	public List<CreateTradeRes> createTrade(CreateTradeReq request, Long memberId) {
+		// 교환은 1개만 가능
+		if (request.getType() == TradeType.EXCHANGE && request.getTicketIds().size() != 1) {
+			throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_COUNT);
+		}
+
+		// 양도는 1개 이상 가능
+		if (request.getType() == TradeType.TRANSFER && request.getTicketIds().isEmpty()) {
+			throw new BusinessException(TradeErrorCode.INVALID_TICKET_COUNT);
+		}
+
 		validateTradeType(request);
 
-		String section = "A";
-		String row = "5열";
-		String seatNumber = "12석";
-		Long performanceId = 1L;
-		Long scheduleId = 1L;
+		List<CreateTradeRes> results = new java.util.ArrayList<>();
 
-		Trade trade = Trade.builder()
-			.memberId(memberId)
-			.performanceId(performanceId)
-			.scheduleId(scheduleId)
-			.ticketId(request.getTicketId())
-			.type(request.getType())
-			.price(request.getPrice())
-			.totalCount(request.getTotalCount())
-			.section(section)
-			.row(row)
-			.seatNumber(seatNumber)
-			.build();
+		for (Long ticketId : request.getTicketIds()) {
+			validateTicketNotDuplicated(ticketId);
 
-		try {
-			Trade savedTrade = tradeRepository.save(trade);
-			return new CreateTradeRes(savedTrade);
-		} catch (DataIntegrityViolationException e) {
-			throw new BusinessException(TradeErrorCode.TICKET_ALREADY_REGISTERED);
+			// Ticket 조회
+			Ticket ticket = ticketRepository.findById(ticketId)
+				.orElseThrow(() -> new BusinessException(TradeErrorCode.TICKET_NOT_OWNED));
+
+			// 티켓 소유자 검증
+			if (!ticket.getMemberId().equals(memberId)) {
+				throw new BusinessException(TradeErrorCode.TICKET_NOT_OWNED);
+			}
+
+			// Seat 조회
+			Seat seat = seatRepository.findById(ticket.getSeatId())
+				.orElseThrow(() -> new BusinessException(TradeErrorCode.TICKET_NOT_OWNED));
+
+			// Reservation 조회
+			Reservation reservation = reservationRepository.findById(ticket.getReservationId())
+				.orElseThrow(() -> new BusinessException(TradeErrorCode.TICKET_NOT_OWNED));
+
+			// 실제 데이터 사용
+			String section = seat.getSectionName();
+			String row = seat.getRowLabel();
+			String seatNumber = seat.getSeatNumber().toString();
+			Long performanceId = reservation.getPerformanceId();
+			Long scheduleId = 1L;  // 회차 연결 전까지 하드코딩 유지
+
+			Trade trade = Trade.builder()
+				.memberId(memberId)
+				.performanceId(performanceId)
+				.scheduleId(scheduleId)
+				.ticketId(ticketId)
+				.type(request.getType())
+				.price(request.getPrice())
+				.totalCount(request.getTicketIds().size())  // 전체 티켓 개수
+				.section(section)
+				.row(row)
+				.seatNumber(seatNumber)
+				.build();
+
+			try {
+				Trade savedTrade = tradeRepository.save(trade);
+				results.add(new CreateTradeRes(savedTrade));
+			} catch (DataIntegrityViolationException e) {
+				throw new BusinessException(TradeErrorCode.TICKET_ALREADY_REGISTERED);
+			}
 		}
+
+		return results;
 	}
 
 	private void validateTicketNotDuplicated(Long ticketId) {
@@ -127,9 +171,6 @@ public class TradeService {
 
 	private void validateTradeType(CreateTradeReq request) {
 		if (request.getType() == TradeType.EXCHANGE) {
-			if (request.getTotalCount() != 1) {
-				throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_COUNT);
-			}
 			if (request.getPrice() != null) {
 				throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_PRICE);
 			}

@@ -57,11 +57,11 @@ public class TradeController implements TradeApi {
 
 	@Override
 	@PostMapping
-	public ResponseEntity<BaseResponse<CreateTradeRes>> createTrade(
+	public ResponseEntity<BaseResponse<java.util.List<CreateTradeRes>>> createTrade(
 		@Valid @RequestBody CreateTradeReq request,
 		@CurrentUser UserPrincipal userPrincipal
 	) {
-		CreateTradeRes response = tradeService.createTrade(request, userPrincipal.getId());
+		java.util.List<CreateTradeRes> response = tradeService.createTrade(request, userPrincipal.getId());
 		return ResponseEntity.ok(BaseResponse.success(response));
 	}
 

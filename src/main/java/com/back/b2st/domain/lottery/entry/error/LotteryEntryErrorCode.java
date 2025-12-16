@@ -14,7 +14,7 @@ public enum LotteryEntryErrorCode implements ErrorCode {
 	MEMBER_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "L401", "응모자 정보를 찾을 수 없습니다."),
 	PERFORMANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "L402", "공연 정보를 찾을 수 없습니다."),
 	SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "L403", "회차 정보를 찾을 수 없습니다."),
-	INVALID_GRADE_INFO(HttpStatus.BAD_REQUEST, "L404", "공연 정보를 찾을 수 없습니다."),
+	INVALID_GRADE_INFO(HttpStatus.BAD_REQUEST, "L404", "등급 정보가 올바르지 않습니다."),
 	EXCEEDS_MAX_ALLOCATION(HttpStatus.BAD_REQUEST, "L405", "응모 인원을 초과하였습니다."),
 	DUPLICATE_ENTRY(HttpStatus.CONFLICT, "L406", "이미 존재하는 응모 내역이 있습니다."),
 

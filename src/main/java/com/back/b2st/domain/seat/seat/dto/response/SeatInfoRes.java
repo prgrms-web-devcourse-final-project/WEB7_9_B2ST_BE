@@ -10,7 +10,7 @@ public record SeatInfoRes(
 ) {
 	public static SeatInfoRes toDetail(Seat seat) {
 		return new SeatInfoRes(
-			seat.getId();
+			seat.getId(),
 			seat.getSectionName(),
 			seat.getRowLabel(),
 			seat.getSeatNumber()

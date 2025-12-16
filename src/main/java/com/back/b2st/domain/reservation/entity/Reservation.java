@@ -28,7 +28,7 @@ import lombok.NoArgsConstructor;
 		@Index(name = "idx_reservation_member", columnList = "member_id")
 	},
 	uniqueConstraints = {
-		@UniqueConstraint(name = "uk_reservation_schedule_seat", columnNames = {"schedule_id", "seat_id"})
+		@UniqueConstraint(name = "uk_reservation_performance_seat", columnNames = {"performance_id", "seat_id"})
 	}
 )
 @SequenceGenerator(

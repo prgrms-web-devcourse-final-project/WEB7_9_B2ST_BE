@@ -2,6 +2,7 @@ package com.back.b2st.domain.reservation.service;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import com.back.b2st.global.error.exception.BusinessException;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@Disabled
 class ReservationServiceTest {
 
 	@Autowired

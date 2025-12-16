@@ -21,8 +21,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.request.LoginReq;
 import com.back.b2st.domain.member.entity.Member;
@@ -137,7 +137,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 			Seat savedSeat = seatRepository.save(seat);
 
 			Reservation reservation = Reservation.builder()
-				.performanceId(1L)
+				.scheduleId(1L)
 				.memberId(testMemberId)
 				.seatId(savedSeat.getId())
 				.build();

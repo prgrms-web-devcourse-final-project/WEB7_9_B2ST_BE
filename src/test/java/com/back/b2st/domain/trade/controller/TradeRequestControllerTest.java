@@ -5,11 +5,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.LocalDate;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import java.time.LocalDate;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -203,7 +203,7 @@ class TradeRequestControllerTest {
 			.findFirst()
 			.orElseThrow();
 		Reservation reservation = reservationRepository.save(Reservation.builder()
-			.performanceId(1L)
+			.scheduleId(1L)
 			.memberId(memberId)
 			.seatId(seat.getId())
 			.build());

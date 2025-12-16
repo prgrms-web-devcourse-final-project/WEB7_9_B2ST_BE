@@ -82,7 +82,7 @@ class TradeServiceTest {
 			.build();
 
 		Reservation mockReservation = Reservation.builder()
-			.performanceId(1L)
+			.scheduleId(1L)
 			.memberId(memberId)
 			.seatId(1L)
 			.build();
@@ -143,7 +143,7 @@ class TradeServiceTest {
 			.build();
 
 		Reservation mockReservation = Reservation.builder()
-			.performanceId(1L)
+			.scheduleId(1L)
 			.memberId(memberId)
 			.seatId(1L)
 			.build();
@@ -259,7 +259,7 @@ class TradeServiceTest {
 			.build();
 
 		Reservation mockReservation = Reservation.builder()
-			.performanceId(1L)
+			.scheduleId(1L)
 			.memberId(memberId)
 			.seatId(1L)
 			.build();

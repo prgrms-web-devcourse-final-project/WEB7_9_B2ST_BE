@@ -18,6 +18,7 @@ import com.back.b2st.domain.trade.entity.TradeRequestStatus;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
+import com.back.b2st.domain.trade.mapper.TradeRequestMapper;
 import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.domain.trade.repository.TradeRequestRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -42,11 +43,7 @@ public class TradeRequestService {
 		validateNotOwnTrade(trade, requesterId);
 		validateNoDuplicateRequest(trade, requesterId);
 
-		TradeRequest tradeRequest = TradeRequest.builder()
-			.trade(trade)
-			.requesterId(requesterId)
-			.requesterTicketId(request.getRequesterTicketId())
-			.build();
+		TradeRequest tradeRequest = TradeRequestMapper.toEntity(request, trade, requesterId);
 
 		TradeRequest savedRequest = tradeRequestRepository.save(tradeRequest);
 		return TradeRequestRes.from(savedRequest);

@@ -69,7 +69,7 @@ class TradeRequestServiceTest {
 		TradeRequest tradeRequest = TradeRequest.builder()
 			.trade(trade)
 			.requesterId(requesterId)
-			.requesterTicketId(request.getRequesterTicketId())
+			.requesterTicketId(request.requesterTicketId())
 			.build();
 
 		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
@@ -82,9 +82,9 @@ class TradeRequestServiceTest {
 
 		// then
 		assertThat(response).isNotNull();
-		assertThat(response.getRequesterId()).isEqualTo(requesterId);
-		assertThat(response.getRequesterTicketId()).isEqualTo(10L);
-		assertThat(response.getStatus()).isEqualTo(TradeRequestStatus.PENDING);
+		assertThat(response.requesterId()).isEqualTo(requesterId);
+		assertThat(response.requesterTicketId()).isEqualTo(10L);
+		assertThat(response.status()).isEqualTo(TradeRequestStatus.PENDING);
 		verify(tradeRequestRepository).save(any(TradeRequest.class));
 	}
 
@@ -236,8 +236,8 @@ class TradeRequestServiceTest {
 
 		// then
 		assertThat(response).isNotNull();
-		assertThat(response.getRequesterId()).isEqualTo(200L);
-		assertThat(response.getRequesterTicketId()).isEqualTo(10L);
+		assertThat(response.requesterId()).isEqualTo(200L);
+		assertThat(response.requesterTicketId()).isEqualTo(10L);
 	}
 
 	@Test
@@ -291,8 +291,8 @@ class TradeRequestServiceTest {
 
 		// then
 		assertThat(responses).hasSize(2);
-		assertThat(responses.get(0).getRequesterId()).isEqualTo(200L);
-		assertThat(responses.get(1).getRequesterId()).isEqualTo(201L);
+		assertThat(responses.get(0).requesterId()).isEqualTo(200L);
+		assertThat(responses.get(1).requesterId()).isEqualTo(201L);
 	}
 
 	@Test
@@ -326,7 +326,7 @@ class TradeRequestServiceTest {
 
 		// then
 		assertThat(responses).hasSize(1);
-		assertThat(responses.get(0).getRequesterId()).isEqualTo(requesterId);
+		assertThat(responses.get(0).requesterId()).isEqualTo(requesterId);
 	}
 
 	@Test

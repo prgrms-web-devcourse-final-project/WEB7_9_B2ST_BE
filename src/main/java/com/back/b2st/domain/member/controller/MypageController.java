@@ -8,10 +8,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.back.b2st.domain.member.dto.MyInfoResponse;
-import com.back.b2st.domain.member.dto.PasswordChangeRequest;
-import com.back.b2st.domain.member.dto.RefundAccountReq;
-import com.back.b2st.domain.member.dto.RefundAccountRes;
+import com.back.b2st.domain.member.dto.request.PasswordChangeReq;
+import com.back.b2st.domain.member.dto.request.RefundAccountReq;
+import com.back.b2st.domain.member.dto.response.MyInfoRes;
+import com.back.b2st.domain.member.dto.response.RefundAccountRes;
 import com.back.b2st.domain.member.service.MemberService;
 import com.back.b2st.domain.member.service.RefundAccountService;
 import com.back.b2st.global.annotation.CurrentUser;
@@ -22,22 +22,22 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/mypage")
+@RequestMapping("/api/mypage")
 public class MypageController {
 
 	private final MemberService memberService;
 	private final RefundAccountService refundAccountService;
 
 	@GetMapping("/me")
-	public ResponseEntity<BaseResponse<MyInfoResponse>> getMyInfo(@CurrentUser UserPrincipal userPrincipal) {
-		MyInfoResponse myInfo = memberService.getMyInfo(userPrincipal.getId());
+	public ResponseEntity<BaseResponse<MyInfoRes>> getMyInfo(@CurrentUser UserPrincipal userPrincipal) {
+		MyInfoRes myInfo = memberService.getMyInfo(userPrincipal.getId());
 
 		return ResponseEntity.ok(BaseResponse.success(myInfo));
 	}
 
 	@PatchMapping("/password")
 	public BaseResponse<Void> changePassword(@CurrentUser UserPrincipal userPrincipal,
-		@RequestBody PasswordChangeRequest request) {
+		@RequestBody PasswordChangeReq request) {
 		memberService.changePassword(userPrincipal.getId(), request);
 		return BaseResponse.success(null);
 	}

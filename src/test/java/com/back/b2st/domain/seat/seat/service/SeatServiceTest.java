@@ -20,6 +20,8 @@ import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.error.SectionErrorCode;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
+import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @SpringBootTest
@@ -33,28 +35,36 @@ class SeatServiceTest {
 	private SeatRepository seatRepository;
 	@Autowired
 	private SectionRepository sectionRepository;
+	@Autowired
+	private VenueRepository venueRepository;
 
 	private Section section1A;
 	private Seat seat;
+	private Venue venue;
 
 	@BeforeEach
 	void setUp() {
-		section1A = Section.builder()
-			.venueId(1L)
-			.sectionName("A")
-			.build();
+		venue = venueRepository.save(
+			Venue.builder()
+				.name("잠실실내체육관")
+				.build());
 
-		sectionRepository.save(section1A);
+		section1A = sectionRepository.save(
+			Section.builder()
+				.venueId(venue.getVenueId())
+				.sectionName("A")
+				.build()
+		);
 
-		seat = Seat.builder()
-			.venueId(1L)
-			.sectionId(section1A.getId())
-			.sectionName(section1A.getSectionName())
-			.rowLabel("1")
-			.seatNumber(7)
-			.build();
-
-		seat = seatRepository.save(seat);
+		seat = seatRepository.save(
+			Seat.builder()
+				.venueId(venue.getVenueId())
+				.sectionId(section1A.getId())
+				.sectionName("A")
+				.rowLabel("1")
+				.seatNumber(1)
+				.build()
+		);
 	}
 
 	@Test
@@ -122,5 +132,39 @@ class SeatServiceTest {
 
 		// then
 		assertThat(e.getErrorCode()).isEqualTo(SectionErrorCode.SECTION_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("좌석조회 - 성공, 공연장")
+	void getSeatInfoByVenueId_success() {
+		// given
+		String sectionName = "A";
+		String rowLabel = seat.getRowLabel();
+		int seatNumber = seat.getSeatNumber();
+
+		// when
+		List<SeatInfoRes> seats = seatService.getSeatInfoByVenueId(venue.getVenueId());
+
+		// then
+		assertThat(seats).isNotEmpty();
+
+		SeatInfoRes findSeat = seats.get(0);
+		assertThat(findSeat.sectionName()).isEqualTo(sectionName);
+		assertThat(findSeat.rowLabel()).isEqualTo(rowLabel);
+		assertThat(findSeat.seatNumber()).isEqualTo(seatNumber);
+	}
+
+	@Test
+	@DisplayName("좌석조회 - 실패, 공연장")
+	void getSeatInfoByVenueId_fail() {
+		// given
+		Long venudId = 999L;
+
+		// when
+		BusinessException e = assertThrows(BusinessException.class,
+			() -> seatService.getSeatInfoByVenueId(venudId));
+
+		// then
+		assertThat(e.getErrorCode()).isEqualTo(SeatErrorCode.VENUE_NOT_FOUND);
 	}
 }

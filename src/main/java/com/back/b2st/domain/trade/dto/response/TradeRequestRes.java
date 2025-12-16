@@ -5,30 +5,25 @@ import java.time.LocalDateTime;
 import com.back.b2st.domain.trade.entity.TradeRequest;
 import com.back.b2st.domain.trade.entity.TradeRequestStatus;
 
-import lombok.Builder;
-import lombok.Getter;
-
-@Getter
-@Builder
-public class TradeRequestRes {
-
-	private Long tradeRequestId;
-	private Long tradeId;
-	private Long requesterId;
-	private Long requesterTicketId;
-	private TradeRequestStatus status;
-	private LocalDateTime createdAt;
-	private LocalDateTime modifiedAt;
+public record TradeRequestRes(
+	Long tradeRequestId,
+	Long tradeId,
+	Long requesterId,
+	Long requesterTicketId,
+	TradeRequestStatus status,
+	LocalDateTime createdAt,
+	LocalDateTime modifiedAt
+) {
 
 	public static TradeRequestRes from(TradeRequest tradeRequest) {
-		return TradeRequestRes.builder()
-			.tradeRequestId(tradeRequest.getId())
-			.tradeId(tradeRequest.getTrade().getId())
-			.requesterId(tradeRequest.getRequesterId())
-			.requesterTicketId(tradeRequest.getRequesterTicketId())
-			.status(tradeRequest.getStatus())
-			.createdAt(tradeRequest.getCreatedAt())
-			.modifiedAt(tradeRequest.getModifiedAt())
-			.build();
+		return new TradeRequestRes(
+			tradeRequest.getId(),
+			tradeRequest.getTrade().getId(),
+			tradeRequest.getRequesterId(),
+			tradeRequest.getRequesterTicketId(),
+			tradeRequest.getStatus(),
+			tradeRequest.getCreatedAt(),
+			tradeRequest.getModifiedAt()
+		);
 	}
 }

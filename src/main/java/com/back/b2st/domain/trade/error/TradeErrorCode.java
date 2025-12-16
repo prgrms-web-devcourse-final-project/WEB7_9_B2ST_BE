@@ -28,7 +28,8 @@ public enum TradeErrorCode implements ErrorCode {
 	CANNOT_REQUEST_OWN_TRADE(HttpStatus.BAD_REQUEST, "X015", "자신의 게시글에는 신청할 수 없습니다."),
 	DUPLICATE_TRADE_REQUEST(HttpStatus.BAD_REQUEST, "X016", "이미 신청한 게시글입니다."),
 	UNAUTHORIZED_TRADE_REQUEST_ACCESS(HttpStatus.FORBIDDEN, "X017", "해당 신청에 접근할 권한이 없습니다."),
-	TRADE_ALREADY_HAS_ACCEPTED_REQUEST(HttpStatus.BAD_REQUEST, "X018", "이미 수락된 신청이 있습니다.");
+	TRADE_ALREADY_HAS_ACCEPTED_REQUEST(HttpStatus.BAD_REQUEST, "X018", "이미 수락된 신청이 있습니다."),
+	INVALID_TICKET_COUNT(HttpStatus.BAD_REQUEST, "X019", "티켓은 최소 1개 이상이어야 합니다.");
 
 	private final HttpStatus status;
 	private final String code;

@@ -82,8 +82,8 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<BaseResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
 		log.error("AccessDeniedException: {}", ex.getMessage());
 		return ResponseEntity
-			.status(CommonErrorCode.FORBIDDEN.getStatus())
-			.body(BaseResponse.error(CommonErrorCode.FORBIDDEN));
+			.status(AuthErrorCode.UNAUTHORIZED_ACCESS.getStatus())
+			.body(BaseResponse.error(AuthErrorCode.UNAUTHORIZED_ACCESS));
 	}
 
 	/* =========================

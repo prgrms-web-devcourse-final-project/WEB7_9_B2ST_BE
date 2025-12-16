@@ -4,63 +4,90 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.member.dto.MyInfoResponse;
-import com.back.b2st.domain.member.dto.PasswordChangeRequest;
-import com.back.b2st.domain.member.dto.SignupRequest;
+import com.back.b2st.domain.member.dto.request.PasswordChangeReq;
+import com.back.b2st.domain.member.dto.request.SignupReq;
+import com.back.b2st.domain.member.dto.response.MyInfoRes;
 import com.back.b2st.domain.member.entity.Member;
+import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.global.error.exception.BusinessException;
+import com.back.b2st.global.util.MaskingUtil;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MemberService {
 
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
 
 	@Transactional
-	public Long signup(SignupRequest request) {
-		if (memberRepository.existsByEmail(request.getEmail())) {
-			throw new IllegalArgumentException("이미 가입된 이메일입니다.");
-		}
+	public Long signup(SignupReq request) {
+		validateEmail(request);
 
 		// 비밀번호 암호화 및 엔티티 생성
 		Member member = Member.builder()
-			.email(request.getEmail())
-			.password(passwordEncoder.encode(request.getPassword()))
-			.name(request.getName())
-			.phone(request.getPhone())
-			.birth(request.getBirth())
+			.email(request.email())
+			.password(passwordEncoder.encode(request.password()))
+			.name(request.name())
+			.phone(request.phone())
+			.birth(request.birth())
 			.role(Member.Role.MEMBER) // 기본 가입은 MEMBER
 			.provider(Member.Provider.EMAIL)
 			.isVerified(false) // 초기엔 미인증
 			.build();
 
-		// 저장
+		log.info("새로운 회원 가입: ID={}, Email={}", member.getId(), MaskingUtil.maskEmail(member.getEmail()));
+
 		return memberRepository.save(member).getId();
 	}
 
 	@Transactional(readOnly = true)
-	public MyInfoResponse getMyInfo(Long memberId) {
-		Member member = memberRepository.findById(memberId)
-			.orElseThrow(() -> new IllegalArgumentException("해당하는 회원 찾을 수 없습니다."));
+	public MyInfoRes getMyInfo(Long memberId) {
+		Member member = validateMember(memberId);
 
-		return MyInfoResponse.from(member);
+		return MyInfoRes.from(member);
 	}
 
-	public void changePassword(Long memberId, PasswordChangeRequest request) {
-		Member member = memberRepository.findById(memberId)
-			.orElseThrow(() -> new IllegalArgumentException("해당하는 회원 찾을 수 없습니다."));
+	@Transactional
+	public void changePassword(Long memberId, PasswordChangeReq request) {
+		Member member = validateMember(memberId);
+		validatePasswordChange(request, member);
 
-		if (!passwordEncoder.matches(request.getCurrentPassword(), member.getPassword())) {
-			throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+		member.updatePassword(passwordEncoder.encode(request.newPassword()));
+		log.info("비밀번호 변경 완료: MemberID={}", memberId);
+	}
+
+	// 밑으로 validate 모음
+	private Member validateMember(Long memberId) {
+		return memberRepository.findById(memberId)
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+	}
+
+	private void validateEmail(SignupReq request) {
+		if (memberRepository.existsByEmail(request.email())) {
+			throw new BusinessException(MemberErrorCode.DUPLICATE_EMAIL);
 		}
+	}
 
-		if (request.getNewPassword().equals(request.getCurrentPassword())) {
-			throw new IllegalArgumentException("새 비밀번호는 기존 비밀번호와 다르게 설정해야 합니다.");
+	private void validateCurrentPassword(PasswordChangeReq request, Member member) {
+		if (!passwordEncoder.matches(request.currentPassword(), member.getPassword())) {
+			throw new BusinessException(MemberErrorCode.PASSWORD_MISMATCH);
 		}
+	}
 
-		member.updatePassword(passwordEncoder.encode(request.getNewPassword()));
+	private void ensurePasswordDiffer(PasswordChangeReq request) {
+		if (request.newPassword().equals(request.currentPassword())) {
+			throw new BusinessException(MemberErrorCode.SAME_PASSWORD);
+		}
+	}
+
+	// 비번변경 api 검증 상위 메서드. 쓸데없지만 퍼사드 패턴 숙달 차원에서 묶어봄
+	private void validatePasswordChange(PasswordChangeReq request, Member member) {
+		validateCurrentPassword(request, member);
+		ensurePasswordDiffer(request);
 	}
 }

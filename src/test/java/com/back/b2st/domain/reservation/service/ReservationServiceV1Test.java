@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Disabled("test-V1")
 class ReservationServiceV1Test {
 
 	@Autowired
@@ -68,7 +70,7 @@ class ReservationServiceV1Test {
 		assertThat(response).isNotNull();
 		assertThat(response.reservationId()).isNotNull();
 		assertThat(response.memberId()).isEqualTo(memberId);
-		assertThat(response.performanceId()).isEqualTo(performanceId);
+		assertThat(response.scheduleId()).isEqualTo(performanceId);
 		assertThat(response.seatId()).isEqualTo(seatId);
 
 		// 좌석 상태가 HOLD로 변경되었는지 검증

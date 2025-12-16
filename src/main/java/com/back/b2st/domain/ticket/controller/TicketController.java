@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.back.b2st.domain.ticket.api.TicketApi;
 import com.back.b2st.domain.ticket.dto.response.TicketRes;
 import com.back.b2st.domain.ticket.service.TicketService;
 import com.back.b2st.global.annotation.CurrentUser;
@@ -22,11 +21,10 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/tickets")
 @RequiredArgsConstructor
 @Tag(name = "🎫 Ticket", description = "티켓 API")
-public class TicketController implements TicketApi {
+public class TicketController {
 
 	private final TicketService ticketService;
 
-	@Override
 	@GetMapping("/my")
 	@Operation(summary = "내 티켓 목록 조회", description = "본인이 소유한 티켓 목록을 조회합니다")
 	public ResponseEntity<BaseResponse<List<TicketRes>>> getMyTickets(

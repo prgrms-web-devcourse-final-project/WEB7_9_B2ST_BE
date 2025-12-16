@@ -25,6 +25,7 @@ public class SeatService {
 	private final SeatRepository seatRepository;
 	private final SectionService sectionService;
 
+	// 생성
 	public CreateSeatRes createSeatInfo(Long venueId, CreateSeatReq request) {
 		// todo : venueId 검증
 		Section section = validateSectionId(request.sectionId());
@@ -42,6 +43,7 @@ public class SeatService {
 		return CreateSeatRes.from(seatRepository.save(seat));
 	}
 
+	// 기등록 검증
 	private void validateSeatInfo(Long venueId, Long sectionId, String sectionName, String rowLabel,
 		Integer seatNumber) {
 		if (seatRepository.existsByVenueIdAndSectionIdAndSectionNameAndRowLabelAndSeatNumber(
@@ -50,25 +52,33 @@ public class SeatService {
 		}
 	}
 
+	// 구역 id 검증
 	private Section validateSectionId(Long sectionId) {
 		return sectionService.getSection(sectionId);
 	}
 
+	// 조회 - 좌석 id
 	public SeatInfoRes getSeatInfoBySeatId(Long seatId) {
 		Seat seat = seatRepository.findById(seatId)
 			.orElseThrow(() -> new BusinessException(SeatErrorCode.SEAT_NOT_FOUND));
 		return SeatInfoRes.toDetail(seat);
 	}
 
+	// 조회 - 구역 id
 	public List<SeatInfoRes> getSeatInfoBySectionId(Long sectionId) {
 		validateSectionId(sectionId);
 		List<Seat> seats = seatRepository.findBySectionId(sectionId);
 
 		return seats.stream()
-			.map(seat -> new SeatInfoRes(
-				seat.getSectionName(),
-				seat.getRowLabel(),
-				seat.getSeatNumber()
-			)).toList();
+			.map(SeatInfoRes::toDetail).toList();
+	}
+
+	// 조회 - 공연장 id
+	public List<SeatInfoRes> getSeatInfoByVenueId(Long venudId) {
+		validateSectionId(venudId);
+		List<Seat> seats = seatRepository.findBySectionId(venudId);
+
+		return seats.stream()
+			.map(SeatInfoRes::toDetail).toList();
 	}
 }

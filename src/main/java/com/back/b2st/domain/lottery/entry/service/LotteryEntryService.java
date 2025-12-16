@@ -57,7 +57,7 @@ public class LotteryEntryService {
 			.build();
 
 		try {
-			return new LotteryEntryInfo(lotteryEntryRepository.save(lotteryEntry));
+			return LotteryEntryInfo.from(lotteryEntryRepository.save(lotteryEntry));
 		} catch (DataAccessException e) {
 			throw new BusinessException(LotteryEntryErrorCode.CREATE_ENTRY_FAILED);
 		}
@@ -74,7 +74,7 @@ public class LotteryEntryService {
 	// 고객 검증
 	private void validateMember(Long memberId) {
 		if (!memberRepository.existsById(memberId)) {
-			throw new BusinessException(LotteryEntryErrorCode.MEMBER_INFO_NOT_FOUND);
+			throw new BusinessException(LotteryEntryErrorCode.MEMBER_NOT_FOUND);
 		}
 	}
 

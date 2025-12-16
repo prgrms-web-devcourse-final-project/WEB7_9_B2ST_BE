@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum LotteryEntryErrorCode implements ErrorCode {
 
-	MEMBER_INFO_NOT_FOUND(HttpStatus.NOT_FOUND, "L401", "응모자 정보를 찾을 수 없습니다."),
+	MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "L401", "응모자 정보를 찾을 수 없습니다."),
 	PERFORMANCE_NOT_FOUND(HttpStatus.NOT_FOUND, "L402", "공연 정보를 찾을 수 없습니다."),
 	SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "L403", "회차 정보를 찾을 수 없습니다."),
 	INVALID_GRADE_INFO(HttpStatus.BAD_REQUEST, "L404", "등급 정보가 올바르지 않습니다."),

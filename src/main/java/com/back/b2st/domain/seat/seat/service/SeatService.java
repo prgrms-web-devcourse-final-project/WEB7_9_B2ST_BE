@@ -63,7 +63,7 @@ public class SeatService {
 	public SeatInfoRes getSeatInfoBySeatId(Long seatId) {
 		Seat seat = seatRepository.findById(seatId)
 			.orElseThrow(() -> new BusinessException(SeatErrorCode.SEAT_NOT_FOUND));
-		return SeatInfoRes.toDetail(seat);
+		return SeatInfoRes.from(seat);
 	}
 
 	// 조회 - 구역 id
@@ -71,7 +71,7 @@ public class SeatService {
 		validateSectionId(sectionId);
 		List<Seat> seats = seatRepository.findBySectionId(sectionId);
 
-		return seats.stream().map(SeatInfoRes::toDetail).toList();
+		return seats.stream().map(SeatInfoRes::from).toList();
 	}
 
 	// 조회 - 공연장 id
@@ -80,7 +80,7 @@ public class SeatService {
 		validateVenueId(venudId);
 		List<Seat> seats = seatRepository.findByVenueId(venudId);
 
-		return seats.stream().map(SeatInfoRes::toDetail).toList();
+		return seats.stream().map(SeatInfoRes::from).toList();
 	}
 
 	private void validateVenueId(Long venudId) {

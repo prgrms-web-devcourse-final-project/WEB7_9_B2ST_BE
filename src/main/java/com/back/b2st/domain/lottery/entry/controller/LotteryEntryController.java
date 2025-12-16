@@ -25,7 +25,6 @@ public class LotteryEntryController {
 
 	private final LotteryEntryService lotteryEntryService;
 
-	// TODO : performaces나 예매 Controller로 이동 예정
 	// 구역별 좌석 조회
 	@GetMapping("/api/performances/{performanceId}/lottery/section")
 	public BaseResponse<List<SectionLayoutRes>> getSeatLayout(
@@ -34,7 +33,6 @@ public class LotteryEntryController {
 		return BaseResponse.success(lotteryEntryService.getSeatLayout(performanceId));
 	}
 
-	// TODO : performaces나 예매 Controller로 이동 예정
 	// 추첨 응모 생성
 	@PostMapping("/api/performances/{performanceId}/lottery/entry")
 	public BaseResponse<LotteryEntryInfo> registerLotteryEntry(

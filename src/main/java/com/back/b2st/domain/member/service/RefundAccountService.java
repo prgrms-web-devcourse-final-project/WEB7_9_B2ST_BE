@@ -63,6 +63,7 @@ public class RefundAccountService {
 		}
 	}
 
+	// 밑으로 validate 모음
 	private Member validateMember(Long memberId) {
 		return memberRepository.findById(memberId)
 			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));

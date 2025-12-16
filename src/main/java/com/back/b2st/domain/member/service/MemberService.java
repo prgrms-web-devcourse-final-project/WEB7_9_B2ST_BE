@@ -61,6 +61,7 @@ public class MemberService {
 		log.info("비밀번호 변경 완료: MemberID={}", memberId);
 	}
 
+	// 밑으로 validate 모음
 	private Member validateMember(Long memberId) {
 		return memberRepository.findById(memberId)
 			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
@@ -84,7 +85,7 @@ public class MemberService {
 		}
 	}
 
-	// 비번변경 api 검증 상위 메서드. 쓸데없지만 퍼사드 패턴 숙달을 위해 묶어봄
+	// 비번변경 api 검증 상위 메서드. 쓸데없지만 퍼사드 패턴 숙달 차원에서 묶어봄
 	private void validatePasswordChange(PasswordChangeReq request, Member member) {
 		validateCurrentPassword(request, member);
 		ensurePasswordDiffer(request);

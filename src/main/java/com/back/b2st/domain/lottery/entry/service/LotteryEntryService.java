@@ -15,6 +15,7 @@ import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
 import com.back.b2st.domain.seat.seat.service.SeatService;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -29,6 +30,7 @@ public class LotteryEntryService {
 	private final MemberRepository memberRepository;
 	private final PerformanceRepository performanceRepository;
 	private final SeatService seatService;
+	private final PerformanceScheduleRepository performanceScheduleRepository;
 
 	// 선택한 회차의 좌석 배치도 전달
 	public List<SectionLayoutRes> getSeatLayout(Long performanceId) {
@@ -69,16 +71,17 @@ public class LotteryEntryService {
 		return performance.getVenue().getVenueId();
 	}
 
+	// 고객 검증
 	private void validateMember(Long memberId) {
 		if (!memberRepository.existsById(memberId)) {
 			throw new BusinessException(LotteryEntryErrorCode.INVALID_MEMBER_INFO);
 		}
 	}
 
+	// 공연 + 회차 확인
 	private void validateSchedule(Long scheduleId, Long performanceId) {
-		// TODO: 회차정보 Repo 연결
-		// requset.scheduleId() + 공연 ID 확인
-		if (false) {
+		if (!(performanceScheduleRepository.existsByPerformanceScheduleIdAndPerformance_PerformanceId(
+			scheduleId, performanceId))) {
 			throw new BusinessException(LotteryEntryErrorCode.INVALID_SCHEDULE_INFO);
 		}
 	}

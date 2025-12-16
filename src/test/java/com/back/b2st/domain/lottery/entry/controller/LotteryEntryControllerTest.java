@@ -25,6 +25,9 @@ import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
@@ -52,11 +55,14 @@ class LotteryEntryControllerTest {
 	private SectionRepository sectionRepository;
 	@Autowired
 	private SeatRepository seatRepository;
+	@Autowired
+	private PerformanceScheduleRepository performanceScheduleRepository;
 
 	private Member tMember;
 	private Performance performance;
 	private Section section;
 	private Seat seat;
+	private PerformanceSchedule performanceSchedule;
 
 	@BeforeEach
 	void setUp() {
@@ -100,6 +106,29 @@ class LotteryEntryControllerTest {
 			.rowLabel("8")
 			.seatNumber(7)
 			.build());
+
+		performanceSchedule = performanceScheduleRepository.save(
+			PerformanceSchedule.builder()
+				.performance(performance)
+				.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
+				.roundNo(1)
+				.bookingType(BookingType.LOTTERY)
+				.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
+				.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
+				.build());
+	}
+
+	record TestRequest(Long memberId, Long scheduleId, Long seatGradeId, Integer quantity) {
+		String toJson() {
+			return String.format("""
+				{
+				    "memberId": %d,
+				    "scheduleId": %d,
+				    "seatGradeId": %d,
+				    "quantity": %d
+				}
+				""", memberId, scheduleId, seatGradeId, quantity);
+		}
 	}
 
 	@Test
@@ -131,7 +160,7 @@ class LotteryEntryControllerTest {
 		Long param = performance.getPerformanceId();
 
 		Long memberId = tMember.getId();
-		Long scheduleId = 2L;
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		Long seatGradeId = 3L;
 		int quantity = 4;
 
@@ -163,7 +192,31 @@ class LotteryEntryControllerTest {
 	@Test
 	@DisplayName("추첨응모_실패_공연")
 	void registerLotteryEntry_fail_performance() throws Exception {
-		// TODO: repo 연결 후 테스트 INVALID_PERFORMANCE_INFO
+		// given
+		String url = "/api/performances/{performanceId}/lottery/entry";
+		Long param = 999L;
+
+		Long memberId = tMember.getId();
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
+		Long seatGradeId = 3L;
+		int quantity = 4;
+
+		String requestBody = "{"
+			+ "\"memberId\": " + memberId + ","
+			+ "\"scheduleId\": " + scheduleId + ","
+			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"quantity\": " + quantity
+			+ "}";
+
+		// when & then
+		mvc.perform(
+				post(url, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.INVALID_PERFORMANCE_INFO.getMessage()));
 	}
 
 	@Test
@@ -201,7 +254,31 @@ class LotteryEntryControllerTest {
 	@Test
 	@DisplayName("추첨응모_실패_회차")
 	void registerLotteryEntry_fail_schedule() throws Exception {
-		// TODO : Repo 연결 후 테스트
+		// given
+		String url = "/api/performances/{performanceId}/lottery/entry";
+		Long param = performance.getPerformanceId();
+
+		Long memberId = tMember.getId();
+		Long scheduleId = 999L;
+		Long seatGradeId = 3L;
+		int quantity = 4;
+
+		String requestBody = "{"
+			+ "\"memberId\": " + memberId + ","
+			+ "\"scheduleId\": " + scheduleId + ","
+			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"quantity\": " + quantity
+			+ "}";
+
+		// when & then
+		mvc.perform(
+				post(url, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.INVALID_SCHEDULE_INFO.getMessage()));
 	}
 
 	@Test
@@ -283,7 +360,7 @@ class LotteryEntryControllerTest {
 		Long param = performance.getPerformanceId();
 
 		Long memberId = tMember.getId();
-		Long scheduleId = 2L;
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		Long seatGradeId = 3L;
 		int quantity = 4;
 

@@ -1,5 +1,6 @@
 package com.back.b2st.domain.member.controller;
 
+import static com.back.b2st.domain.auth.service.AuthTestRequestBuilder.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -13,11 +14,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.auth.dto.LoginRequest;
+import com.back.b2st.domain.auth.dto.request.LoginReq;
 import com.back.b2st.domain.bank.BankCode;
 import com.back.b2st.domain.member.dto.request.PasswordChangeReq;
 import com.back.b2st.domain.member.dto.request.RefundAccountReq;
@@ -69,9 +69,7 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		memberRepository.save(member);
 
 		// 토큰 발급
-		LoginRequest loginRequest = new LoginRequest();
-		ReflectionTestUtils.setField(loginRequest, "email", email);
-		ReflectionTestUtils.setField(loginRequest, "password", "Password123!");
+		LoginReq loginRequest = buildLoginRequest(email, "Password123!");
 
 		String loginResponse = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(loginRequest))).andReturn().getResponse().getContentAsString();
@@ -305,9 +303,7 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 
 	// 로그인 및 AccessToken 추출 헬퍼 메서드
 	private String getAccessToken(String email, String password) throws Exception {
-		LoginRequest loginRequest = new LoginRequest();
-		ReflectionTestUtils.setField(loginRequest, "email", email);
-		ReflectionTestUtils.setField(loginRequest, "password", password);
+		LoginReq loginRequest = buildLoginRequest(email, password);
 
 		String response = mockMvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
 			.content(objectMapper.writeValueAsString(loginRequest))).andReturn().getResponse().getContentAsString();

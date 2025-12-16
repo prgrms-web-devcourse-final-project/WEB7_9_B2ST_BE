@@ -45,15 +45,15 @@ public class JwtAuthenticationFilter extends GenericFilterBean {
 		} catch (io.jsonwebtoken.security.SignatureException e) {
 			// 위조/손상 -> INVALID_ACCESS_TOKEN
 			log.debug("Invalid JWT signature: {}", e.getMessage());
-			request.setAttribute("exception", AuthErrorCode.INVALID_ACCESS_TOKEN);
+			request.setAttribute("exception", AuthErrorCode.INVALID_TOKEN);
 		} catch (UnsupportedJwtException e) {
 			// 지원하지 않는 형식 -> UNSUPPORTED_TOKEN
 			log.debug("Unsupported JWT token: {}", e.getMessage());
-			request.setAttribute("exception", AuthErrorCode.UNSUPPORTED_TOKEN);
+			request.setAttribute("exception", AuthErrorCode.INVALID_TOKEN);
 		} catch (Exception e) {
 			// 그 외 오류 -> INVALID_ACCESS_TOKEN
 			log.debug("JWT processing error: {}", e.getMessage());
-			request.setAttribute("exception", AuthErrorCode.INVALID_ACCESS_TOKEN);
+			request.setAttribute("exception", AuthErrorCode.INVALID_TOKEN);
 		}
 
 		// 인증 실패 시 AuthenticationEntryPoint 처리

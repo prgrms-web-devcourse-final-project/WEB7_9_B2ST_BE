@@ -1,4 +1,4 @@
-package com.back.b2st.global.jwt.dto;
+package com.back.b2st.global.jwt.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

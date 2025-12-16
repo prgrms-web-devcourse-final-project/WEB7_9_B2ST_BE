@@ -11,4 +11,6 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
 
 	boolean existsByVenueIdAndSectionIdAndSectionNameAndRowLabelAndSeatNumber(
 		Long venueId, Long sectionId, String sectionName, String rowLabel, Integer seatNumber);
+
+	List<Seat> findByVenueId(Long venudId);
 }

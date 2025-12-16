@@ -44,28 +44,27 @@ class SeatServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		Venue venue1 = Venue.builder()
-			.name("잠실실내체육관")
-			.build();
+		venue = venueRepository.save(
+			Venue.builder()
+				.name("잠실실내체육관")
+				.build());
 
-		venue = venueRepository.save(venue1);
+		section1A = sectionRepository.save(
+			Section.builder()
+				.venueId(venue.getVenueId())
+				.sectionName("A")
+				.build()
+		);
 
-		section1A = Section.builder()
-			.venueId(venue.getVenueId())
-			.sectionName("A")
-			.build();
-
-		Section section = sectionRepository.save(section1A);
-
-		seat = Seat.builder()
-			.venueId(venue.getVenueId())
-			.sectionId(section.getId())
-			.sectionName("A")
-			.rowLabel("1")
-			.seatNumber(7)
-			.build();
-
-		seat = seatRepository.save(seat);
+		seat = seatRepository.save(
+			Seat.builder()
+				.venueId(venue.getVenueId())
+				.sectionId(section1A.getId())
+				.sectionName("A")
+				.rowLabel("1")
+				.seatNumber(1)
+				.build()
+		);
 	}
 
 	@Test

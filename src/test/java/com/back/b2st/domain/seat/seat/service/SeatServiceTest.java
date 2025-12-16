@@ -166,6 +166,6 @@ class SeatServiceTest {
 			() -> seatService.getSeatInfoByVenueId(venudId));
 
 		// then
-		assertThat(e.getErrorCode()).isEqualTo(SectionErrorCode.SECTION_NOT_FOUND);
+		assertThat(e.getErrorCode()).isEqualTo(SeatErrorCode.VENUE_NOT_FOUND);
 	}
 }

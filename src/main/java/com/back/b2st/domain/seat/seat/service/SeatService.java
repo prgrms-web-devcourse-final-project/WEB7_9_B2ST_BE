@@ -12,6 +12,7 @@ import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.service.SectionService;
+import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class SeatService {
 
 	private final SeatRepository seatRepository;
 	private final SectionService sectionService;
+	private final VenueRepository venueRepository;
 
 	// 생성
 	public CreateSeatRes createSeatInfo(Long venueId, CreateSeatReq request) {
@@ -46,8 +48,8 @@ public class SeatService {
 	// 기등록 검증
 	private void validateSeatInfo(Long venueId, Long sectionId, String sectionName, String rowLabel,
 		Integer seatNumber) {
-		if (seatRepository.existsByVenueIdAndSectionIdAndSectionNameAndRowLabelAndSeatNumber(
-			venueId, sectionId, sectionName, rowLabel, seatNumber)) {
+		if (seatRepository.existsByVenueIdAndSectionIdAndSectionNameAndRowLabelAndSeatNumber(venueId, sectionId,
+			sectionName, rowLabel, seatNumber)) {
 			throw new BusinessException(SeatErrorCode.ALREADY_CREATE_SEAT);
 		}
 	}
@@ -69,17 +71,21 @@ public class SeatService {
 		validateSectionId(sectionId);
 		List<Seat> seats = seatRepository.findBySectionId(sectionId);
 
-		return seats.stream()
-			.map(SeatInfoRes::toDetail).toList();
+		return seats.stream().map(SeatInfoRes::toDetail).toList();
 	}
 
 	// 조회 - 공연장 id
 	// todo seatInfo 만들어서 필요한 정보만 받아오도록 쿼리 작성
 	public List<SeatInfoRes> getSeatInfoByVenueId(Long venudId) {
-		validateSectionId(venudId);
+		validateVenueId(venudId);
 		List<Seat> seats = seatRepository.findBySectionId(venudId);
 
-		return seats.stream()
-			.map(SeatInfoRes::toDetail).toList();
+		return seats.stream().map(SeatInfoRes::toDetail).toList();
+	}
+
+	private void validateVenueId(Long venudId) {
+		if (!(venueRepository.existsById(venudId))) {
+			throw new BusinessException(SeatErrorCode.VENUE_NOT_FOUND);
+		}
 	}
 }

@@ -5,25 +5,32 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.back.b2st.domain.reservation.service.SeatHoldService;
+import com.back.b2st.domain.reservation.service.SeatSelectionService;
+import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
+import com.back.b2st.security.UserPrincipal;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/schedules/{scheduleId}/seats")
+@RequestMapping("/api/schedules")
 public class SeatSelectionController {
 
-	private final SeatHoldService seatHoldService;
+	private final SeatSelectionService seatSelectionService;
 
-	@PostMapping("/{seatId}/hold")
+	@PostMapping("/{scheduleId}/seats/{seatId}/hold")
 	public BaseResponse<Void> holdSeat(
+		@CurrentUser UserPrincipal user,
 		@PathVariable Long scheduleId,
 		@PathVariable Long seatId
 	) {
-		seatHoldService.holdSeat(scheduleId, seatId);
-		return BaseResponse.success();
+		seatSelectionService.selectSeat(
+			user.getId(),
+			scheduleId,
+			seatId
+		);
+		return BaseResponse.success(null);
 	}
 
 }

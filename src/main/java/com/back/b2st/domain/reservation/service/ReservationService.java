@@ -21,28 +21,45 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ReservationService {
 
-	private final SeatSelectionService seatSelectionService;
 	private final ReservationRepository reservationRepository;
 	private final ScheduleSeatRepository scheduleSeatRepository;
+	private final SeatHoldTokenService seatHoldTokenService;
+	private final ScheduleSeatService scheduleSeatService;
 
 	/** === 예매 생성 === */
 	@Transactional
 	public ReservationRes createReservation(Long memberId, ReservationReq request) {
 
-		// 1. 락 + HOLD
-		seatSelectionService.selectSeat(memberId, request.performanceId(), request.seatId());
+		// 1. HOLD 소유권 검증
+		seatHoldTokenService.validateOwnership(
+			request.scheduleId(),
+			request.seatId(),
+			memberId
+		);
 
-		// 2. Reservation 생성
-		Reservation reservation = Reservation.builder()
-			.performanceId(request.performanceId())
-			.memberId(memberId)
-			.seatId(request.seatId())
-			.build();
+		// 2. 좌석 상태 검증
+		scheduleSeatService.getHoldSeatOrThrow(
+			request.scheduleId(),
+			request.seatId()
+		);
 
+		// 3. 중복 예매 방지
+		validateNotAlreadyReserved(
+			request.scheduleId(),
+			request.seatId()
+		);
+
+		// 4. Reservation 생성
+		Reservation reservation = request.toEntity(memberId);
 		Reservation saved = reservationRepository.save(reservation);
 
-		// 3. Response 변환
-		return ReservationRes.from(reservation);
+		// 5. Redis HOLD 제거
+		seatHoldTokenService.remove(
+			request.scheduleId(),
+			request.seatId()
+		);
+
+		return ReservationRes.from(saved);
 	}
 
 	/** === 예매 취소 (일단 결제 완료 시 취소 불가) === */
@@ -66,7 +83,8 @@ public class ReservationService {
 		reservation.cancel();
 
 		// 좌석 AVAILABLE로 복구
-		scheduleSeatRepository.findByScheduleIdAndSeatId(reservation.getPerformanceId(), reservation.getSeatId())
+		scheduleSeatRepository
+			.findByScheduleIdAndSeatId(reservation.getScheduleId(), reservation.getSeatId())
 			.ifPresent(ScheduleSeat::release);
 	}
 
@@ -96,7 +114,8 @@ public class ReservationService {
 		reservation.complete();
 
 		// 좌석 SOLD 변경
-		scheduleSeatRepository.findByScheduleIdAndSeatId(reservation.getPerformanceId(), reservation.getSeatId())
+		scheduleSeatRepository
+			.findByScheduleIdAndSeatId(reservation.getScheduleId(), reservation.getSeatId())
 			.ifPresent(ScheduleSeat::sold);
 	}
 
@@ -114,13 +133,20 @@ public class ReservationService {
 		return ReservationRes.from(reservation);
 	}
 
-	/** === 로그인 유저의 예매 전체 조회 === */
+	/** === 예매 전체 조회 === */
 	@Transactional(readOnly = true)
 	public List<ReservationRes> getMyReservations(Long memberId) {
 
 		List<Reservation> reservations = reservationRepository.findAllByMemberId(memberId);
 
 		return ReservationRes.fromList(reservations);
+	}
+
+	// === 중복 예매 방지 로직 ===
+	private void validateNotAlreadyReserved(Long scheduleId, Long seatId) {
+		if (reservationRepository.existsByScheduleIdAndSeatId(scheduleId, seatId)) {
+			throw new BusinessException(ReservationErrorCode.SEAT_ALREADY_SOLD);
+		}
 	}
 
 }

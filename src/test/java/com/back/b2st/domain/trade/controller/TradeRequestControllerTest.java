@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import java.time.LocalDate;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -16,18 +18,27 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.member.entity.Member;
+import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
+import com.back.b2st.domain.trade.repository.TradeRepository;
+import com.back.b2st.domain.trade.repository.TradeRequestRepository;
+import com.back.b2st.domain.venue.section.entity.Section;
+import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.security.UserPrincipal;
 
+import jakarta.persistence.EntityManager;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
 class TradeRequestControllerTest {
 
 	@Autowired
@@ -37,28 +48,120 @@ class TradeRequestControllerTest {
 	private ObjectMapper objectMapper;
 
 	@Autowired
+	private MemberRepository memberRepository;
+
+	@Autowired
+	private SectionRepository sectionRepository;
+
+	@Autowired
+	private SeatRepository seatRepository;
+
+	@Autowired
+	private ReservationRepository reservationRepository;
+
+	@Autowired
 	private TicketRepository ticketRepository;
+
+	@Autowired
+	private TradeRepository tradeRepository;
+
+	@Autowired
+	private TradeRequestRepository tradeRequestRepository;
+
+	@Autowired
+	private EntityManager em;
 
 	private Authentication tradeOwnerAuth;
 	private Authentication requesterAuth;
 
+	private Long tradeOwnerId;
+	private Long requesterId;
+
 	private Long ticket100Id;  // tradeOwner 소유
 	private Long ticket101Id;  // requester 소유
+	private Long ticket110Id;  // tradeOwner 소유 - 자신의 게시글 테스트용
+	private Long ticket111Id;  // tradeOwner 소유 - 자신의 게시글 테스트용
+	private Long ticket120Id;  // tradeOwner 소유 - 중복 신청 테스트용
+	private Long ticket121Id;  // requester 소유 - 중복 신청 테스트용
+	private Long ticket130Id;  // tradeOwner 소유 - 조회 성공 테스트용
+	private Long ticket131Id;  // requester 소유 - 조회 성공 테스트용
+	private Long ticket140Id;  // tradeOwner 소유 - Trade별 조회 테스트용
+	private Long ticket141Id;  // requester 소유 - Trade별 조회 테스트용
+	private Long ticket150Id;  // tradeOwner 소유 - 신청자별 조회 테스트용
+	private Long ticket151Id;  // requester 소유 - 신청자별 조회 테스트용
 	private Long ticket160Id;  // tradeOwner 소유 - accept 테스트용
 	private Long ticket161Id;  // requester 소유 - accept 테스트용
 	private Long ticket170Id;  // tradeOwner 소유 - unauthorized 테스트용
 	private Long ticket171Id;  // requester 소유 - unauthorized 테스트용
+	private Long ticket180Id;  // tradeOwner 소유 - 거절 성공 테스트용
+	private Long ticket181Id;  // requester 소유 - 거절 성공 테스트용
+	private Long ticket190Id;  // tradeOwner 소유 - 거절 unauthorized 테스트용
+	private Long ticket191Id;  // requester 소유 - 거절 unauthorized 테스트용
+	private Long ticket200Id;  // tradeOwner 소유 - 필드 누락 테스트용
 
 	@BeforeEach
 	void setup() {
+		// Clean up existing data to ensure test isolation
+		tradeRequestRepository.deleteAll();
+		tradeRepository.deleteAll();
+		ticketRepository.deleteAll();
+		reservationRepository.deleteAll();
+		seatRepository.deleteAll();
+		sectionRepository.deleteAll();
+		memberRepository.deleteAll();
+
+		// Create test members
+		Member tradeOwnerMember = Member.builder()
+			.email("owner@test.com")
+			.password("password")
+			.name("Trade Owner")
+			.birth(LocalDate.of(1990, 1, 1))
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isVerified(true)
+			.build();
+		Member savedTradeOwner = memberRepository.save(tradeOwnerMember);
+		tradeOwnerId = savedTradeOwner.getId();
+
+		Member requesterMember = Member.builder()
+			.email("requester@test.com")
+			.password("password")
+			.name("Requester")
+			.birth(LocalDate.of(1990, 1, 1))
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isVerified(true)
+			.build();
+		Member savedRequester = memberRepository.save(requesterMember);
+		requesterId = savedRequester.getId();
+
+		// Create test section
+		Section section = Section.builder()
+			.venueId(1L)
+			.sectionName("A")
+			.build();
+		Section savedSection = sectionRepository.save(section);
+
+		// Create seats and reservations for tickets
+		for (int i = 1; i <= 200; i++) {
+			Seat seat = Seat.builder()
+				.venueId(1L)
+				.sectionId(savedSection.getId())
+				.sectionName(savedSection.getSectionName())
+				.rowLabel("1")
+				.seatNumber(i)
+				.build();
+			seatRepository.save(seat);
+		}
+
 		UserPrincipal tradeOwner = UserPrincipal.builder()
-			.id(100L)
+			.id(tradeOwnerId)
 			.email("owner@test.com")
 			.role("ROLE_MEMBER")
 			.build();
 
 		UserPrincipal requester = UserPrincipal.builder()
-			.id(200L)
+			.id(requesterId)
 			.email("requester@test.com")
 			.role("ROLE_MEMBER")
 			.build();
@@ -71,53 +174,45 @@ class TradeRequestControllerTest {
 	}
 
 	private void createTestTickets() {
-		// 티켓 100 (tradeOwner 소유)
-		Ticket ticket100 = ticketRepository.save(Ticket.builder()
-			.reservationId(1L)
-			.memberId(100L)
-			.seatId(1L)
-			.build());
-		ticket100Id = ticket100.getId();
+		ticket100Id = createTicket(1, tradeOwnerId);
+		ticket101Id = createTicket(2, requesterId);
+		ticket110Id = createTicket(10, tradeOwnerId);
+		ticket111Id = createTicket(11, tradeOwnerId);
+		ticket120Id = createTicket(12, tradeOwnerId);
+		ticket121Id = createTicket(13, requesterId);
+		ticket130Id = createTicket(14, tradeOwnerId);
+		ticket131Id = createTicket(15, requesterId);
+		ticket140Id = createTicket(16, tradeOwnerId);
+		ticket141Id = createTicket(17, requesterId);
+		ticket150Id = createTicket(18, tradeOwnerId);
+		ticket151Id = createTicket(19, requesterId);
+		ticket160Id = createTicket(160, tradeOwnerId);
+		ticket161Id = createTicket(161, requesterId);
+		ticket170Id = createTicket(170, tradeOwnerId);
+		ticket171Id = createTicket(171, requesterId);
+		ticket180Id = createTicket(180, tradeOwnerId);
+		ticket181Id = createTicket(181, requesterId);
+		ticket190Id = createTicket(190, tradeOwnerId);
+		ticket191Id = createTicket(191, requesterId);
+		ticket200Id = createTicket(200, tradeOwnerId);
+	}
 
-		// 티켓 101 (requester 소유)
-		Ticket ticket101 = ticketRepository.save(Ticket.builder()
-			.reservationId(2L)
-			.memberId(200L)
-			.seatId(2L)
+	private Long createTicket(int seatNumber, Long memberId) {
+		Seat seat = seatRepository.findAll().stream()
+			.filter(s -> s.getSeatNumber() == seatNumber)
+			.findFirst()
+			.orElseThrow();
+		Reservation reservation = reservationRepository.save(Reservation.builder()
+			.performanceId(1L)
+			.memberId(memberId)
+			.seatId(seat.getId())
 			.build());
-		ticket101Id = ticket101.getId();
-
-		// 티켓 160 (tradeOwner 소유) - acceptTradeRequest_success 테스트용
-		Ticket ticket160 = ticketRepository.save(Ticket.builder()
-			.reservationId(3L)
-			.memberId(100L)
-			.seatId(160L)
+		Ticket ticket = ticketRepository.save(Ticket.builder()
+			.reservationId(reservation.getId())
+			.memberId(memberId)
+			.seatId(seat.getId())
 			.build());
-		ticket160Id = ticket160.getId();
-
-		// 티켓 161 (requester 소유) - acceptTradeRequest_success 테스트용
-		Ticket ticket161 = ticketRepository.save(Ticket.builder()
-			.reservationId(4L)
-			.memberId(200L)
-			.seatId(161L)
-			.build());
-		ticket161Id = ticket161.getId();
-
-		// 티켓 170 (tradeOwner 소유) - acceptTradeRequest_fail_unauthorized 테스트용
-		Ticket ticket170 = ticketRepository.save(Ticket.builder()
-			.reservationId(5L)
-			.memberId(100L)
-			.seatId(170L)
-			.build());
-		ticket170Id = ticket170.getId();
-
-		// 티켓 171 (requester 소유) - acceptTradeRequest_fail_unauthorized 테스트용
-		Ticket ticket171 = ticketRepository.save(Ticket.builder()
-			.reservationId(6L)
-			.memberId(200L)
-			.seatId(171L)
-			.build());
-		ticket171Id = ticket171.getId();
+		return ticket.getId();
 	}
 
 	@Test
@@ -126,10 +221,9 @@ class TradeRequestControllerTest {
 		// given - 먼저 Trade 생성
 		String createTradeRequest = """
 			{
-				"ticketId": %d,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
 			""".formatted(ticket100Id);
 
@@ -141,7 +235,7 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		// when & then - TradeRequest 생성
 		String createRequestBody = """
@@ -157,7 +251,7 @@ class TradeRequestControllerTest {
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.tradeId").value(tradeId))
-			.andExpect(jsonPath("$.data.requesterId").value(200))
+			.andExpect(jsonPath("$.data.requesterId").value(requesterId))
 			.andExpect(jsonPath("$.data.requesterTicketId").value(ticket101Id))
 			.andExpect(jsonPath("$.data.status").value("PENDING"));
 	}
@@ -168,12 +262,11 @@ class TradeRequestControllerTest {
 		// given - Trade 생성
 		String createTradeRequest = """
 			{
-				"ticketId": 110,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
-			""";
+			""".formatted(ticket110Id);
 
 		String tradeResponse = mockMvc.perform(post("/api/trades")
 				.with(authentication(tradeOwnerAuth))
@@ -183,14 +276,14 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		// when & then - 자신의 게시글에 신청
 		String createRequestBody = """
 			{
-				"requesterTicketId": 111
+				"requesterTicketId": %d
 			}
-			""";
+			""".formatted(ticket111Id);
 
 		mockMvc.perform(post("/api/trades/" + tradeId + "/requests")
 				.with(authentication(tradeOwnerAuth))
@@ -207,12 +300,11 @@ class TradeRequestControllerTest {
 		// given - Trade 생성 및 첫 신청
 		String createTradeRequest = """
 			{
-				"ticketId": 120,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
-			""";
+			""".formatted(ticket120Id);
 
 		String tradeResponse = mockMvc.perform(post("/api/trades")
 				.with(authentication(tradeOwnerAuth))
@@ -222,13 +314,13 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		String createRequestBody = """
 			{
-				"requesterTicketId": 121
+				"requesterTicketId": %d
 			}
-			""";
+			""".formatted(ticket121Id);
 
 		mockMvc.perform(post("/api/trades/" + tradeId + "/requests")
 			.with(authentication(requesterAuth))
@@ -251,12 +343,11 @@ class TradeRequestControllerTest {
 		// given - Trade 생성 및 신청
 		String createTradeRequest = """
 			{
-				"ticketId": 130,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
-			""";
+			""".formatted(ticket130Id);
 
 		String tradeResponse = mockMvc.perform(post("/api/trades")
 				.with(authentication(tradeOwnerAuth))
@@ -266,13 +357,13 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		String createRequestBody = """
 			{
-				"requesterTicketId": 131
+				"requesterTicketId": %d
 			}
-			""";
+			""".formatted(ticket131Id);
 
 		String requestResponse = mockMvc.perform(post("/api/trades/" + tradeId + "/requests")
 				.with(authentication(requesterAuth))
@@ -300,12 +391,11 @@ class TradeRequestControllerTest {
 		// given - Trade 생성 및 여러 신청
 		String createTradeRequest = """
 			{
-				"ticketId": 140,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
-			""";
+			""".formatted(ticket140Id);
 
 		String tradeResponse = mockMvc.perform(post("/api/trades")
 				.with(authentication(tradeOwnerAuth))
@@ -315,13 +405,13 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		// 첫 번째 신청
 		mockMvc.perform(post("/api/trades/" + tradeId + "/requests")
 			.with(authentication(requesterAuth))
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"requesterTicketId\": 141}"));
+			.content("{\"requesterTicketId\": " + ticket141Id + "}"));
 
 		// when & then - Trade별 조회
 		mockMvc.perform(get("/api/trade-requests?tradeId=" + tradeId)
@@ -339,12 +429,11 @@ class TradeRequestControllerTest {
 		// given - Trade 생성 및 신청
 		String createTradeRequest = """
 			{
-				"ticketId": 150,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
-			""";
+			""".formatted(ticket150Id);
 
 		String tradeResponse = mockMvc.perform(post("/api/trades")
 				.with(authentication(tradeOwnerAuth))
@@ -354,21 +443,21 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		mockMvc.perform(post("/api/trades/" + tradeId + "/requests")
 			.with(authentication(requesterAuth))
 			.contentType(MediaType.APPLICATION_JSON)
-			.content("{\"requesterTicketId\": 151}"));
+			.content("{\"requesterTicketId\": " + ticket151Id + "}"));
 
 		// when & then - 신청자별 조회
-		mockMvc.perform(get("/api/trade-requests?requesterId=200")
+		mockMvc.perform(get("/api/trade-requests?requesterId=" + requesterId)
 				.with(authentication(requesterAuth)))
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data").isArray())
 			.andExpect(jsonPath("$.data.length()").value(1))
-			.andExpect(jsonPath("$.data[0].requesterId").value(200));
+			.andExpect(jsonPath("$.data[0].requesterId").value(requesterId));
 	}
 
 	@Test
@@ -377,10 +466,9 @@ class TradeRequestControllerTest {
 		// given - Trade 생성 및 신청
 		String createTradeRequest = """
 			{
-				"ticketId": %d,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
 			""".formatted(ticket160Id);
 
@@ -392,7 +480,7 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		String requestResponse = mockMvc.perform(post("/api/trades/" + tradeId + "/requests")
 				.with(authentication(requesterAuth))
@@ -423,10 +511,9 @@ class TradeRequestControllerTest {
 		// given - Trade 생성 및 신청
 		String createTradeRequest = """
 			{
-				"ticketId": %d,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
 			""".formatted(ticket170Id);
 
@@ -438,7 +525,7 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		String requestResponse = mockMvc.perform(post("/api/trades/" + tradeId + "/requests")
 				.with(authentication(requesterAuth))
@@ -463,12 +550,11 @@ class TradeRequestControllerTest {
 		// given - Trade 생성 및 신청
 		String createTradeRequest = """
 			{
-				"ticketId": 180,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
-			""";
+			""".formatted(ticket180Id);
 
 		String tradeResponse = mockMvc.perform(post("/api/trades")
 				.with(authentication(tradeOwnerAuth))
@@ -478,12 +564,12 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		String requestResponse = mockMvc.perform(post("/api/trades/" + tradeId + "/requests")
 				.with(authentication(requesterAuth))
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"requesterTicketId\": 181}"))
+				.content("{\"requesterTicketId\": " + ticket181Id + "}"))
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
@@ -509,12 +595,11 @@ class TradeRequestControllerTest {
 		// given - Trade 생성 및 신청
 		String createTradeRequest = """
 			{
-				"ticketId": 190,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
-			""";
+			""".formatted(ticket190Id);
 
 		String tradeResponse = mockMvc.perform(post("/api/trades")
 				.with(authentication(tradeOwnerAuth))
@@ -524,12 +609,12 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		String requestResponse = mockMvc.perform(post("/api/trades/" + tradeId + "/requests")
 				.with(authentication(requesterAuth))
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"requesterTicketId\": 191}"))
+				.content("{\"requesterTicketId\": " + ticket191Id + "}"))
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
@@ -549,12 +634,11 @@ class TradeRequestControllerTest {
 		// given
 		String createTradeRequest = """
 			{
-				"ticketId": 200,
+				"ticketIds": [%d],
 				"type": "EXCHANGE",
-				"price": null,
-				"totalCount": 1
+				"price": null
 			}
-			""";
+			""".formatted(ticket200Id);
 
 		String tradeResponse = mockMvc.perform(post("/api/trades")
 				.with(authentication(tradeOwnerAuth))
@@ -564,7 +648,7 @@ class TradeRequestControllerTest {
 			.getResponse()
 			.getContentAsString();
 
-		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get("tradeId").asLong();
+		Long tradeId = objectMapper.readTree(tradeResponse).get("data").get(0).get("tradeId").asLong();
 
 		// when & then - 필드 누락
 		String requestBody = "{}";

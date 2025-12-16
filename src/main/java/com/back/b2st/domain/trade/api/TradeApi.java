@@ -36,8 +36,8 @@ public interface TradeApi {
 		@Parameter(description = "거래 ID") @PathVariable("tradeId") Long tradeId
 	);
 
-	@Operation(summary = "교환/양도 등록", description = "새로운 교환/양도를 등록합니다")
-	ResponseEntity<BaseResponse<CreateTradeRes>> createTrade(
+	@Operation(summary = "교환/양도 등록", description = "새로운 교환/양도를 등록합니다. 교환은 1개, 양도는 1개 이상 가능합니다.")
+	ResponseEntity<BaseResponse<java.util.List<CreateTradeRes>>> createTrade(
 		@Valid @RequestBody CreateTradeReq request,
 		@Parameter(hidden = true) UserPrincipal userPrincipal
 	);

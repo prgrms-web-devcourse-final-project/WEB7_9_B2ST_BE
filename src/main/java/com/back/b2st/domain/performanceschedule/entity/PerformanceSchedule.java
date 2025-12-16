@@ -1,5 +1,7 @@
 package com.back.b2st.domain.performanceschedule.entity;
 
+import java.time.LocalDateTime;
+
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
@@ -11,13 +13,11 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
-
-import java.time.LocalDateTime;
-
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,11 +26,17 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "performance_schedule")
+@Table(name = "performance_schedule",
+	indexes = {
+		@Index(name = "idx_performance_schedule",
+			columnList = "performance_schedule_id, performance_id"
+		)
+	}
+)
 @SequenceGenerator(
-		name = "performance_schedule_id_gen",
-		sequenceName = "performance_schedule_seq",
-		allocationSize = 50
+	name = "performance_schedule_id_gen",
+	sequenceName = "performance_schedule_seq",
+	allocationSize = 50
 )
 public class PerformanceSchedule extends BaseEntity {
 
@@ -62,12 +68,12 @@ public class PerformanceSchedule extends BaseEntity {
 
 	@Builder
 	public PerformanceSchedule(
-			Performance performance,
-			LocalDateTime startAt,
-			Integer roundNo,
-			BookingType bookingType,
-			LocalDateTime bookingOpenAt,
-			LocalDateTime bookingCloseAt
+		Performance performance,
+		LocalDateTime startAt,
+		Integer roundNo,
+		BookingType bookingType,
+		LocalDateTime bookingOpenAt,
+		LocalDateTime bookingCloseAt
 	) {
 		this.performance = performance;
 		this.startAt = startAt;

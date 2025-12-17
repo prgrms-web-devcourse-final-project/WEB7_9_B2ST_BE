@@ -62,6 +62,11 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     developmentOnly 'org.springframework.boot:spring-boot-h2console'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // AWS S3
+    implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:4.0.0-M1")
+    implementation "io.awspring.cloud:spring-cloud-aws-starter-s3"
+
 }
 
 tasks.withType(JavaCompile) {

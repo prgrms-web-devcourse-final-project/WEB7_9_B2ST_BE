@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -20,7 +21,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Table(
-	name = "seat_grades"
+	name = "seat_grades",
+	indexes = {
+		@Index(name = "idx_performance", columnList = "performance_id"),
+		@Index(
+			name = "idx_performance_seat_grade",
+			columnList = "performance_id, seat_id, grade"
+		)
+	}
 )
 @SequenceGenerator(
 	name = "seat_grades_id_gen",
@@ -32,16 +40,16 @@ public class SeatGrade extends BaseEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seat_id_gen")
 	@Column(name = "seat_grade_id")
-	private Long seatGradeId;
+	private Long id;
 
 	@Column(name = "performance_id", nullable = false)
 	private Long performanceId;
 
-	@Column(name = "seatId", nullable = false)
+	@Column(name = "seat_id", nullable = false)
 	private Long seatId;
 
 	@Enumerated(EnumType.STRING)
-	@Column(name = "row_label", nullable = false, length = 20)
+	@Column(name = "grade", nullable = false, length = 20)
 	private SeatGradeType grade;
 
 	@Column(name = "price", nullable = false)

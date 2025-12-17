@@ -120,12 +120,13 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 
 		Thread.sleep(1500);
 
-		TokenReissueReq reissueRequest = new TokenReissueReq(accessToken, refreshToken);
+		TokenReissueReq reissueRequest = new TokenReissueReq(accessToken, null);
 
 		// when & then
 		mockMvc.perform(post("/api/auth/reissue")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(reissueRequest)))
+				.content(objectMapper.writeValueAsString(reissueRequest))
+				.cookie(refreshCookie))
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.accessToken").exists());

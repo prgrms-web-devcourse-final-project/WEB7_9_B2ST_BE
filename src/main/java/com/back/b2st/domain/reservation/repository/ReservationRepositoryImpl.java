@@ -32,6 +32,7 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 					Projections.constructor(
 						ReservationDetailRes.PerformanceInfo.class,
 						performance.performanceId,
+						performanceSchedule.performanceScheduleId,
 						performance.title,
 						performance.category,
 						performance.startDate,
@@ -39,6 +40,7 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 					),
 					Projections.constructor(
 						ReservationDetailRes.SeatInfo.class,
+						seat.id,
 						seat.sectionId,
 						seat.sectionName,
 						seat.rowLabel,
@@ -71,6 +73,7 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 					Projections.constructor(
 						ReservationDetailRes.PerformanceInfo.class,
 						performance.performanceId,
+						performanceSchedule.performanceScheduleId,
 						performance.title,
 						performance.category,
 						performance.startDate,

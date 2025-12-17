@@ -11,6 +11,7 @@ public record ReservationDetailRes(
 
 	public record PerformanceInfo(
 		Long performanceId,
+		Long performanceScheduleId,
 		String title,
 		String category,
 		LocalDateTime startDate,

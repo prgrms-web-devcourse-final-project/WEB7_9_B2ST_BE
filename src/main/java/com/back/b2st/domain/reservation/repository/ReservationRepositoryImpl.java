@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 
 	private final JPAQueryFactory queryFactory;
-	
+
 	@Override
 	public ReservationDetailRes findReservationDetail(Long reservationId, Long memberId) {
 		return queryFactory
@@ -78,6 +78,7 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 					),
 					Projections.constructor(
 						ReservationDetailRes.SeatInfo.class,
+						seat.id,
 						seat.sectionId,
 						seat.sectionName,
 						seat.rowLabel,

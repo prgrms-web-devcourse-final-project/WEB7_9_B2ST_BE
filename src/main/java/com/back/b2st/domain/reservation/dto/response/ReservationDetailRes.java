@@ -19,6 +19,7 @@ public record ReservationDetailRes(
 	}
 
 	public record SeatInfo(
+		Long seatId,
 		Long sectionId,
 		String sectionName,
 		String rowLabel,

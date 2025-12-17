@@ -18,7 +18,6 @@ import com.back.b2st.global.error.exception.BusinessException;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-@Disabled
 class ReservationServiceTest {
 
 	@Autowired
@@ -96,4 +95,40 @@ class ReservationServiceTest {
 			.isInstanceOf(BusinessException.class)
 			.hasMessage("이미 다른 사용자가 선택한 좌석입니다.");
 	}
+
+	@Test
+	@DisplayName("예매하기 - 정상 예매 성공 시 상세 정보 반환")
+	@Disabled
+	void 예매하기_성공() {
+		// given
+		Long memberId = 1L;
+		Long scheduleId = 10L;
+		Long seatId = 100L;
+
+		// 회차별 좌석이 AVAILABLE 상태로 존재
+		scheduleSeatRepository.save(
+			ScheduleSeat.builder()
+				.scheduleId(scheduleId)
+				.seatId(seatId)
+				.build()
+		);
+
+		ReservationReq request = new ReservationReq(scheduleId, seatId);
+
+		// when
+		var result = reservationService.createReservation(memberId, request);
+
+		// then
+		assertThat(result).isNotNull();
+		assertThat(result.reservationId()).isNotNull();
+
+		assertThat(result.status()).isNotNull();
+
+		assertThat(result.performance()).isNotNull();
+		//assertThat(result.performance().performanceId()).isEqualTo(scheduleId);
+
+		assertThat(result.seat()).isNotNull();
+		//assertThat(result.seat().seatId()).isEqualTo(seatId);
+	}
+
 }

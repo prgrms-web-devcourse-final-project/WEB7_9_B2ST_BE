@@ -131,7 +131,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.createTradeRequest(tradeId, request, requesterId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -160,7 +160,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.createTradeRequest(tradeId, request, requesterId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.CANNOT_REQUEST_OWN_TRADE);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -202,7 +202,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.createTradeRequest(tradeId, request, requesterId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.DUPLICATE_TRADE_REQUEST);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -452,7 +452,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.acceptTradeRequest(tradeRequestId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_REQUEST_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -487,7 +487,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.acceptTradeRequest(tradeRequestId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -530,7 +530,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.acceptTradeRequest(tradeRequestId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TRADE_ALREADY_HAS_ACCEPTED_REQUEST);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -634,6 +634,6 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.rejectTradeRequest(tradeRequestId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_REQUEST_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 }

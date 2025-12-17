@@ -38,13 +38,6 @@ class MemberServiceTest {
 	@Test
 	@DisplayName("회원가입 성공 테스트")
 	void signup_success() {
-		// given
-		// SignupReq request = SignupReq.builder()
-		// 	.email("test@email.com")
-		// 	.password("validPw123!")
-		// 	.name("tester")
-		// 	.birth(LocalDate.of(2000, 1, 1))
-		// 	.build();
 
 		SignupReq request = buildSignupReq();
 
@@ -122,7 +115,7 @@ class MemberServiceTest {
 			"test@email.com",
 			"validPw123!",
 			"tester",
-			"010-1234-5678",
+			"01012345678",
 			LocalDate.of(2000, 1, 1)
 		);
 	}

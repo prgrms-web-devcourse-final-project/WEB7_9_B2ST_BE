@@ -18,6 +18,7 @@ import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.security.UserPrincipal;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -37,7 +38,7 @@ public class MypageController {
 
 	@PatchMapping("/password")
 	public BaseResponse<Void> changePassword(@CurrentUser UserPrincipal userPrincipal,
-		@RequestBody PasswordChangeReq request) {
+		@Valid @RequestBody PasswordChangeReq request) {
 		memberService.changePassword(userPrincipal.getId(), request);
 		return BaseResponse.success(null);
 	}
@@ -45,7 +46,7 @@ public class MypageController {
 	@PostMapping("/account")
 	public BaseResponse<Void> setRefunAccount(
 		@CurrentUser UserPrincipal userPrincipal,
-		@RequestBody RefundAccountReq refundAccountReq) {
+		@Valid @RequestBody RefundAccountReq refundAccountReq) {
 		refundAccountService.saveAccount(userPrincipal.getId(), refundAccountReq);
 		return BaseResponse.success(null);
 	}

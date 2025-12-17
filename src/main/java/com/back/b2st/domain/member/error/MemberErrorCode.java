@@ -13,7 +13,6 @@ public enum MemberErrorCode implements ErrorCode {
 
 	// 회원가입
 	DUPLICATE_EMAIL(HttpStatus.CONFLICT, "M401", "이미 가입된 이메일입니다."), // 409 Conflict
-	DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "M402", "이미 존재하는 닉네임입니다."),
 
 	// 조회
 	MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M403", "해당하는 회원을 찾을 수 없습니다."),

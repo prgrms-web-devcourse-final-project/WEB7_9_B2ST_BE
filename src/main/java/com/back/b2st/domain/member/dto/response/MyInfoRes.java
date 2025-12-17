@@ -2,9 +2,6 @@ package com.back.b2st.domain.member.dto.response;
 
 import com.back.b2st.domain.member.entity.Member;
 
-import lombok.Builder;
-
-@Builder
 public record MyInfoRes(
 	Long memberId,
 	String email,
@@ -12,11 +9,11 @@ public record MyInfoRes(
 	boolean isVerified
 ) {
 	public static MyInfoRes from(Member member) {
-		return MyInfoRes.builder()
-			.memberId(member.getId())
-			.email(member.getEmail())
-			.name(member.getName())
-			.isVerified(member.isVerified())
-			.build();
+		return new MyInfoRes(
+			member.getId(),
+			member.getEmail(),
+			member.getName(),
+			member.isVerified()
+		);
 	}
 }

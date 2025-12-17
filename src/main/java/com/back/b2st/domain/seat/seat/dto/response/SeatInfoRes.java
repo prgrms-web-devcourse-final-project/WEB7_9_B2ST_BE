@@ -1,21 +1,12 @@
 package com.back.b2st.domain.seat.seat.dto.response;
 
-import com.back.b2st.domain.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 
 public record SeatInfoRes(
 	Long seatId,
 	String sectionName,
 	String rowLabel,
 	Integer seatNumber,
-	String grade
+	SeatGradeType grade
 ) {
-	public static SeatInfoRes from(Seat seat) {
-		return new SeatInfoRes(
-			seat.getId(),
-			seat.getSectionName(),
-			seat.getRowLabel(),
-			seat.getSeatNumber(),
-			"VIP"   // 임시
-		);
-	}
 }

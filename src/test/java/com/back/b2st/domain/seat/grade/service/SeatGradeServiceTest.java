@@ -1,6 +1,7 @@
 package com.back.b2st.domain.seat.grade.service;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDateTime;
 
@@ -20,6 +21,7 @@ import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRe
 import com.back.b2st.domain.seat.grade.dto.request.CreateSeatGradeReq;
 import com.back.b2st.domain.seat.grade.dto.response.SeatGradeInfoRes;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+import com.back.b2st.domain.seat.grade.error.SeatGradeErrorCode;
 import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
@@ -27,6 +29,7 @@ import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
+import com.back.b2st.global.error.exception.BusinessException;
 
 import jakarta.transaction.Transactional;
 
@@ -118,5 +121,66 @@ class SeatGradeServiceTest {
 
 		SeatGrade findGrade = seatGradeRepository.findById(saveGrade.seatGradeId()).orElseThrow();
 		assertThat(findGrade.getId()).isEqualTo(saveGrade.seatGradeId());
+	}
+
+	@Test
+	@DisplayName("좌석등급 생성 - 실패, 공연")
+	void createSeatGradeInfo_fail_performance() {
+		// given
+		Long performanceId = 99L;
+		CreateSeatGradeReq req = new CreateSeatGradeReq(
+			performanceId,
+			seat.getId(),
+			"VIP",
+			10000
+		);
+
+		// when
+		BusinessException e = assertThrows(BusinessException.class,
+			() -> seatGradeService.createSeatGradeInfo(performanceId, req));
+
+		// then
+		assertThat(e.getErrorCode()).isEqualTo(SeatGradeErrorCode.PERFORMANCE_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("좌석등급 생성 - 실패, 좌석")
+	void createSeatGradeInfo_fail_seat() {
+		// given
+		Long performanceId = performance.getPerformanceId();
+		Long seatId = 99999L;
+		CreateSeatGradeReq req = new CreateSeatGradeReq(
+			performanceId,
+			seatId,
+			"VIP",
+			10000
+		);
+
+		// when
+		BusinessException e = assertThrows(BusinessException.class,
+			() -> seatGradeService.createSeatGradeInfo(performanceId, req));
+
+		// then
+		assertThat(e.getErrorCode()).isEqualTo(SeatGradeErrorCode.SEAT_NOT_FOUND);
+	}
+
+	@Test
+	@DisplayName("좌석등급 생성 - 실패, 등급")
+	void createSeatGradeInfo_fail_grade() {
+		// given
+		Long performanceId = performance.getPerformanceId();
+		CreateSeatGradeReq req = new CreateSeatGradeReq(
+			performanceId,
+			seat.getId(),
+			"TEST",
+			10000
+		);
+
+		// when
+		BusinessException e = assertThrows(BusinessException.class,
+			() -> seatGradeService.createSeatGradeInfo(performanceId, req));
+
+		// then
+		assertThat(e.getErrorCode()).isEqualTo(SeatGradeErrorCode.INVALID_GRADE_TYPE);
 	}
 }

@@ -32,13 +32,13 @@ public class SeatGradeService {
 			.grade(grade)
 			.price(request.price())
 			.build();
-		
+
 		return SeatGradeInfoRes.from(seatGradeRepository.save(seatGrade));
 	}
 
 	private void validateSeat(Long seatId) {
 		if (!performanceRepository.existsById(seatId)) {
-			throw new BusinessException(SeatGradeErrorCode.SEAT_GRADE_NOT_FOUND);
+			throw new BusinessException(SeatGradeErrorCode.SEAT_NOT_FOUND);
 		}
 	}
 

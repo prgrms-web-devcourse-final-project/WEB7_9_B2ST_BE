@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
 
 public record SectionLayoutRes(
@@ -11,12 +12,13 @@ public record SectionLayoutRes(
 	List<GradeInfo> grades
 ) {
 	public record GradeInfo(
-		String grade,
+		SeatGradeType grade,
 		List<String> rows
 	) {
 	}
 
 	public static List<SectionLayoutRes> from(List<SeatInfoRes> seats) {
+		// 구역으로 묶음
 		Map<String, List<SeatInfoRes>> bySectionName = seats.stream()
 			.collect(Collectors.groupingBy(SeatInfoRes::sectionName));
 
@@ -25,7 +27,8 @@ public record SectionLayoutRes(
 				String sectionName = entry.getKey();
 				List<SeatInfoRes> sectionSeats = entry.getValue();
 
-				Map<String, List<SeatInfoRes>> byGrade = sectionSeats.stream()
+				// 등급으로 묶음
+				Map<SeatGradeType, List<SeatInfoRes>> byGrade = sectionSeats.stream()
 					.collect(Collectors.groupingBy(SeatInfoRes::grade));
 
 				List<GradeInfo> grades = byGrade.entrySet().stream()

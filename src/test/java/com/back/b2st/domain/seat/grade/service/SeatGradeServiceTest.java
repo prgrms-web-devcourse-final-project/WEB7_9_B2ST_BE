@@ -107,7 +107,6 @@ class SeatGradeServiceTest {
 	void createSeatGradeInfo_success() {
 		// given
 		CreateSeatGradeReq req = new CreateSeatGradeReq(
-			performance.getPerformanceId(),
 			seat.getId(),
 			"VIP",
 			10000
@@ -129,7 +128,6 @@ class SeatGradeServiceTest {
 		// given
 		Long performanceId = 99L;
 		CreateSeatGradeReq req = new CreateSeatGradeReq(
-			performanceId,
 			seat.getId(),
 			"VIP",
 			10000
@@ -150,7 +148,6 @@ class SeatGradeServiceTest {
 		Long performanceId = performance.getPerformanceId();
 		Long seatId = 99999L;
 		CreateSeatGradeReq req = new CreateSeatGradeReq(
-			performanceId,
 			seatId,
 			"VIP",
 			10000
@@ -170,7 +167,6 @@ class SeatGradeServiceTest {
 		// given
 		Long performanceId = performance.getPerformanceId();
 		CreateSeatGradeReq req = new CreateSeatGradeReq(
-			performanceId,
 			seat.getId(),
 			"TEST",
 			10000

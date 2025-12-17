@@ -31,7 +31,7 @@ public class ReservationService {
 
 	/** === 예매 생성 === */
 	@Transactional
-	public ReservationDetailRes createReservation(Long memberId, ReservationReq request) {
+	public Long reserveSeat(Long memberId, ReservationReq request) {
 
 		Long scheduleId = request.performanceId();
 		Long seatId = request.seatId();
@@ -57,15 +57,18 @@ public class ReservationService {
 			Reservation reservation = request.toEntity(memberId);
 			Reservation saved = reservationRepository.save(reservation);
 
-			return reservationRepository.findReservationDetail(
-				saved.getId(),
-				memberId
-			);
+			return saved.getId();
 
 		} finally {
 			seatLockService.unlock(scheduleId, seatId, lockValue);
 		}
 
+	}
+
+	@Transactional
+	public ReservationDetailRes createReservation(Long memberId, ReservationReq request) {
+		Long reservationId = reserveSeat(memberId, request);
+		return getReservationDetail(reservationId, memberId);
 	}
 
 	/** === 예매 취소 (일단 결제 완료 시 취소 불가) === */

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.reservation.api.ReservationApi;
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
+import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.service.ReservationService;
 import com.back.b2st.global.annotation.CurrentUser;
@@ -29,14 +30,13 @@ public class ReservationController implements ReservationApi {
 
 	/** === 예매 생성 === */
 	@PostMapping
-	public BaseResponse<ReservationRes> createReservation(
+	public BaseResponse<ReservationDetailRes> createReservation(
 		@CurrentUser UserPrincipal user,
 		@RequestBody ReservationReq request
 	) {
-		Long memberId = user.getId();
-
-		ReservationRes response = reservationService.createReservation(memberId, request);
-		return BaseResponse.created(response);
+		return BaseResponse.created(
+			reservationService.createReservation(user.getId(), request)
+		);
 	}
 
 	/** === 예매 취소 === */
@@ -61,8 +61,8 @@ public class ReservationController implements ReservationApi {
 		return BaseResponse.success();
 	}
 
-	/** === 예매 단건 조회 === */
-	@GetMapping("/{reservationId}")
+	/** === 예매 단건 조회 (심플) === */
+	@GetMapping("/{reservationId}/simple")
 	public BaseResponse<ReservationRes> getReservation(
 		@PathVariable Long reservationId,
 		@CurrentUser UserPrincipal user
@@ -72,13 +72,34 @@ public class ReservationController implements ReservationApi {
 		return BaseResponse.success(response);
 	}
 
-	/** === 전체 예매 조회 === */
-	@GetMapping("/me")
+	/** === 전체 예매 조회 (심플) === */
+	@GetMapping("/me/simple")
 	public BaseResponse<List<ReservationRes>> getMyReservations(
 		@CurrentUser UserPrincipal user
 	) {
 		Long memberId = user.getId();
 		List<ReservationRes> reservations = reservationService.getMyReservations(memberId);
+		return BaseResponse.success(reservations);
+	}
+
+	/** === 예매 조회 === */
+	@GetMapping("/{reservationId}")
+	public BaseResponse<ReservationDetailRes> getReservationDetail(
+		@PathVariable Long reservationId,
+		@CurrentUser UserPrincipal user
+	) {
+		return BaseResponse.success(
+			reservationService.getReservationDetail(reservationId, user.getId())
+		);
+	}
+
+	/** === 전체 예매 조회 === */
+	@GetMapping("/me")
+	public BaseResponse<List<ReservationDetailRes>> getMyReservationsDetail(
+		@CurrentUser UserPrincipal user
+	) {
+		Long memberId = user.getId();
+		List<ReservationDetailRes> reservations = reservationService.getMyReservationsDetail(memberId);
 		return BaseResponse.success(reservations);
 	}
 }

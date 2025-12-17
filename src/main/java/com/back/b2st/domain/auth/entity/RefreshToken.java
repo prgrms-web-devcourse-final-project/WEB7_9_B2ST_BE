@@ -13,6 +13,7 @@ public class RefreshToken {
 
 	@Id
 	private String email; // Key: 이메일
-
 	private String token; // Value: Refresh Token 값
+	private String family; // 토큰 패밀리 ID (탈취 감지용)
+	private Long generation; // 세대 번호
 }

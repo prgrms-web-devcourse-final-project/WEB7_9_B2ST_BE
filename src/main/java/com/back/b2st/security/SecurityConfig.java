@@ -1,5 +1,7 @@
 package com.back.b2st.security;
 
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,6 +12,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.back.b2st.global.jwt.JwtAuthenticationFilter;
 import com.back.b2st.global.jwt.JwtTokenProvider;
@@ -33,6 +38,7 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
+			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 			.csrf(AbstractHttpConfigurer::disable)
 			.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
@@ -51,5 +57,27 @@ public class SecurityConfig {
 			.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
+	}
+
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration configuration = new CorsConfiguration();
+
+		// 프엔주소
+		configuration.setAllowedOrigins(List.of(
+			"http://localhost:3000",
+			"http://저희 도메인 칸만 뚫어놨고, 생기면 여기다 적겠습니다."
+		));
+
+		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+		configuration.setAllowedHeaders(List.of("*"));
+		// 쿠키나 인증헤더
+		configuration.setAllowCredentials(true);
+		// 캐시 시간 1시간
+		configuration.setMaxAge(3600L);
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
 	}
 }

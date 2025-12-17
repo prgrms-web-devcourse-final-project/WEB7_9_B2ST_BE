@@ -16,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.request.LoginReq;
@@ -27,7 +28,7 @@ import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.global.test.AbstractContainerBaseTest;
 
-import tools.jackson.databind.JsonNode;
+import jakarta.servlet.http.Cookie;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
@@ -61,15 +62,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 	void login_integration_success() throws Exception {
 		String email = "login@test.com";
 		String password = "Password123!";
-		Member member = Member.builder()
-			.email(email)
-			.password(passwordEncoder.encode(password))
-			.name("로그인유저")
-			.role(Member.Role.MEMBER)
-			.isVerified(true)
-			.provider(Member.Provider.EMAIL)
-			.build();
-		memberRepository.save(member);
+		createMember(email, password);
 
 		LoginReq request = buildLoginRequest(email, password);
 
@@ -78,25 +71,19 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.andDo(print())
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.accessToken").exists())
-			.andExpect(jsonPath("$.data.refreshToken").exists());
+			.andExpect(jsonPath("$.data.refreshToken").doesNotExist())
+			.andExpect(cookie().exists("refreshToken"))
+			.andExpect(cookie().httpOnly("refreshToken", true));
 
 		RefreshToken savedToken = refreshTokenRepository.findById(email).orElse(null);
 		assertThat(savedToken).isNotNull();
-		assertThat(savedToken.getToken()).isNotEmpty();
 	}
 
 	@Test
 	@DisplayName("통합: 로그인 실패 - 비밀번호 불일치")
 	void login_integration_fail_password() throws Exception {
 		// given
-		Member member = Member.builder()
-			.email("fail@test.com")
-			.password(passwordEncoder.encode("Password123!"))
-			.name("유저")
-			.role(Member.Role.MEMBER)
-			.provider(Member.Provider.EMAIL)
-			.build();
-		memberRepository.save(member);
+		createMember("fail@test.com", "Password123!");
 
 		LoginReq request = buildLoginRequest("fail@test.com", "WrongPw123!");
 
@@ -113,37 +100,36 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("통합: 토큰 재발급 성공")
 	void reissue_integration_success() throws Exception {
 		String email = "reissue@test.com";
+		String password = "Password123!";
+		createMember(email, password);
 
-		Member member = Member.builder()
-			.email(email)
-			.password(passwordEncoder.encode("Password123!"))
-			.name("유저")
-			.role(Member.Role.MEMBER)
-			.provider(Member.Provider.EMAIL)
-			.build();
-		memberRepository.save(member);
+		LoginReq loginReq = new LoginReq(email, password);
+		MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(loginReq)))
+			.andReturn();
 
-		LoginReq loginRequest = buildLoginRequest(email, "Password123!");
+		// 토큰 추출 Body -> AT, Cookie -> RT
+		String responseBody = loginResult.getResponse().getContentAsString();
+		String accessToken = objectMapper.readTree(responseBody).path("data").path("accessToken").asText();
 
-		String responseBody = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-			.content(objectMapper.writeValueAsString(loginRequest))).andReturn().getResponse().getContentAsString();
-
-		JsonNode rootNode = objectMapper.readTree(responseBody);
-		JsonNode dataNode = rootNode.path("data");
-
-		String accessToken = dataNode.path("accessToken").asText();
-		String refreshToken = dataNode.path("refreshToken").asText();
+		// 쿠키서 refresh token 꺼내기
+		Cookie refreshCookie = loginResult.getResponse().getCookie("refreshToken");
+		assertThat(refreshCookie).isNotNull();
+		String refreshToken = refreshCookie.getValue();
 
 		Thread.sleep(1500);
 
-		TokenReissueReq reissueRequest = new TokenReissueReq(accessToken, refreshToken);
+		TokenReissueReq reissueRequest = new TokenReissueReq(accessToken, null);
 
-		mockMvc.perform(post("/api/auth/reissue").contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(reissueRequest)))
+		// when & then
+		mockMvc.perform(post("/api/auth/reissue")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(reissueRequest))
+				.cookie(refreshCookie))
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.accessToken").exists())
-			.andExpect(jsonPath("$.data.accessToken").isString());
+			.andExpect(jsonPath("$.data.accessToken").exists());
 
 		RefreshToken updatedRedisToken = refreshTokenRepository.findById(email).orElseThrow();
 		assertThat(updatedRedisToken.getToken()).isNotEqualTo(refreshToken);
@@ -169,33 +155,38 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 	@DisplayName("통합: 로그아웃 성공")
 	void logout_integration_success() throws Exception {
 		String email = "logout@test.com";
-		refreshTokenRepository.save(new RefreshToken(email, "someRefreshToken"));
+		String password = "Password123!";
+		createMember(email, password);
 
-		Member member = Member.builder()
-			.email(email)
-			.password(passwordEncoder.encode("Password123!"))
-			.name("로그아웃")
-			.role(Member.Role.MEMBER)
-			.provider(Member.Provider.EMAIL)
-			.build();
-		memberRepository.save(member);
-
-		LoginReq loginRequest = buildLoginRequest(email, "Password123!");
-
+		LoginReq loginReq = new LoginReq(email, password);
 		String loginResponse = mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(loginRequest)))
+				.content(objectMapper.writeValueAsString(loginReq)))
 			.andReturn().getResponse().getContentAsString();
 
 		String accessToken = objectMapper.readTree(loginResponse).path("data").path("accessToken").asText();
 
+		// when
 		mockMvc.perform(post("/api/auth/logout")
 				.header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON))
 			.andDo(print())
 			.andExpect(status().isOk());
 
+		// then
 		boolean exists = refreshTokenRepository.findById(email).isPresent();
 		assertThat(exists).isFalse();
+	}
+
+	private void createMember(String email, String password) {
+		Member member = Member.builder()
+			.email(email)
+			.password(passwordEncoder.encode(password))
+			.name("유저일")
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isVerified(true)
+			.build();
+		memberRepository.save(member);
 	}
 }

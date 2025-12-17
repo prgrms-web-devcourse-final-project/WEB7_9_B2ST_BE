@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
+import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
@@ -30,7 +31,7 @@ public class ReservationService {
 
 	/** === 예매 생성 === */
 	@Transactional
-	public ReservationRes createReservation(Long memberId, ReservationReq request) {
+	public Long reserveSeat(Long memberId, ReservationReq request) {
 
 		Long scheduleId = request.performanceId();
 		Long seatId = request.seatId();
@@ -56,12 +57,18 @@ public class ReservationService {
 			Reservation reservation = request.toEntity(memberId);
 			Reservation saved = reservationRepository.save(reservation);
 
-			return ReservationRes.from(saved);
+			return saved.getId();
 
 		} finally {
 			seatLockService.unlock(scheduleId, seatId, lockValue);
 		}
 
+	}
+
+	@Transactional
+	public ReservationDetailRes createReservation(Long memberId, ReservationReq request) {
+		Long reservationId = reserveSeat(memberId, request);
+		return getReservationDetail(reservationId, memberId);
 	}
 
 	/** === 예매 취소 (일단 결제 완료 시 취소 불가) === */
@@ -138,13 +145,31 @@ public class ReservationService {
 	/** === 예매 전체 조회 === */
 	@Transactional(readOnly = true)
 	public List<ReservationRes> getMyReservations(Long memberId) {
-
 		List<Reservation> reservations = reservationRepository.findAllByMemberId(memberId);
-
 		return ReservationRes.fromList(reservations);
 	}
 
-	// === 중복 예매 방지 로직 ===
+	/** === 예매 상세 조회 === */
+	@Transactional(readOnly = true)
+	public ReservationDetailRes getReservationDetail(Long reservationId, Long memberId) {
+
+		ReservationDetailRes result =
+			reservationRepository.findReservationDetail(reservationId, memberId);
+
+		if (result == null) {
+			throw new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND);
+		}
+
+		return result;
+	}
+
+	/** === 예매 상세 다건 조회 === */
+	@Transactional(readOnly = true)
+	public List<ReservationDetailRes> getMyReservationsDetail(Long memberId) {
+		return reservationRepository.findMyReservationDetails(memberId);
+	}
+
+	// === 중복 예매 방지 로직 === //
 	private void validateNotAlreadyReserved(Long scheduleId, Long seatId) {
 		if (reservationRepository.existsByPerformanceIdAndSeatId(scheduleId, seatId)) {
 			throw new BusinessException(ReservationErrorCode.SEAT_ALREADY_SOLD);

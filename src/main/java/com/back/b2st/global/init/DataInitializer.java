@@ -71,7 +71,7 @@ public class DataInitializer implements CommandLineRunner {
 
 		Member admin = Member.builder()
 			.email("admin@tt.com")
-			.password(passwordEncoder.encode("1234")) // 어드민, 유저 비번 전부 1234입니다
+			.password(passwordEncoder.encode("1234567a!")) // 어드민, 유저 비번 전부 1234567a!입니다
 			.name("관리자")
 			.role(Member.Role.ADMIN)
 			.provider(Member.Provider.EMAIL)
@@ -88,8 +88,8 @@ public class DataInitializer implements CommandLineRunner {
 
 		Member user1 = Member.builder()
 			.email("user1@tt.com")
-			.password(passwordEncoder.encode("1234"))
-			.name("유저1")
+			.password(passwordEncoder.encode("1234567a!"))
+			.name("유저일")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
 			.isVerified(true)
@@ -97,8 +97,8 @@ public class DataInitializer implements CommandLineRunner {
 
 		Member user2 = Member.builder()
 			.email("user2@tt.com")
-			.password(passwordEncoder.encode("1234"))
-			.name("유저2")
+			.password(passwordEncoder.encode("1234567a!"))
+			.name("유저이")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
 			.isVerified(true)
@@ -108,8 +108,8 @@ public class DataInitializer implements CommandLineRunner {
 		memberRepository.save(user2);
 
 		log.info("[DataInit] 계정 생성 완");
-		log.info("   - 유저1 : user1@tt.com / 1234");
-		log.info("   - 유저2 : user2@tt.com / 1234");
+		log.info("   - 유저1 : user1@tt.com / 1234567a!");
+		log.info("   - 유저2 : user2@tt.com / 1234567a!");
 
 		ScheduleSeat testSeat1 = ScheduleSeat.builder()
 			.scheduleId(1001L)

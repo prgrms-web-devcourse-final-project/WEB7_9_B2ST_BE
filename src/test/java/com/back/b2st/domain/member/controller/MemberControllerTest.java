@@ -79,7 +79,7 @@ class MemberControllerTest {
 			email,
 			pw,
 			name,
-			"010-1234-5678",
+			"01012345678",
 			LocalDate.of(1990, 1, 1)
 		);
 	}

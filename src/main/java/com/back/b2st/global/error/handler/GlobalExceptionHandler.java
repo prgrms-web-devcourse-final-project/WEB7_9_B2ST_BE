@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.util.StringUtils;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -37,11 +38,23 @@ public class GlobalExceptionHandler {
 	   ========================= */
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<BaseResponse<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
-		log.error("MethodArgumentNotValidException: {}", ex.getMessage(), ex);
+
+		String errorMessage = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+
+		// null이거나 빈 문자열이면 기본 메시지 사용하게
+		if (!StringUtils.hasText(errorMessage)) {
+			errorMessage = CommonErrorCode.BAD_REQUEST.getMessage(); // "잘못된 요청입니다."
+		}
+
+		log.error("Validation Error: {}", errorMessage);
 
 		return ResponseEntity
 			.status(CommonErrorCode.BAD_REQUEST.getStatus())
-			.body(BaseResponse.error(CommonErrorCode.BAD_REQUEST)); // data = null
+			.body(new BaseResponse<>(
+				CommonErrorCode.BAD_REQUEST.getStatus().value(),
+				errorMessage, // DTO 메시지 or 기본 메시지
+				null
+			)); // data = null
 	}
 
 	@ExceptionHandler(HttpMessageNotReadableException.class)

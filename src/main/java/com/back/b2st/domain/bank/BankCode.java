@@ -1,7 +1,12 @@
 package com.back.b2st.domain.bank;
 
 import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import com.back.b2st.domain.bank.error.BankErrorCode;
+import com.back.b2st.global.error.exception.BusinessException;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -30,12 +35,20 @@ public enum BankCode {
 	private final String code;
 	private final String description;
 
+	private static final Map<String, BankCode> CODE_MAP =
+		Arrays.stream(values())
+			.collect(Collectors.toUnmodifiableMap(
+				BankCode::getCode,
+				Function.identity()
+			));
+
 	@JsonCreator
 	public static BankCode fromCode(String code) {
-		return Arrays.stream(BankCode.values())
-			.filter(bank -> bank.getCode().equals(code))
-			.findFirst()
-			.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 은행 코드입니다: " + code));
+		BankCode bankCode = CODE_MAP.get(code);
+		if (bankCode == null) {
+			throw new BusinessException(BankErrorCode.INVALID_BANK_CODE, code);
+		}
+		return bankCode;
 	}
 
 	@JsonValue

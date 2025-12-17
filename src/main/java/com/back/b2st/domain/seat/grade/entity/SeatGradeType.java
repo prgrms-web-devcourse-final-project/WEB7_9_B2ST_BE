@@ -80,3 +80,4 @@ public enum SeatGradeType {
 		}
 		return type;
 	}
+}

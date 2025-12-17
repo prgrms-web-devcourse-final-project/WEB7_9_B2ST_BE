@@ -3,6 +3,7 @@ package com.back.b2st.domain.seat.seat.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +14,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.entity.PerformanceStatus;
+import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
+import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
@@ -37,6 +44,10 @@ class SeatServiceTest {
 	private SectionRepository sectionRepository;
 	@Autowired
 	private VenueRepository venueRepository;
+	@Autowired
+	private PerformanceRepository performanceRepository;
+	@Autowired
+	private SeatGradeRepository seatGradeRepository;
 
 	private Section section1A;
 	private Seat seat;
@@ -48,6 +59,17 @@ class SeatServiceTest {
 			Venue.builder()
 				.name("잠실실내체육관")
 				.build());
+
+		Performance performance = performanceRepository.save(Performance.builder()
+			.venue(venue)
+			.title("2024 아이유 콘서트 - HEREH WORLD TOUR")
+			.category("콘서트")
+			.posterUrl("")
+			.description(null)
+			.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
+			.endDate(LocalDateTime.of(2024, 12, 22, 21, 0))
+			.status(PerformanceStatus.ON_SALE)
+			.build());
 
 		section1A = sectionRepository.save(
 			Section.builder()
@@ -65,6 +87,14 @@ class SeatServiceTest {
 				.seatNumber(1)
 				.build()
 		);
+
+		seatGradeRepository.save(
+			SeatGrade.builder()
+				.performanceId(performance.getPerformanceId())
+				.seatId(seat.getId())
+				.grade(SeatGradeType.VIP)
+				.price(10000)
+				.build());
 	}
 
 	@Test

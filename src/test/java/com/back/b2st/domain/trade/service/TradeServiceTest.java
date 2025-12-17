@@ -278,6 +278,43 @@ class TradeServiceTest {
 	}
 
 	@Test
+	@DisplayName("type과 status로 필터링하여 거래 목록 조회")
+	void getTrades_withTypeAndStatus() {
+		// given
+		TradeType type = TradeType.EXCHANGE;
+		TradeStatus status = TradeStatus.ACTIVE;
+		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+
+		Trade trade = Trade.builder()
+			.memberId(100L)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.EXCHANGE)
+			.price(null)
+			.totalCount(1)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		org.springframework.data.domain.Page<Trade> tradePage =
+			new org.springframework.data.domain.PageImpl<>(List.of(trade));
+
+		given(tradeRepository.findAllByTypeAndStatus(type, status, pageable))
+			.willReturn(tradePage);
+
+		// when
+		org.springframework.data.domain.Page<com.back.b2st.domain.trade.dto.response.TradeRes> result =
+			tradeService.getTrades(type, status, pageable);
+
+		// then
+		assertThat(result.getContent()).hasSize(1);
+		assertThat(result.getContent().get(0).type()).isEqualTo(TradeType.EXCHANGE);
+		verify(tradeRepository).findAllByTypeAndStatus(type, status, pageable);
+	}
+
+	@Test
 	@DisplayName("양도 게시글 수정 성공")
 	void updateTrade_success() {
 		// given
@@ -549,6 +586,70 @@ class TradeServiceTest {
 
 		// when & then
 		assertThatThrownBy(() -> tradeService.deleteTrade(tradeId, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("교환 - 티켓이 2개 이상일 때 실패")
+	void createExchangeTrade_fail_moreThanOneTicket() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(
+			java.util.List.of(1L, 2L),
+			TradeType.EXCHANGE,
+			null
+		);
+		Long memberId = 100L;
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("양도 - 티켓이 0개일 때 실패")
+	void createTransferTrade_fail_emptyTickets() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(
+			Collections.emptyList(),
+			TradeType.TRANSFER,
+			50000
+		);
+		Long memberId = 100L;
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("다른 사용자의 티켓으로 거래 생성 실패")
+	void createTrade_fail_notOwnedTicket() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(
+			java.util.List.of(1L),
+			TradeType.TRANSFER,
+			50000
+		);
+		Long memberId = 100L;
+		Long otherMemberId = 200L;
+
+		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
+			.willReturn(false);
+
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(otherMemberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
 			.isInstanceOf(BusinessException.class)
 			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}

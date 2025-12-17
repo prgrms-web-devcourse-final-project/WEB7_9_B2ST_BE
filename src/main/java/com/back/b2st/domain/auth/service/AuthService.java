@@ -1,5 +1,7 @@
 package com.back.b2st.domain.auth.service;
 
+import java.util.UUID;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
@@ -7,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.request.LoginReq;
-import com.back.b2st.domain.auth.dto.request.TokenReissueReq;
 import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
@@ -17,9 +18,11 @@ import com.back.b2st.global.jwt.dto.response.TokenInfo;
 import com.back.b2st.security.UserPrincipal;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
 	private final AuthenticationManagerBuilder authenticationManagerBuilder;
@@ -41,21 +44,28 @@ public class AuthService {
 		TokenInfo tokenInfo = jwtTokenProvider.generateToken(authentication);
 
 		// RefreshToken Redis 저장
-		refreshTokenRepository.save(new RefreshToken(authentication.getName(), tokenInfo.refreshToken()));
+		String family = UUID.randomUUID().toString();
+
+		refreshTokenRepository.save(new RefreshToken(
+			authentication.getName(),
+			tokenInfo.refreshToken(),
+			family,
+			1L
+		));
 
 		return tokenInfo;
 	}
 
 	@Transactional
-	public TokenInfo reissue(TokenReissueReq request) {
+	public TokenInfo reissue(String accessToken, String refreshToken) {
 		// Refresh Token 검증
-		validateToken(request);
+		validateToken(refreshToken);
 
 		// Access Token 서명 검증 (만료 여부는 무시하고 서명만 확인)
-		validateTokenSignature(request);
+		validateTokenSignature(accessToken);
 
 		// Access Token에서 Authentication 객체 추출 (만료된 토큰이어도 파싱 가능)
-		Authentication authentication = jwtTokenProvider.getAuthentication(request.accessToken());
+		Authentication authentication = jwtTokenProvider.getAuthentication(accessToken);
 
 		// 이메일 추출 (UserPrincipal 타입 체크)
 		String email;
@@ -67,19 +77,26 @@ public class AuthService {
 		}
 
 		// Redis에서 사용자의 Refresh Token 조회
-		RefreshToken refreshToken = refreshTokenRepository.findById(email)
+		RefreshToken storedToken = refreshTokenRepository.findById(email)
 			.orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_TOKEN));
 
 		// Redis의 토큰과 요청받은 토큰 일치 여부 확인
-		if (!refreshToken.getToken().equals(request.refreshToken())) {
-			throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
+		if (!storedToken.getToken().equals(refreshToken)) {
+			refreshTokenRepository.deleteById(email);
+			log.warn("🚨 토큰 탈취 감지! (Token Reuse Detected) User: {}", email);
+			throw new BusinessException(AuthErrorCode.TOKEN_REUSE_DETECTED);
 		}
 
 		// 새로운 토큰 생성
 		TokenInfo newToken = jwtTokenProvider.generateToken(authentication);
 
 		// Refresh Token Redis 업데이트
-		refreshTokenRepository.save(new RefreshToken(email, newToken.refreshToken()));
+		refreshTokenRepository.save(new RefreshToken(
+			email,
+			newToken.refreshToken(),
+			storedToken.getFamily(),
+			storedToken.getGeneration() + 1
+		));
 
 		return newToken;
 	}
@@ -90,17 +107,17 @@ public class AuthService {
 	}
 
 	// 이 밑으로 validate
-	private void validateToken(TokenReissueReq request) {
+	private void validateToken(String refreshToken) {
 		// validateToken은 실패 시 예외를 던짐. 잡아서 커스텀 에러로 변환
 		try {
-			jwtTokenProvider.validateToken(request.refreshToken());
+			jwtTokenProvider.validateToken(refreshToken);
 		} catch (Exception e) {
 			throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
 		}
 	}
 
-	private void validateTokenSignature(TokenReissueReq request) {
-		if (!jwtTokenProvider.validateTokenSignature(request.accessToken())) {
+	private void validateTokenSignature(String accessToken) {
+		if (!jwtTokenProvider.validateTokenSignature(accessToken)) {
 			throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
 		}
 	}

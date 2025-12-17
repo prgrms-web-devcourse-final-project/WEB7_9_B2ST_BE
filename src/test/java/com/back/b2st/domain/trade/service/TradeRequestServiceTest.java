@@ -382,7 +382,7 @@ class TradeRequestServiceTest {
 			.seatId(10L)
 			.build();
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
 		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
 			.willReturn(Collections.emptyList());
@@ -428,7 +428,7 @@ class TradeRequestServiceTest {
 			.requesterTicketId(10L)
 			.build();
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
 		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 
 		// when & then
@@ -464,7 +464,7 @@ class TradeRequestServiceTest {
 			.build();
 		tradeRequest.accept();
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
 		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 
 		// when & then
@@ -500,7 +500,7 @@ class TradeRequestServiceTest {
 			.requesterTicketId(10L)
 			.build();
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
 		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 
 		// when & then
@@ -542,7 +542,7 @@ class TradeRequestServiceTest {
 			.build();
 		acceptedRequest.accept();
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
 		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
 			.willReturn(List.of(acceptedRequest));
@@ -579,7 +579,8 @@ class TradeRequestServiceTest {
 			.requesterTicketId(10L)
 			.build();
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
+		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 
 		// when
 		tradeRequestService.rejectTradeRequest(tradeRequestId, memberId);
@@ -614,7 +615,8 @@ class TradeRequestServiceTest {
 			.requesterTicketId(10L)
 			.build();
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
+		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.rejectTradeRequest(tradeRequestId, memberId))
@@ -649,7 +651,8 @@ class TradeRequestServiceTest {
 			.build();
 		tradeRequest.reject();
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
+		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.rejectTradeRequest(tradeRequestId, memberId))
@@ -689,7 +692,7 @@ class TradeRequestServiceTest {
 			.seatId(1L)
 			.build();
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
 		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
 			.willReturn(Collections.emptyList());
@@ -751,7 +754,7 @@ class TradeRequestServiceTest {
 		statusField.setAccessible(true);
 		statusField.set(ownerTicket, TicketStatus.TRANSFERRED);
 
-		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
 		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
 			.willReturn(Collections.emptyList());

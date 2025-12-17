@@ -77,7 +77,7 @@ public class TradeRequestService {
 
 	@Transactional
 	public void acceptTradeRequest(Long tradeRequestId, Long memberId) {
-		TradeRequest tradeRequest = findTradeRequestById(tradeRequestId);
+		TradeRequest tradeRequest = findTradeRequestByIdWithLock(tradeRequestId);
 		Trade trade = findTradeByIdWithLock(tradeRequest.getTrade().getId());
 
 		validateTradeOwner(trade, memberId);
@@ -163,8 +163,8 @@ public class TradeRequestService {
 
 	@Transactional
 	public void rejectTradeRequest(Long tradeRequestId, Long memberId) {
-		TradeRequest tradeRequest = findTradeRequestById(tradeRequestId);
-		Trade trade = tradeRequest.getTrade();
+		TradeRequest tradeRequest = findTradeRequestByIdWithLock(tradeRequestId);
+		Trade trade = findTradeByIdWithLock(tradeRequest.getTrade().getId());
 
 		validateTradeOwner(trade, memberId);
 		validateTradeRequestIsPending(tradeRequest);
@@ -188,6 +188,14 @@ public class TradeRequestService {
 	private TradeRequest findTradeRequestById(Long tradeRequestId) {
 		return tradeRequestRepository.findById(tradeRequestId)
 			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_REQUEST_NOT_FOUND));
+	}
+
+	private TradeRequest findTradeRequestByIdWithLock(Long tradeRequestId) {
+		TradeRequest tradeRequest = entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE);
+		if (tradeRequest == null) {
+			throw new BusinessException(TradeErrorCode.TRADE_REQUEST_NOT_FOUND);
+		}
+		return tradeRequest;
 	}
 
 	private void validateTradeIsActive(Trade trade) {

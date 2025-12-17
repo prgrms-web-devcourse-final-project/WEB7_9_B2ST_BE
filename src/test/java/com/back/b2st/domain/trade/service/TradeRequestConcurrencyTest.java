@@ -208,4 +208,127 @@ class TradeRequestConcurrencyTest extends AbstractContainerBaseTest {
 
 		assertThat(acceptedCount).isEqualTo(1);
 	}
+
+	@Test
+	@DisplayName("Accept와 Reject를 동시에 호출해도 하나만 성공해야 함 (Pessimistic Lock)")
+	void acceptAndRejectTradeRequest_concurrency() throws InterruptedException {
+		// given
+		Long ownerId = 100L;
+		Long requesterId = 200L;
+
+		// Seat 생성
+		Seat seat1 = Seat.builder()
+			.venueId(1L)
+			.sectionId(1L)
+			.sectionName("A")
+			.rowLabel("5열")
+			.seatNumber(1)
+			.build();
+		Seat seat2 = Seat.builder()
+			.venueId(1L)
+			.sectionId(1L)
+			.sectionName("A")
+			.rowLabel("5열")
+			.seatNumber(2)
+			.build();
+		seatRepository.save(seat1);
+		seatRepository.save(seat2);
+
+		// Reservation 생성
+		Reservation reservation1 = Reservation.builder()
+			.performanceId(1L)
+			.memberId(ownerId)
+			.seatId(seat1.getId())
+			.build();
+		Reservation reservation2 = Reservation.builder()
+			.performanceId(1L)
+			.memberId(requesterId)
+			.seatId(seat2.getId())
+			.build();
+		reservationRepository.save(reservation1);
+		reservationRepository.save(reservation2);
+
+		// 티켓 생성
+		Ticket ownerTicket = Ticket.builder()
+			.reservationId(reservation1.getId())
+			.memberId(ownerId)
+			.seatId(seat1.getId())
+			.qrCode("QR1")
+			.build();
+		Ticket requesterTicket = Ticket.builder()
+			.reservationId(reservation2.getId())
+			.memberId(requesterId)
+			.seatId(seat2.getId())
+			.qrCode("QR2")
+			.build();
+		ticketRepository.save(ownerTicket);
+		ticketRepository.save(requesterTicket);
+
+		// Trade 생성
+		Trade trade = Trade.builder()
+			.memberId(ownerId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(ownerTicket.getId())
+			.type(TradeType.EXCHANGE)
+			.price(null)
+			.totalCount(1)
+			.section("A")
+			.row("5열")
+			.seatNumber("1석")
+			.build();
+		tradeRepository.save(trade);
+
+		// TradeRequest 생성
+		TradeRequest tradeRequest = TradeRequest.builder()
+			.trade(trade)
+			.requesterId(requesterId)
+			.requesterTicketId(requesterTicket.getId())
+			.build();
+		tradeRequestRepository.save(tradeRequest);
+
+		Long requestId = tradeRequest.getId();
+
+		// when - Accept와 Reject를 동시에 호출
+		ExecutorService executorService = Executors.newFixedThreadPool(2);
+		CountDownLatch latch = new CountDownLatch(2);
+		AtomicInteger successCount = new AtomicInteger(0);
+		AtomicInteger failCount = new AtomicInteger(0);
+
+		// Accept 스레드
+		executorService.submit(() -> {
+			try {
+				tradeRequestService.acceptTradeRequest(requestId, ownerId);
+				successCount.incrementAndGet();
+			} catch (BusinessException e) {
+				failCount.incrementAndGet();
+			} finally {
+				latch.countDown();
+			}
+		});
+
+		// Reject 스레드
+		executorService.submit(() -> {
+			try {
+				tradeRequestService.rejectTradeRequest(requestId, ownerId);
+				successCount.incrementAndGet();
+			} catch (BusinessException e) {
+				failCount.incrementAndGet();
+			} finally {
+				latch.countDown();
+			}
+		});
+
+		latch.await();
+		executorService.shutdown();
+
+		// then - 하나만 성공해야 함
+		assertThat(successCount.get()).isEqualTo(1);
+		assertThat(failCount.get()).isEqualTo(1);
+
+		// 실제 DB 상태 확인 - ACCEPTED 또는 REJECTED 중 하나만 있어야 함
+		TradeRequest finalRequest = tradeRequestRepository.findById(requestId).orElseThrow();
+		assertThat(finalRequest.getStatus()).isIn(TradeRequestStatus.ACCEPTED, TradeRequestStatus.REJECTED);
+		assertThat(finalRequest.getStatus()).isNotEqualTo(TradeRequestStatus.PENDING);
+	}
 }

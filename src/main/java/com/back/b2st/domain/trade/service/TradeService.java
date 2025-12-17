@@ -69,12 +69,12 @@ public class TradeService {
 	public List<CreateTradeRes> createTrade(CreateTradeReq request, Long memberId) {
 		// 교환은 1개만 가능
 		if (request.type() == TradeType.EXCHANGE && request.ticketIds().size() != 1) {
-			throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_COUNT);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "교환은 1개만 가능합니다.");
 		}
 
 		// 양도는 1개 이상 가능
 		if (request.type() == TradeType.TRANSFER && request.ticketIds().isEmpty()) {
-			throw new BusinessException(TradeErrorCode.INVALID_TICKET_COUNT);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "티켓은 최소 1개 이상이어야 합니다.");
 		}
 
 		validateTradeType(request);
@@ -84,22 +84,18 @@ public class TradeService {
 		for (Long ticketId : request.ticketIds()) {
 			validateTicketNotDuplicated(ticketId);
 
-			// Ticket 조회
 			Ticket ticket = ticketRepository.findById(ticketId)
-				.orElseThrow(() -> new BusinessException(TradeErrorCode.TICKET_NOT_OWNED));
+				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다."));
 
-			// 티켓 소유자 검증
 			if (!ticket.getMemberId().equals(memberId)) {
-				throw new BusinessException(TradeErrorCode.TICKET_NOT_OWNED);
+				throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다.");
 			}
 
-			// Seat 조회
 			Seat seat = seatRepository.findById(ticket.getSeatId())
-				.orElseThrow(() -> new BusinessException(TradeErrorCode.TICKET_NOT_OWNED));
+				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다."));
 
-			// Reservation 조회
 			Reservation reservation = reservationRepository.findById(ticket.getReservationId())
-				.orElseThrow(() -> new BusinessException(TradeErrorCode.TICKET_NOT_OWNED));
+				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다."));
 
 		Trade trade = TradeMapper.toEntity(request, ticket, seat, reservation, memberId);
 
@@ -107,7 +103,7 @@ public class TradeService {
 				Trade savedTrade = tradeRepository.save(trade);
 				results.add(CreateTradeRes.from(savedTrade));
 			} catch (DataIntegrityViolationException e) {
-				throw new BusinessException(TradeErrorCode.TICKET_ALREADY_REGISTERED);
+				throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "이미 등록된 티켓입니다.");
 			}
 		}
 
@@ -121,7 +117,7 @@ public class TradeService {
 		);
 
 		if (exists) {
-			throw new BusinessException(TradeErrorCode.TICKET_ALREADY_REGISTERED);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "이미 등록된 티켓입니다.");
 		}
 	}
 
@@ -155,11 +151,11 @@ public class TradeService {
 	private void validateTradeType(CreateTradeReq request) {
 		if (request.type() == TradeType.EXCHANGE) {
 			if (request.price() != null) {
-				throw new BusinessException(TradeErrorCode.INVALID_EXCHANGE_PRICE);
+				throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "교환은 가격을 설정할 수 없습니다.");
 			}
 		} else if (request.type() == TradeType.TRANSFER) {
 			if (request.price() == null || request.price() <= 0) {
-				throw new BusinessException(TradeErrorCode.INVALID_TRANSFER_PRICE);
+				throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "양도 가격은 필수입니다.");
 			}
 		}
 	}
@@ -172,13 +168,13 @@ public class TradeService {
 
 	private void validateTradeIsActive(Trade trade) {
 		if (trade.getStatus() != TradeStatus.ACTIVE) {
-			throw new BusinessException(TradeErrorCode.INVALID_TRADE_STATUS);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "유효하지 않은 거래 상태입니다.");
 		}
 	}
 
 	private void validateTradeIsTransfer(Trade trade) {
 		if (trade.getType() == TradeType.EXCHANGE) {
-			throw new BusinessException(TradeErrorCode.CANNOT_UPDATE_EXCHANGE_TRADE);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "교환 게시글은 수정할 수 없습니다.");
 		}
 	}
 
@@ -189,7 +185,7 @@ public class TradeService {
 		);
 
 		if (!pendingRequests.isEmpty()) {
-			throw new BusinessException(TradeErrorCode.CANNOT_DELETE_WITH_PENDING_REQUESTS);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "대기 중인 교환 신청이 있어 삭제할 수 없습니다.");
 		}
 	}
 }

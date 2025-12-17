@@ -16,6 +16,7 @@ import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
 import com.back.b2st.domain.seat.seat.service.SeatService;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -41,19 +42,21 @@ public class LotteryEntryService {
 	}
 
 	// 추첨 응모 등록
-	public LotteryEntryInfo createLotteryEntry(Long performanceId, RegisterLotteryEntryReq requset) {
+	public LotteryEntryInfo createLotteryEntry(Long performanceId, RegisterLotteryEntryReq request) {
 		validatePerformance(performanceId);
-		validateMember(requset.memberId());
-		validateSchedule(requset.scheduleId(), performanceId);
-		validateEntryData(requset);
-		validateEntryNotDuplicated(requset.memberId(), performanceId, requset.scheduleId());
+		validateMember(request.memberId());
+		validateSchedule(request.scheduleId(), performanceId);
+		validateEntryData(request);
+		validateEntryNotDuplicated(request.memberId(), performanceId, request.scheduleId());
+
+		SeatGradeType grade = SeatGradeType.fromString(request.grade());
 
 		LotteryEntry lotteryEntry = LotteryEntry.builder()
-			.memberId(requset.memberId())
+			.memberId(request.memberId())
 			.performanceId(performanceId)
-			.scheduleId(requset.scheduleId())
-			.seatGradeId(requset.seatGradeId())
-			.quantity(requset.quantity())
+			.scheduleId(request.scheduleId())
+			.grade(grade)
+			.quantity(request.quantity())
 			.build();
 
 		try {
@@ -87,13 +90,7 @@ public class LotteryEntryService {
 	}
 
 	private void validateEntryData(RegisterLotteryEntryReq requset) {
-		// TODO: 인입 데이터 검증
-		// requset.seatGradeId()
-		if (false) {
-			throw new BusinessException(LotteryEntryErrorCode.INVALID_GRADE_INFO);
-		}
-
-		// TODO: 최대 응모인원 수 관련내용 없음
+		// 최대 응모인원 수 관련논의 없음
 		if (requset.quantity() > LotteryConstants.MAX_LOTTERY_ENTRY_COUNT) {
 			throw new BusinessException(LotteryEntryErrorCode.EXCEEDS_MAX_ALLOCATION);
 		}

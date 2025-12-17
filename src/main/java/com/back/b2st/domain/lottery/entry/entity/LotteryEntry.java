@@ -1,5 +1,6 @@
 package com.back.b2st.domain.lottery.entry.entity;
 
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -50,8 +51,9 @@ public class LotteryEntry extends BaseEntity {
 	@Column(name = "schedule_id", nullable = false)
 	private Long scheduleId;
 
-	@Column(name = "seat_grade_id", nullable = false)
-	private Long seatGradeId;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "grade", nullable = false, length = 20)
+	private SeatGradeType grade;
 
 	@Column(name = "quantity", nullable = false)
 	private Integer quantity;
@@ -65,13 +67,13 @@ public class LotteryEntry extends BaseEntity {
 		Long memberId,
 		Long performanceId,
 		Long scheduleId,
-		Long seatGradeId,
+		SeatGradeType grade,
 		Integer quantity
 	) {
 		this.memberId = memberId;
 		this.performanceId = performanceId;
 		this.scheduleId = scheduleId;
-		this.seatGradeId = seatGradeId;
+		this.grade = grade;
 		this.quantity = quantity;
 		this.status = LotteryStatus.APPLIED;
 	}

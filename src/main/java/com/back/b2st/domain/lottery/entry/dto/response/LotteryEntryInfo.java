@@ -7,7 +7,7 @@ public record LotteryEntryInfo(
 	Long memberId,
 	Long performanceId,
 	Long scheduleId,
-	Long seatGradeId,
+	String grade,
 	Integer quantity,
 	String status
 ) {
@@ -17,7 +17,7 @@ public record LotteryEntryInfo(
 			entry.getMemberId(),
 			entry.getPerformanceId(),
 			entry.getScheduleId(),
-			entry.getSeatGradeId(),
+			entry.getGrade().toString(),
 			entry.getQuantity(),
 			entry.getStatus().toString()
 		);

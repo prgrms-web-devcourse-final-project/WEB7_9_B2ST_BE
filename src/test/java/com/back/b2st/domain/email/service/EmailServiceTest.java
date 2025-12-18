@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.back.b2st.domain.email.dto.request.CheckDuplicateReq;
+import com.back.b2st.domain.email.dto.request.SenderVerificationReq;
 import com.back.b2st.domain.email.dto.request.VerifyCodeReq;
 import com.back.b2st.domain.email.dto.response.CheckDuplicateRes;
 import com.back.b2st.domain.email.entity.EmailVerification;
@@ -46,6 +47,26 @@ class EmailServiceTest {
 	}
 
 	@Test
+	@DisplayName("인증 코드 발송 실패 - 이미 인증된 회원")
+	void sendVerificationCode_alreadyVerified() {
+		// given
+		String email = "verified@test.com";
+		Member member = Member.builder()
+				.email(email)
+				.role(Member.Role.MEMBER)
+				.provider(Member.Provider.EMAIL)
+				.isEmailVerified(true)
+				.build();
+		given(memberRepository.findByEmail(email)).willReturn(Optional.of(member));
+
+		// when & then
+		assertThatThrownBy(() -> emailService.sendVerificationCode(new SenderVerificationReq(email)))
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(EmailErrorCode.ALREADY_VERIFIED);
+	}
+
+	@Test
 	@DisplayName("중복 확인 - 이미 가입된 이메일")
 	void checkDuplicate_alreadyExists() {
 		// given
@@ -56,7 +77,7 @@ class EmailServiceTest {
 		// then
 		assertThat(result.available()).isFalse();
 	}
-	
+
 	@Test
 	@DisplayName("인증 성공 - 코드 일치")
 	void verifyCode_success() {
@@ -64,18 +85,18 @@ class EmailServiceTest {
 		String email = "test@test.com";
 		String code = "123456";
 		EmailVerification verification = EmailVerification.builder()
-			.email(email)
-			.code(code)
-			.attemptCount(0)
-			.build();
+				.email(email)
+				.code(code)
+				.attemptCount(0)
+				.build();
 		Member member = Member.builder()
-			.email(email)
-			.name("테스터")
-			.role(Member.Role.MEMBER)
-			.provider(Member.Provider.EMAIL)
-			.isEmailVerified(false)
-			.isIdentityVerified(false)
-			.build();
+				.email(email)
+				.name("테스터")
+				.role(Member.Role.MEMBER)
+				.provider(Member.Provider.EMAIL)
+				.isEmailVerified(false)
+				.isIdentityVerified(false)
+				.build();
 		given(emailVerificationRepository.findById(email)).willReturn(Optional.of(verification));
 		given(memberRepository.findByEmail(email)).willReturn(Optional.of(member));
 		// when
@@ -91,16 +112,16 @@ class EmailServiceTest {
 		// given
 		String email = "test@test.com";
 		EmailVerification verification = EmailVerification.builder()
-			.email(email)
-			.code("123456")
-			.attemptCount(0)
-			.build();
+				.email(email)
+				.code("123456")
+				.attemptCount(0)
+				.build();
 		given(emailVerificationRepository.findById(email)).willReturn(Optional.of(verification));
 		// when & then
 		assertThatThrownBy(() -> emailService.verifyCode(new VerifyCodeReq(email, "000000")))
-			.isInstanceOf(BusinessException.class)
-			.extracting("errorCode")
-			.isEqualTo(EmailErrorCode.VERIFICATION_CODE_MISMATCH);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(EmailErrorCode.VERIFICATION_CODE_MISMATCH);
 		verify(emailVerificationRepository).save(any(EmailVerification.class));
 	}
 
@@ -110,16 +131,16 @@ class EmailServiceTest {
 		// given
 		String email = "test@test.com";
 		EmailVerification verification = EmailVerification.builder()
-			.email(email)
-			.code("123456")
-			.attemptCount(5)  // 이미 5회 시도
-			.build();
+				.email(email)
+				.code("123456")
+				.attemptCount(5) // 이미 5회 시도
+				.build();
 		given(emailVerificationRepository.findById(email)).willReturn(Optional.of(verification));
 		// when & then
 		assertThatThrownBy(() -> emailService.verifyCode(new VerifyCodeReq(email, "123456")))
-			.isInstanceOf(BusinessException.class)
-			.extracting("errorCode")
-			.isEqualTo(EmailErrorCode.VERIFICATION_MAX_ATTEMPT);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(EmailErrorCode.VERIFICATION_MAX_ATTEMPT);
 		verify(emailVerificationRepository).deleteById(email);
 	}
 
@@ -131,8 +152,8 @@ class EmailServiceTest {
 		given(emailVerificationRepository.findById(email)).willReturn(Optional.empty());
 		// when & then
 		assertThatThrownBy(() -> emailService.verifyCode(new VerifyCodeReq(email, "123456")))
-			.isInstanceOf(BusinessException.class)
-			.extracting("errorCode")
-			.isEqualTo(EmailErrorCode.VERIFICATION_NOT_FOUND);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(EmailErrorCode.VERIFICATION_NOT_FOUND);
 	}
 }

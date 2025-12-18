@@ -43,15 +43,23 @@ public class EmailService {
 
 	public void sendVerificationCode(SenderVerificationReq request) {
 		String email = request.email();
+
+		// 이미 인증된 회원인지 확인
+		memberRepository.findByEmail(email).ifPresent(member -> {
+			if (member.isEmailVerified()) {
+				throw new BusinessException(EmailErrorCode.ALREADY_VERIFIED);
+			}
+		});
+
 		rateLimiter.checkRateLimit(email);
 		String code = generateSecureCode();
 
 		// redis 저장. 기존 있으면 덮어쓰기
 		EmailVerification emailVerification = EmailVerification.builder()
-			.email(email)
-			.code(code)
-			.attemptCount(0)
-			.build();
+				.email(email)
+				.code(code)
+				.attemptCount(0)
+				.build();
 
 		emailVerificationRepository.save(emailVerification);
 
@@ -73,7 +81,7 @@ public class EmailService {
 
 		// redis 조회
 		EmailVerification verification = emailVerificationRepository.findById(email)
-			.orElseThrow(() -> new BusinessException(EmailErrorCode.VERIFICATION_NOT_FOUND));
+				.orElseThrow(() -> new BusinessException(EmailErrorCode.VERIFICATION_NOT_FOUND));
 
 		// 시도 횟수 확인
 		if (verification.isMaxAttemptExceeded()) {
@@ -95,7 +103,7 @@ public class EmailService {
 		emailVerificationRepository.deleteById(email);
 
 		Member member = memberRepository.findByEmail(email)
-			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+				.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
 		member.verifyEmail();
 

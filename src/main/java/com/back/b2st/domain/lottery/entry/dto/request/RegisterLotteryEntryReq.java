@@ -1,8 +1,8 @@
 package com.back.b2st.domain.lottery.entry.dto.request;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 public record RegisterLotteryEntryReq(
 	@NotNull(message = "사용자ID는 필수입니다.")
@@ -15,7 +15,7 @@ public record RegisterLotteryEntryReq(
 	String grade,
 
 	@NotNull(message = "인원수는 필수입니다.")
-	@Min(value = 1, message = "인원수는 1 이상이어야 합니다.")
+	@Positive(message = "인원수는 1 이상이어야 합니다.")
 	Integer quantity
 ) {
 }

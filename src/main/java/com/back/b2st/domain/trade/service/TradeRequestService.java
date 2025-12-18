@@ -23,6 +23,9 @@ import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.domain.trade.repository.TradeRequestRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -33,6 +36,9 @@ public class TradeRequestService {
 	private final TradeRequestRepository tradeRequestRepository;
 	private final TradeRepository tradeRepository;
 	private final TicketService ticketService;
+
+	@PersistenceContext
+	private EntityManager entityManager;
 
 	@Transactional
 	public TradeRequestRes createTradeRequest(Long tradeId, CreateTradeRequestReq request,
@@ -71,8 +77,8 @@ public class TradeRequestService {
 
 	@Transactional
 	public void acceptTradeRequest(Long tradeRequestId, Long memberId) {
-		TradeRequest tradeRequest = findTradeRequestById(tradeRequestId);
-		Trade trade = tradeRequest.getTrade();
+		TradeRequest tradeRequest = findTradeRequestByIdWithLock(tradeRequestId);
+		Trade trade = findTradeByIdWithLock(tradeRequest.getTrade().getId());
 
 		validateTradeOwner(trade, memberId);
 		validateTradeIsActive(trade);
@@ -157,8 +163,8 @@ public class TradeRequestService {
 
 	@Transactional
 	public void rejectTradeRequest(Long tradeRequestId, Long memberId) {
-		TradeRequest tradeRequest = findTradeRequestById(tradeRequestId);
-		Trade trade = tradeRequest.getTrade();
+		TradeRequest tradeRequest = findTradeRequestByIdWithLock(tradeRequestId);
+		Trade trade = findTradeByIdWithLock(tradeRequest.getTrade().getId());
 
 		validateTradeOwner(trade, memberId);
 		validateTradeRequestIsPending(tradeRequest);
@@ -171,9 +177,25 @@ public class TradeRequestService {
 			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
 	}
 
+	private Trade findTradeByIdWithLock(Long tradeId) {
+		Trade trade = entityManager.find(Trade.class, tradeId, LockModeType.PESSIMISTIC_WRITE);
+		if (trade == null) {
+			throw new BusinessException(TradeErrorCode.TRADE_NOT_FOUND);
+		}
+		return trade;
+	}
+
 	private TradeRequest findTradeRequestById(Long tradeRequestId) {
 		return tradeRequestRepository.findById(tradeRequestId)
 			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_REQUEST_NOT_FOUND));
+	}
+
+	private TradeRequest findTradeRequestByIdWithLock(Long tradeRequestId) {
+		TradeRequest tradeRequest = entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE);
+		if (tradeRequest == null) {
+			throw new BusinessException(TradeErrorCode.TRADE_REQUEST_NOT_FOUND);
+		}
+		return tradeRequest;
 	}
 
 	private void validateTradeIsActive(Trade trade) {

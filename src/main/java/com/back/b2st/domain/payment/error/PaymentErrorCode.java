@@ -20,8 +20,13 @@ public enum PaymentErrorCode implements ErrorCode {
 	// 크리티컬: 상태 전이 오류
 	INVALID_STATUS(HttpStatus.BAD_REQUEST, "P003", "잘못된 결제 상태입니다."),
 
+	// 준비 단계 검증
+	DOMAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "P004", "결제 대상을 찾을 수 없습니다."),
+	DOMAIN_NOT_PAYABLE(HttpStatus.BAD_REQUEST, "P005", "결제 가능한 상태가 아닙니다."),
+	UNAUTHORIZED_PAYMENT_ACCESS(HttpStatus.FORBIDDEN, "P006", "결제 접근 권한이 없습니다."),
+
 	// 일반 에러
-	NOT_FOUND(HttpStatus.NOT_FOUND, "P004", "결제 정보를 찾을 수 없습니다.");
+	NOT_FOUND(HttpStatus.NOT_FOUND, "P007", "결제 정보를 찾을 수 없습니다.");
 
 	private final HttpStatus status;
 	private final String code;

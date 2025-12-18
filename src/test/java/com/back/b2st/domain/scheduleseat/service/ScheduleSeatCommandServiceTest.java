@@ -1,4 +1,4 @@
-package com.back.b2st.domain.reservation.service;
+package com.back.b2st.domain.scheduleseat.service;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -15,7 +15,6 @@ import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
-import com.back.b2st.domain.scheduleseat.service.ScheduleSeatCommandService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @SpringBootTest

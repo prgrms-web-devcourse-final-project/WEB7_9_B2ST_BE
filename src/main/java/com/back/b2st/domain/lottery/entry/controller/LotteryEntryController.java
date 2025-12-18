@@ -52,14 +52,11 @@ public class LotteryEntryController {
 	@PostMapping("/api/performances/{performanceId}/lottery/entry")
 	public BaseResponse<LotteryEntryInfo> registerLotteryEntry(
 		@CurrentUser UserPrincipal userPrincipal,
-		@Parameter(description = "공연 ID", example = "1")
 		@PathVariable("performanceId") Long performanceId,
-		@io.swagger.v3.oas.annotations.parameters.RequestBody(
-			description = "추첨 응모 요청 정보 ", required = true
-		)
 		@Valid @RequestBody RegisterLotteryEntryReq request
 	) {
-		return BaseResponse.created(lotteryEntryService.createLotteryEntry(performanceId, request));
+		return BaseResponse.created(
+			lotteryEntryService.createLotteryEntry(userPrincipal.getId(), performanceId, request));
 	}
 
 	@Operation(

@@ -59,7 +59,7 @@ public class DataInitializer implements CommandLineRunner {
 		initPerformance();
 		initSectionData();
 		initSectData();
-		//initConnectedSet(); // 테스트용
+		//initConnectedSet();
 		//initConnectedSet2();
 	}
 

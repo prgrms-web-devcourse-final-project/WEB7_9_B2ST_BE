@@ -11,11 +11,11 @@ import com.back.b2st.domain.reservation.entity.SeatStatus;
 public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long> {
 
 	/* 특정 회차 모든 좌석 조회 */
-	List<ScheduleSeat> findAllByScheduleId(Long scheduleId);
+	List<ScheduleSeat> findByScheduleId(Long scheduleId);
 
 	/* scheduleId + seatId 로 특정 좌석 조회 */
 	Optional<ScheduleSeat> findByScheduleIdAndSeatId(Long scheduleId, Long seatId);
 
 	/* 특정 회차에서 특정 상태의 좌석 조회 (예: AVAILABLE 좌석만) */
-	List<ScheduleSeat> findAllByScheduleIdAndStatus(Long scheduleId, SeatStatus status);
+	List<ScheduleSeat> findByScheduleIdAndStatus(Long scheduleId, SeatStatus status);
 }

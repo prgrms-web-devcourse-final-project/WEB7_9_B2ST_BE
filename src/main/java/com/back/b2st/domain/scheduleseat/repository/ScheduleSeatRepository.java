@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 
-public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long> {
+public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long>, ScheduleSeatRepositoryCustom {
 
 	/* 특정 회차 모든 좌석 조회 */
 	List<ScheduleSeat> findByScheduleId(Long scheduleId);

@@ -4,7 +4,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +38,7 @@ import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
+import com.back.b2st.global.test.AbstractContainerBaseTest;
 
 import jakarta.persistence.EntityManager;
 import tools.jackson.databind.JsonNode;
@@ -48,7 +48,7 @@ import tools.jackson.databind.ObjectMapper;
 @AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
-class LotteryEntryControllerTest {
+class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 
 	@Autowired
 	private MockMvc mvc;
@@ -96,7 +96,6 @@ class LotteryEntryControllerTest {
 			.email(email)
 			.password(passwordEncoder.encode(password))
 			.name("추첨응모")
-			.birth(LocalDate.of(1990, 1, 1))
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
 			.isEmailVerified(true)
@@ -192,15 +191,12 @@ class LotteryEntryControllerTest {
 	private String getAccessToken(String email, String password) throws Exception {
 		LoginReq loginRequest = new LoginReq(email, password);
 
-		String response = mvc.perform(post("/api/auth/login")
+		String loginResponse = mvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(loginRequest)))
 			.andReturn().getResponse().getContentAsString();
 
-		JsonNode jsonNode = objectMapper.readTree(response);
-		if (!jsonNode.has("data") || !jsonNode.get("data").has("accessToken")) {
-			throw new IllegalStateException("Login response missing accessToken: " + response);
-		}
+		JsonNode jsonNode = objectMapper.readTree(loginResponse);
 		return jsonNode.path("data").path("accessToken").asText();
 	}
 

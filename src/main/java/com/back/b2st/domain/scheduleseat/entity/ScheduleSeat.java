@@ -1,4 +1,4 @@
-package com.back.b2st.domain.reservation.entity;
+package com.back.b2st.domain.scheduleseat.entity;
 
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 	name = "schedule_seat",
 	indexes = {
 		@Index(name = "idx_schedule_seat_schedule_seat", columnList = "schedule_id, seat_id"),
-		@Index(name = "idx_schedule_seat_status", columnList = "status")
+		@Index(name = "idx_schedule_seat_schedule_status", columnList = "schedule_id, status")
 	},
 	uniqueConstraints = {
 		@UniqueConstraint(name = "uk_schedule_seat_schedule_seat", columnNames = {"schedule_id", "seat_id"})

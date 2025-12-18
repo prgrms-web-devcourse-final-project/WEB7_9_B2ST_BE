@@ -15,8 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.back.b2st.domain.reservation.entity.ScheduleSeat;
-import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.scheduleseat.service.ScheduleSeatCommandService;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -24,7 +25,7 @@ import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
 class SeatSelectionConcurrencyTest {
 
 	@Autowired
-	private SeatHoldService seatHoldService;
+	private ScheduleSeatCommandService scheduleSeatCommandService;
 
 	@Autowired
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -56,7 +57,7 @@ class SeatSelectionConcurrencyTest {
 
 		Runnable task = () -> {
 			try {
-				seatHoldService.holdSeat(scheduleId, seatId);
+				scheduleSeatCommandService.holdSeat(scheduleId, seatId);
 				successCount.incrementAndGet(); // HOLD 성공한 스레드 수 증가
 			} catch (Exception e) {
 				System.out.println("[Thread Error] " + e.getMessage());

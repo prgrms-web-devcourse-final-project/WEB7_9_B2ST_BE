@@ -20,8 +20,8 @@ import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
-import com.back.b2st.domain.reservation.entity.ScheduleSeat;
-import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
@@ -59,7 +59,7 @@ public class DataInitializer implements CommandLineRunner {
 		initPerformance();
 		initSectionData();
 		initSectData();
-		//initConnectedSet(); // 테스트용
+		//initConnectedSet();
 		//initConnectedSet2();
 	}
 
@@ -226,49 +226,68 @@ public class DataInitializer implements CommandLineRunner {
 	private void initConnectedSet() {
 
 		// 공연장 생성
-		Venue connectedVenue = venueRepository.save(Venue.builder().name("QueryDSL 연결 테스트 공연장").build());
+		Venue connectedVenue = venueRepository.save(
+			Venue.builder()
+				.name("QueryDSL 연결 테스트 공연장")
+				.build()
+		);
 
 		// 공연 생성
-		Performance connectedPerformance = performanceRepository.save(Performance.builder()
-			.venue(connectedVenue)
-			.title("QueryDSL 연결 테스트 공연")
-			.category("콘서트")
-			.posterUrl("")
-			.description(null)
-			.startDate(LocalDateTime.now().plusDays(5))
-			.endDate(LocalDateTime.now().plusDays(7))
-			.status(PerformanceStatus.ON_SALE)
-			.build());
+		Performance connectedPerformance = performanceRepository.save(
+			Performance.builder()
+				.venue(connectedVenue)
+				.title("QueryDSL 연결 테스트 공연")
+				.category("콘서트")
+				.posterUrl("")
+				.description(null)
+				.startDate(LocalDateTime.now().plusDays(5))
+				.endDate(LocalDateTime.now().plusDays(7))
+				.status(PerformanceStatus.ON_SALE)
+				.build()
+		);
 
 		// 공연 회차 생성
-		PerformanceSchedule connectedSchedule = performanceScheduleRepository.save(PerformanceSchedule.builder()
-			.performance(connectedPerformance)
-			.roundNo(1)
-			.startAt(LocalDateTime.now().plusDays(5))
-			.bookingType(BookingType.FIRST_COME)
-			.bookingOpenAt(LocalDateTime.now().minusDays(1))
-			.bookingCloseAt(LocalDateTime.now().plusDays(3))
-			.build());
+		PerformanceSchedule connectedSchedule = performanceScheduleRepository.save(
+			PerformanceSchedule.builder()
+				.performance(connectedPerformance)
+				.roundNo(1)
+				.startAt(LocalDateTime.now().plusDays(5))
+				.bookingType(BookingType.FIRST_COME)
+				.bookingOpenAt(LocalDateTime.now().minusDays(1))
+				.bookingCloseAt(LocalDateTime.now().plusDays(3))
+				.build()
+		);
 
 		// 구역 생성
 		Section connectedSection = sectionRepository.save(
-			Section.builder().venueId(connectedVenue.getVenueId()).sectionName("A").build());
+			Section.builder()
+				.venueId(connectedVenue.getVenueId())
+				.sectionName("A")
+				.build()
+		);
 
-		// 좌석 생성
-		Seat connectedSeat = seatRepository.save(Seat.builder()
-			.venueId(connectedVenue.getVenueId())
-			.sectionId(connectedSection.getId())
-			.sectionName(connectedSection.getSectionName())
-			.rowLabel("1")
-			.seatNumber(1)
-			.build());
+		// === 좌석 10개 + 회차별 좌석 10개 생성 ===
+		for (int seatNumber = 1; seatNumber <= 10; seatNumber++) {
 
-		// 회차별 좌석 생성
-		ScheduleSeat connectedScheduleSeat = scheduleSeatRepository.save(ScheduleSeat.builder()
-			.scheduleId(connectedSchedule.getPerformanceScheduleId())
-			.seatId(connectedSeat.getId())
-			.build());
+			// 좌석 생성
+			Seat connectedSeat = seatRepository.save(
+				Seat.builder()
+					.venueId(connectedVenue.getVenueId())
+					.sectionId(connectedSection.getId())
+					.sectionName(connectedSection.getSectionName())
+					.rowLabel("1")
+					.seatNumber(seatNumber)
+					.build()
+			);
 
+			// 회차별 좌석 생성
+			scheduleSeatRepository.save(
+				ScheduleSeat.builder()
+					.scheduleId(connectedSchedule.getPerformanceScheduleId())
+					.seatId(connectedSeat.getId())
+					.build()
+			);
+		}
 	}
 
 	private void initConnectedSet2() {

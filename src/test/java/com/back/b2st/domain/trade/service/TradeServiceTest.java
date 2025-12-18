@@ -82,7 +82,7 @@ class TradeServiceTest {
 			.build();
 
 		Reservation mockReservation = Reservation.builder()
-			.performanceId(1L)
+			.scheduleId(1L)
 			.memberId(memberId)
 			.seatId(1L)
 			.build();
@@ -143,7 +143,7 @@ class TradeServiceTest {
 			.build();
 
 		Reservation mockReservation = Reservation.builder()
-			.performanceId(1L)
+			.scheduleId(1L)
 			.memberId(memberId)
 			.seatId(1L)
 			.build();
@@ -237,7 +237,7 @@ class TradeServiceTest {
 	@DisplayName("동시성 문제로 중복 발생 시 예외 처리")
 	void createTrade_fail_dataIntegrityViolation() {
 		// given
-		CreateTradeReq request = new CreateTradeReq(java.util.List.of(1L), TradeType.EXCHANGE, null);
+		CreateTradeReq request = new CreateTradeReq(List.of(1L), TradeType.EXCHANGE, null);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
@@ -259,7 +259,7 @@ class TradeServiceTest {
 			.build();
 
 		Reservation mockReservation = Reservation.builder()
-			.performanceId(1L)
+			.scheduleId(1L)
 			.memberId(memberId)
 			.seatId(1L)
 			.build();

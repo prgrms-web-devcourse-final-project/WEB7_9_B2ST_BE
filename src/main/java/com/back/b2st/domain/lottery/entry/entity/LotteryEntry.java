@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,11 +30,18 @@ import lombok.NoArgsConstructor;
 		@Index(name = "idx_lottery_entries_schedule", columnList = "schedule_id"),
 		@Index(name = "idx_lottery_entries_member_performance_schedule", columnList = "member_id, performance_id, schedule_id"),
 		@Index(name = "idx_lottery_entries_status", columnList = "status")
+	},
+	uniqueConstraints = {
+		@UniqueConstraint(
+			name = "uk_member_performance_schedule",
+			columnNames = {"member_id", "performance_id", "schedule_id"}
+		)
 	}
+
 )
 @SequenceGenerator(
 	name = "lottery_entry_id_gen",
-	sequenceName = "LOTTERY_ENTRY_SEQ",
+	sequenceName = "lottery_entry_seq",
 	allocationSize = 50
 )
 public class LotteryEntry extends BaseEntity {

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 public record RegisterLotteryEntryReq(
+	// todo 제거하고 헤더, User인증 토큰
 	@NotNull(message = "사용자ID는 필수입니다.")
 	Long memberId,
 

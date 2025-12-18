@@ -74,7 +74,8 @@ class TicketControllerTest {
 			.birth(LocalDate.of(1990, 1, 1))
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		Member savedMember = memberRepository.save(testMember);
 

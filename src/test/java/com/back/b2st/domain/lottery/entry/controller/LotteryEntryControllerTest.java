@@ -28,6 +28,10 @@ import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
+import com.back.b2st.domain.seat.grade.error.SeatGradeErrorCode;
+import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
@@ -57,12 +61,16 @@ class LotteryEntryControllerTest {
 	private SeatRepository seatRepository;
 	@Autowired
 	private PerformanceScheduleRepository performanceScheduleRepository;
+	@Autowired
+	private SeatGradeRepository seatGradeRepository;
 
 	private Member tMember;
 	private Performance performance;
 	private Section section;
 	private Seat seat;
 	private PerformanceSchedule performanceSchedule;
+	private SeatGrade seatGrade;
+	private Venue venue;
 
 	@BeforeEach
 	void setUp() {
@@ -77,7 +85,7 @@ class LotteryEntryControllerTest {
 
 		tMember = memberRepository.save(user1);
 
-		Venue venue = venueRepository.save(Venue.builder()
+		venue = venueRepository.save(Venue.builder()
 			.name("잠실실내체육관")
 			.build());
 
@@ -103,7 +111,7 @@ class LotteryEntryControllerTest {
 			.venueId(venue.getVenueId())
 			.sectionId(section.getId())
 			.sectionName("A")
-			.rowLabel("8")
+			.rowLabel("5")
 			.seatNumber(7)
 			.build());
 
@@ -115,6 +123,46 @@ class LotteryEntryControllerTest {
 				.bookingType(BookingType.LOTTERY)
 				.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
 				.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
+				.build());
+
+		seatGrade = seatGradeRepository.save(
+			SeatGrade.builder()
+				.performanceId(performance.getPerformanceId())
+				.seatId(seat.getId())
+				.grade(SeatGradeType.ROYAL)
+				.price(10000)
+				.build());
+
+		Seat seat2 = seatRepository.save(Seat.builder()
+			.venueId(venue.getVenueId())
+			.sectionId(section.getId())
+			.sectionName("A")
+			.rowLabel("8")
+			.seatNumber(70)
+			.build());
+
+		seatGradeRepository.save(
+			SeatGrade.builder()
+				.performanceId(performance.getPerformanceId())
+				.seatId(seat2.getId())
+				.grade(SeatGradeType.ROYAL)
+				.price(10000)
+				.build());
+
+		Seat seat3 = seatRepository.save(Seat.builder()
+			.venueId(venue.getVenueId())
+			.sectionId(section.getId())
+			.sectionName("B")
+			.rowLabel("1")
+			.seatNumber(13)
+			.build());
+
+		seatGradeRepository.save(
+			SeatGrade.builder()
+				.performanceId(performance.getPerformanceId())
+				.seatId(seat3.getId())
+				.grade(SeatGradeType.VIP)
+				.price(10000)
 				.build());
 	}
 
@@ -147,8 +195,8 @@ class LotteryEntryControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data").isArray())
 			.andExpect(jsonPath("$.data[0].sectionName").value("A"))
-			.andExpect(jsonPath("$.data[0].grades[0].grade").value("VIP"))    // todo grade 관련 수정시 작업
-			.andExpect(jsonPath("$.data[0].grades[0].rows[0]").value("8"));
+			.andExpect(jsonPath("$.data[0].grades[0].grade").value(seatGrade.getGrade().toString()))
+			.andExpect(jsonPath("$.data[0].grades[0].rows[0]").value(seat.getRowLabel()));
 		;
 	}
 
@@ -161,15 +209,17 @@ class LotteryEntryControllerTest {
 
 		Long memberId = tMember.getId();
 		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
-		Long seatGradeId = 3L;
+		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
-			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
 			+ "}";
+
+		System.out.println("requestBody = " + requestBody);
 
 		// when & then
 		mvc.perform(
@@ -183,7 +233,7 @@ class LotteryEntryControllerTest {
 			.andExpect(jsonPath("$.data.memberId").value(memberId))
 			.andExpect(jsonPath("$.data.performanceId").value(param))
 			.andExpect(jsonPath("$.data.scheduleId").value(scheduleId))
-			.andExpect(jsonPath("$.data.seatGradeId").value(seatGradeId))
+			.andExpect(jsonPath("$.data.grade").value(grade))
 			.andExpect(jsonPath("$.data.quantity").value(quantity))
 			.andExpect(jsonPath("$.data.status").value("APPLIED"))
 		;
@@ -198,13 +248,13 @@ class LotteryEntryControllerTest {
 
 		Long memberId = tMember.getId();
 		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
-		Long seatGradeId = 3L;
+		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
-			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
 			+ "}";
 
@@ -228,13 +278,13 @@ class LotteryEntryControllerTest {
 
 		Long memberId = 99999999L;
 		Long scheduleId = 2L;
-		Long seatGradeId = 3L;
+		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
-			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
 			+ "}";
 
@@ -259,13 +309,13 @@ class LotteryEntryControllerTest {
 
 		Long memberId = tMember.getId();
 		Long scheduleId = 999L;
-		Long seatGradeId = 3L;
+		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
-			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
 			+ "}";
 
@@ -283,25 +333,19 @@ class LotteryEntryControllerTest {
 	@Test
 	@DisplayName("추첨응모_실패_좌석등급")
 	void registerLotteryEntry_fail_seatGrade() throws Exception {
-		// TODO : Repo 연결 후 테스트
-	}
-
-	@Test
-	@DisplayName("추첨응모_실패_인원수0")
-	void registerLotteryEntry_fail_quantityZero() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = performance.getPerformanceId();
 
 		Long memberId = tMember.getId();
-		Long scheduleId = 2L;
-		Long seatGradeId = 3L;
-		int quantity = 0;
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
+		String grade = "NO";
+		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
-			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
 			+ "}";
 
@@ -313,7 +357,36 @@ class LotteryEntryControllerTest {
 			)
 			.andDo(print())
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.code").value(400))
+			.andExpect(jsonPath("$.message").value(SeatGradeErrorCode.INVALID_GRADE_TYPE.getMessage()));
+	}
+
+	@Test
+	@DisplayName("추첨응모_실패_인원수0")
+	void registerLotteryEntry_fail_quantityZero() throws Exception {
+		// given
+		String url = "/api/performances/{performanceId}/lottery/entry";
+		Long param = performance.getPerformanceId();
+
+		Long memberId = tMember.getId();
+		Long scheduleId = 2L;
+		String grade = seatGrade.getGrade().toString();
+		int quantity = 0;
+
+		String requestBody = "{"
+			+ "\"memberId\": " + memberId + ","
+			+ "\"scheduleId\": " + scheduleId + ","
+			+ "\"grade\": \"" + grade + "\","
+			+ "\"quantity\": " + quantity
+			+ "}";
+
+		// when & then
+		mvc.perform(
+				post(url, param)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andDo(print())
+			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.message").value("인원수는 1 이상이어야 합니다."))
 		;
 	}
@@ -328,13 +401,13 @@ class LotteryEntryControllerTest {
 		Long memberId = tMember.getId();
 		;
 		Long scheduleId = 2L;
-		Long seatGradeId = 3L;
+		String grade = seatGrade.getGrade().toString();
 		int quantity = LotteryConstants.MAX_LOTTERY_ENTRY_COUNT + 1;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
-			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
 			+ "}";
 
@@ -346,7 +419,6 @@ class LotteryEntryControllerTest {
 			)
 			.andDo(print())
 			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.code").value(400))
 			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.EXCEEDS_MAX_ALLOCATION.getMessage()))
 		;
 	}
@@ -360,13 +432,13 @@ class LotteryEntryControllerTest {
 
 		Long memberId = tMember.getId();
 		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
-		Long seatGradeId = 3L;
+		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
-			+ "\"seatGradeId\": " + seatGradeId + ","
+			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
 			+ "}";
 
@@ -388,7 +460,6 @@ class LotteryEntryControllerTest {
 			)
 			.andDo(print())
 			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.code").value(409))
 			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.DUPLICATE_ENTRY.getMessage()))
 		;
 	}

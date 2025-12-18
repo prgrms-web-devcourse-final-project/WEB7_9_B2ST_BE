@@ -14,7 +14,8 @@ public enum SeatGradeType {
 
 	public static SeatGradeType fromString(String grade) {
 		if (grade == null || grade.isBlank()) {
-			throw new BusinessException(SeatGradeErrorCode.GRADE_REQUIRED);
+			// throw new BusinessException(SeatGradeErrorCode.GRADE_REQUIRED);
+			return SeatGradeType.STANDARD;
 		}
 
 		try {

@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +19,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.lottery.constants.LotteryConstants;
+import com.back.b2st.domain.auth.dto.request.LoginReq;
 import com.back.b2st.domain.lottery.entry.error.LotteryEntryErrorCode;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
@@ -39,8 +40,12 @@ import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 
+import jakarta.persistence.EntityManager;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+
 @SpringBootTest
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
 class LotteryEntryControllerTest {
@@ -48,7 +53,10 @@ class LotteryEntryControllerTest {
 	@Autowired
 	private MockMvc mvc;
 	@Autowired
+	private ObjectMapper objectMapper;
+	@Autowired
 	private PasswordEncoder passwordEncoder;
+
 	@Autowired
 	private MemberRepository memberRepository;
 	@Autowired
@@ -64,26 +72,37 @@ class LotteryEntryControllerTest {
 	@Autowired
 	private SeatGradeRepository seatGradeRepository;
 
-	private Member tMember;
+	@Autowired
+	private EntityManager em;
+
+	private String getMyUrl = "/api/mypage/lottery/entries";
+	private String createUrl = "/api/performances/{performanceId}/lottery/entry";
+
+	private Member member;
 	private Performance performance;
 	private Section section;
 	private Seat seat;
 	private PerformanceSchedule performanceSchedule;
 	private SeatGrade seatGrade;
 	private Venue venue;
+	private String accessToken;
 
 	@BeforeEach
-	void setUp() {
-		Member user1 = Member.builder()
-			.email("lotteryEntry@tt.com")
-			.password(passwordEncoder.encode("1234"))
+	void setUp() throws Exception {
+		String email = "lotteryEntry@tt.com";
+		String password = "P@$$w0rd";
+
+		member = memberRepository.save(Member.builder()
+			.email(email)
+			.password(passwordEncoder.encode(password))
 			.name("추첨응모")
+			.birth(LocalDate.of(1990, 1, 1))
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
 			.isVerified(true)
-			.build();
+			.build());
 
-		tMember = memberRepository.save(user1);
+		accessToken = getAccessToken(email, password);
 
 		venue = venueRepository.save(Venue.builder()
 			.name("잠실실내체육관")
@@ -164,19 +183,24 @@ class LotteryEntryControllerTest {
 				.grade(SeatGradeType.VIP)
 				.price(10000)
 				.build());
+
+		em.flush();
+		em.clear();
 	}
 
-	record TestRequest(Long memberId, Long scheduleId, Long seatGradeId, Integer quantity) {
-		String toJson() {
-			return String.format("""
-				{
-				    "memberId": %d,
-				    "scheduleId": %d,
-				    "seatGradeId": %d,
-				    "quantity": %d
-				}
-				""", memberId, scheduleId, seatGradeId, quantity);
+	private String getAccessToken(String email, String password) throws Exception {
+		LoginReq loginRequest = new LoginReq(email, password);
+
+		String response = mvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(loginRequest)))
+			.andReturn().getResponse().getContentAsString();
+
+		JsonNode jsonNode = objectMapper.readTree(response);
+		if (!jsonNode.has("data") || !jsonNode.get("data").has("accessToken")) {
+			throw new IllegalStateException("Login response missing accessToken: " + response);
 		}
+		return jsonNode.path("data").path("accessToken").asText();
 	}
 
 	@Test
@@ -189,6 +213,7 @@ class LotteryEntryControllerTest {
 		// when & then
 		mvc.perform(
 				get(url, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 			)
 			.andDo(print())
@@ -204,10 +229,9 @@ class LotteryEntryControllerTest {
 	@DisplayName("추첨응모_성공")
 	void registerLotteryEntry_success() throws Exception {
 		// given
-		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = performance.getPerformanceId();
 
-		Long memberId = tMember.getId();
+		Long memberId = member.getId();
 		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
@@ -223,7 +247,8 @@ class LotteryEntryControllerTest {
 
 		// when & then
 		mvc.perform(
-				post(url, param)
+				post(createUrl, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -244,12 +269,12 @@ class LotteryEntryControllerTest {
 	void registerLotteryEntry_fail_performance() throws Exception {
 		// given
 		String url = "/api/performances/{performanceId}/lottery/entry";
-		Long param = 999L;
+		Long param = 9999L;
 
-		Long memberId = tMember.getId();
+		Long memberId = member.getId();
 		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		String grade = seatGrade.getGrade().toString();
-		int quantity = 4;
+		int quantity = 3;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
@@ -261,6 +286,7 @@ class LotteryEntryControllerTest {
 		// when & then
 		mvc.perform(
 				post(url, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -291,6 +317,7 @@ class LotteryEntryControllerTest {
 		// when & then
 		mvc.perform(
 				post(url, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -307,7 +334,7 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = performance.getPerformanceId();
 
-		Long memberId = tMember.getId();
+		Long memberId = member.getId();
 		Long scheduleId = 999L;
 		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
@@ -322,6 +349,7 @@ class LotteryEntryControllerTest {
 		// when & then
 		mvc.perform(
 				post(url, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -337,7 +365,7 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = performance.getPerformanceId();
 
-		Long memberId = tMember.getId();
+		Long memberId = member.getId();
 		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		String grade = "NO";
 		int quantity = 4;
@@ -352,6 +380,7 @@ class LotteryEntryControllerTest {
 		// when & then
 		mvc.perform(
 				post(url, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -367,7 +396,7 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = performance.getPerformanceId();
 
-		Long memberId = tMember.getId();
+		Long memberId = member.getId();
 		Long scheduleId = 2L;
 		String grade = seatGrade.getGrade().toString();
 		int quantity = 0;
@@ -382,6 +411,7 @@ class LotteryEntryControllerTest {
 		// when & then
 		mvc.perform(
 				post(url, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -398,11 +428,11 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = performance.getPerformanceId();
 
-		Long memberId = tMember.getId();
+		Long memberId = member.getId();
 		;
 		Long scheduleId = 2L;
 		String grade = seatGrade.getGrade().toString();
-		int quantity = LotteryConstants.MAX_LOTTERY_ENTRY_COUNT + 1;
+		int quantity = 4 + 1;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","
@@ -414,6 +444,7 @@ class LotteryEntryControllerTest {
 		// when & then
 		mvc.perform(
 				post(url, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -430,7 +461,7 @@ class LotteryEntryControllerTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = performance.getPerformanceId();
 
-		Long memberId = tMember.getId();
+		Long memberId = member.getId();
 		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
@@ -445,6 +476,7 @@ class LotteryEntryControllerTest {
 		// when & then
 		mvc.perform(
 				post(url, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -455,6 +487,7 @@ class LotteryEntryControllerTest {
 
 		mvc.perform(
 				post(url, param)
+					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody)
 			)
@@ -462,6 +495,64 @@ class LotteryEntryControllerTest {
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.DUPLICATE_ENTRY.getMessage()))
 		;
+	}
+
+	@Test
+	@DisplayName("내응모조회 - 성공")
+	void getMyLotteryEntries_success() throws Exception {
+		// given
+		String url = getMyUrl;
+		Long param = performance.getPerformanceId();
+
+		Long memberId = member.getId();
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
+		SeatGradeType grade = seatGrade.getGrade();
+
+		// 테스트 데이터 3
+		for (int quantity = 1; quantity < 3; quantity++) {
+			scheduleId = performanceScheduleRepository.save(
+				PerformanceSchedule.builder()
+					.performance(performance)
+					.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
+					.roundNo(quantity)
+					.bookingType(BookingType.LOTTERY)
+					.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
+					.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
+					.build()).getPerformanceScheduleId();
+
+			grade = switch (quantity) {
+				case 1 -> SeatGradeType.STANDARD;
+				case 2 -> SeatGradeType.VIP;
+				case 3 -> SeatGradeType.A;
+				default -> SeatGradeType.RESTRICTED_VIEW;
+			};
+
+			String requestBody = "{"
+				+ "\"memberId\": " + memberId + ","
+				+ "\"scheduleId\": " + scheduleId + ","
+				+ "\"grade\": \"" + grade.toString() + "\","
+				+ "\"quantity\": " + quantity
+				+ "}";
+
+			mvc.perform(
+					post(createUrl, param)
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestBody)
+				)
+				// .andDo(print())
+				.andExpect(status().isOk())
+			;
+		}
+
+		// when
+		mvc.perform(
+				get(getMyUrl)
+					.header("Authorization", "Bearer " + accessToken)
+					.contentType(MediaType.APPLICATION_JSON)
+			)
+			.andDo(print())
+			.andExpect(status().isOk());
 	}
 
 }

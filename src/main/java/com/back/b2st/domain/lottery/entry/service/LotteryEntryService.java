@@ -1,12 +1,13 @@
 package com.back.b2st.domain.lottery.entry.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
-import com.back.b2st.domain.lottery.constants.LotteryConstants;
 import com.back.b2st.domain.lottery.entry.dto.request.RegisterLotteryEntryReq;
+import com.back.b2st.domain.lottery.entry.dto.response.AppliedLotteryInfo;
 import com.back.b2st.domain.lottery.entry.dto.response.LotteryEntryInfo;
 import com.back.b2st.domain.lottery.entry.dto.response.SectionLayoutRes;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
@@ -32,6 +33,9 @@ public class LotteryEntryService {
 	private final PerformanceRepository performanceRepository;
 	private final SeatService seatService;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
+
+	private static final int MAX_LOTTERY_ENTRY_COUNT = 4;
+	private static final int MONTHS = 3;
 
 	// 선택한 회차의 좌석 배치도 전달
 	public List<SectionLayoutRes> getSeatLayout(Long performanceId) {
@@ -66,6 +70,13 @@ public class LotteryEntryService {
 		}
 	}
 
+	// 추첨 진행 전인 응모 내역 조회
+	public List<AppliedLotteryInfo> getMyLotteryEntry(Long memberId) {
+		validateMember(memberId);
+		LocalDateTime fromMonthsAgo = LocalDateTime.now().minusMonths(MONTHS);
+		return lotteryEntryRepository.findAppliedLotteryByMememberId(memberId, fromMonthsAgo);
+	}
+
 	// 공연장 검증 후 장소 확인
 	private Long validatePerformance(Long performanceId) {
 		Performance performance = performanceRepository.findById(performanceId)
@@ -91,7 +102,7 @@ public class LotteryEntryService {
 
 	private void validateEntryData(RegisterLotteryEntryReq requset) {
 		// 최대 응모인원 수 관련논의 없음
-		if (requset.quantity() > LotteryConstants.MAX_LOTTERY_ENTRY_COUNT) {
+		if (requset.quantity() > MAX_LOTTERY_ENTRY_COUNT) {
 			throw new BusinessException(LotteryEntryErrorCode.EXCEEDS_MAX_ALLOCATION);
 		}
 	}

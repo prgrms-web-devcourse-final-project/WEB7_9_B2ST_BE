@@ -24,8 +24,6 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 			  AND le.createdAt >= :month
 			ORDER BY le.createdAt DESC
 		""")
-	List<AppliedLotteryInfo>
-	findAppliedLottertBymemberId(
-		// todo 페이징 추가
+	List<AppliedLotteryInfo> findAppliedLotteryByMememberId(    // todo 페이징 추가
 		@Param("memberId") Long memberId, @Param("month") LocalDateTime month);
 }

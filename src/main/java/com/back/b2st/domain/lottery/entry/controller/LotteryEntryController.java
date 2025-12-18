@@ -10,10 +10,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.lottery.entry.dto.request.RegisterLotteryEntryReq;
+import com.back.b2st.domain.lottery.entry.dto.response.AppliedLotteryInfo;
 import com.back.b2st.domain.lottery.entry.dto.response.LotteryEntryInfo;
 import com.back.b2st.domain.lottery.entry.dto.response.SectionLayoutRes;
 import com.back.b2st.domain.lottery.entry.service.LotteryEntryService;
+import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
+import com.back.b2st.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,6 +38,7 @@ public class LotteryEntryController {
 	)
 	@GetMapping("/api/performances/{performanceId}/lottery/section")
 	public BaseResponse<List<SectionLayoutRes>> getSeatLayout(
+		@CurrentUser UserPrincipal userPrincipal,
 		@Parameter(description = "공연 ID", example = "1")
 		@PathVariable("performanceId") Long performanceId
 	) {
@@ -47,6 +51,7 @@ public class LotteryEntryController {
 	)
 	@PostMapping("/api/performances/{performanceId}/lottery/entry")
 	public BaseResponse<LotteryEntryInfo> registerLotteryEntry(
+		@CurrentUser UserPrincipal userPrincipal,
 		@Parameter(description = "공연 ID", example = "1")
 		@PathVariable("performanceId") Long performanceId,
 		@io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -55,5 +60,16 @@ public class LotteryEntryController {
 		@Valid @RequestBody RegisterLotteryEntryReq request
 	) {
 		return BaseResponse.created(lotteryEntryService.createLotteryEntry(performanceId, request));
+	}
+
+	@Operation(
+		summary = "내 응모 내역 조회",
+		description = "내가 응모한 공연 내역을 조회 - 내 것만 조회가능"
+	)
+	@GetMapping("/api/mypage/lottery/entries")
+	public BaseResponse<List<AppliedLotteryInfo>> getMyLotteryEntry(
+		@CurrentUser UserPrincipal userPrincipal
+	) {
+		return BaseResponse.success(lotteryEntryService.getMyLotteryEntry(userPrincipal.getId()));
 	}
 }

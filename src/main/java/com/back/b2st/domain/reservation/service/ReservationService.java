@@ -33,7 +33,7 @@ public class ReservationService {
 	@Transactional
 	public Long reserveSeat(Long memberId, ReservationReq request) {
 
-		Long scheduleId = request.performanceId();
+		Long scheduleId = request.scheduleId();
 		Long seatId = request.seatId();
 
 		// 1. 락 걸기
@@ -51,7 +51,7 @@ public class ReservationService {
 			seatHoldTokenService.save(scheduleId, seatId, memberId);
 
 			// 4. 중복 예매 방지
-			validateNotAlreadyReserved(request.performanceId(), request.seatId());
+			validateNotAlreadyReserved(request.scheduleId(), request.seatId());
 
 			// 5. Reservation 생성
 			Reservation reservation = request.toEntity(memberId);
@@ -93,7 +93,7 @@ public class ReservationService {
 
 		// 좌석 AVAILABLE로 복구
 		scheduleSeatRepository
-			.findByScheduleIdAndSeatId(reservation.getPerformanceId(), reservation.getSeatId())
+			.findByScheduleIdAndSeatId(reservation.getScheduleId(), reservation.getSeatId())
 			.ifPresent(ScheduleSeat::release);
 	}
 
@@ -124,7 +124,7 @@ public class ReservationService {
 
 		// 좌석 SOLD 변경
 		scheduleSeatRepository
-			.findByScheduleIdAndSeatId(reservation.getPerformanceId(), reservation.getSeatId())
+			.findByScheduleIdAndSeatId(reservation.getScheduleId(), reservation.getSeatId())
 			.ifPresent(ScheduleSeat::sold);
 	}
 
@@ -171,7 +171,7 @@ public class ReservationService {
 
 	// === 중복 예매 방지 로직 === //
 	private void validateNotAlreadyReserved(Long scheduleId, Long seatId) {
-		if (reservationRepository.existsByPerformanceIdAndSeatId(scheduleId, seatId)) {
+		if (reservationRepository.existsByScheduleIdAndSeatId(scheduleId, seatId)) {
 			throw new BusinessException(ReservationErrorCode.SEAT_ALREADY_SOLD);
 		}
 	}

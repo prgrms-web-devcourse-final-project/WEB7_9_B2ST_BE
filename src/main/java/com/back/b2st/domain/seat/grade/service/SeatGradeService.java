@@ -37,7 +37,7 @@ public class SeatGradeService {
 	}
 
 	private void validateSeat(Long seatId) {
-		if (!performanceRepository.existsById(seatId)) {
+		if (!seatGradeRepository.existsById(seatId)) {
 			throw new BusinessException(SeatGradeErrorCode.SEAT_NOT_FOUND);
 		}
 	}

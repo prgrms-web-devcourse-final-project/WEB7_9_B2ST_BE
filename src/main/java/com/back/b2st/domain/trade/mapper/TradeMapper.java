@@ -17,7 +17,7 @@ public class TradeMapper {
 	) {
 		return Trade.builder()
 			.memberId(memberId)
-			.performanceId(reservation.getPerformanceId())
+			.performanceId(reservation.getScheduleId())
 			.scheduleId(1L)  // 회차 연결 전까지 하드코딩 유지
 			.ticketId(ticket.getId())
 			.type(request.type())

@@ -37,7 +37,7 @@ public interface ReservationApi {
 	})
 	BaseResponse<ReservationDetailRes> createReservation(
 		@Parameter(hidden = true) UserPrincipal user,
-		@RequestBody(description = "예매 요청 정보 (performanceId, seatId)")
+		@RequestBody(description = "예매 요청 정보 (scheduleId, seatId)")
 		ReservationReq request
 	);
 

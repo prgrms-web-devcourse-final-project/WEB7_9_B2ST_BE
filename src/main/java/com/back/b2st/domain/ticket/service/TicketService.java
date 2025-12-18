@@ -111,7 +111,7 @@ public class TicketService {
 					.sectionName(seat.getSectionName())
 					.rowLabel(seat.getRowLabel())
 					.seatNumber(seat.getSeatNumber())
-					.performanceId(reservation.getPerformanceId())
+					.performanceId(reservation.getScheduleId())
 					.build();
 			})
 			.collect(Collectors.toList());

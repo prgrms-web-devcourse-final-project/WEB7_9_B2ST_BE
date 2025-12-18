@@ -86,7 +86,7 @@ class TicketServiceTest {
 
 		// Create test reservation
 		Reservation reservation = Reservation.builder()
-			.performanceId(1L)
+			.scheduleId(1L)
 			.memberId(savedMember.getId())
 			.seatId(savedSeat.getId())
 			.build();

@@ -7,14 +7,14 @@ import jakarta.validation.constraints.NotNull;
 public record ReservationReq(
 
 	@NotNull
-	Long performanceId,
+	Long scheduleId,
 
 	@NotNull
 	Long seatId
 ) {
 	public Reservation toEntity(Long memberId) {
 		return Reservation.builder()
-			.performanceId(performanceId)
+			.scheduleId(scheduleId)
 			.memberId(memberId)
 			.seatId(seatId)
 			.build();

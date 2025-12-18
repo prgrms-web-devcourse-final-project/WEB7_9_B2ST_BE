@@ -20,13 +20,12 @@ import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
-import com.back.b2st.domain.reservation.entity.ScheduleSeat;
-import com.back.b2st.domain.reservation.entity.SeatStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.reservation.service.SeatHoldTokenService;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
-import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -68,7 +67,8 @@ class ReservationPaymentHandlerTest {
 		Long performanceId = 5L;
 		Long expectedPrice = 50000L;
 
-		Reservation reservation = createReservation(reservationId, memberId, scheduleId, seatId, ReservationStatus.PENDING);
+		Reservation reservation = createReservation(reservationId, memberId, scheduleId, seatId,
+			ReservationStatus.PENDING);
 		ScheduleSeat scheduleSeat = createScheduleSeat(scheduleId, seatId, SeatStatus.HOLD);
 		PerformanceSchedule schedule = createPerformanceSchedule(scheduleId, performanceId);
 		SeatGrade seatGrade = createSeatGrade(performanceId, seatId, expectedPrice);
@@ -194,7 +194,8 @@ class ReservationPaymentHandlerTest {
 		Long seatId = 20L;
 		Long performanceId = 5L;
 
-		Reservation reservation = createReservation(reservationId, memberId, scheduleId, seatId, ReservationStatus.PENDING);
+		Reservation reservation = createReservation(reservationId, memberId, scheduleId, seatId,
+			ReservationStatus.PENDING);
 		ScheduleSeat scheduleSeat = createScheduleSeat(scheduleId, seatId, SeatStatus.HOLD);
 		PerformanceSchedule schedule = createPerformanceSchedule(scheduleId, performanceId);
 
@@ -213,7 +214,8 @@ class ReservationPaymentHandlerTest {
 			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 	}
 
-	private Reservation createReservation(Long id, Long memberId, Long scheduleId, Long seatId, ReservationStatus status) {
+	private Reservation createReservation(Long id, Long memberId, Long scheduleId, Long seatId,
+		ReservationStatus status) {
 		Reservation reservation = Reservation.builder()
 			.memberId(memberId)
 			.scheduleId(scheduleId)

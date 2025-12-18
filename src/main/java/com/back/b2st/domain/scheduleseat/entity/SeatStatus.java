@@ -1,4 +1,4 @@
-package com.back.b2st.domain.reservation.entity;
+package com.back.b2st.domain.scheduleseat.entity;
 
 public enum SeatStatus {
 	AVAILABLE,   // 예매 가능

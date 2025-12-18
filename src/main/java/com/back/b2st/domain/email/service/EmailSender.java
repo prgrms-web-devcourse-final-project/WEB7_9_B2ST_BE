@@ -50,6 +50,8 @@ public class EmailSender {
 			log.error("이메일 발송 실패: to={}, error={}", maskEmail(to), e.getMessage(), e);
 		} catch (java.io.UnsupportedEncodingException e) {
 			log.error("이메일 인코딩 오류: {}", e.getMessage(), e);
+		} catch (Exception e) {
+			log.error("이메일 발송 중 예상치 못한 오류: to={}, error={}", maskEmail(to), e.getMessage(), e);
 		}
 	}
 

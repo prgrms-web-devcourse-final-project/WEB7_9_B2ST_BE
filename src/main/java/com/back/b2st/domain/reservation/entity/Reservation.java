@@ -89,4 +89,21 @@ public class Reservation extends BaseEntity {
 		this.status = ReservationStatus.COMPLETED;
 		this.completedAt = LocalDateTime.now();
 	}
+
+	/**
+	 * ===== 임시 호환 코드 =====
+	 */
+	@Deprecated
+	public static class ReservationBuilder {
+
+		public ReservationBuilder performanceId(Long performanceId) {
+			this.scheduleId = performanceId;
+			return this;
+		}
+	}
+
+	@Deprecated
+	public Long getPerformanceId() {
+		return scheduleId;
+	}
 }

@@ -104,7 +104,7 @@ class JwtAuthenticationFilterTest {
 
 		// then
 		assertNull(SecurityContextHolder.getContext().getAuthentication());
-		assertEquals(AuthErrorCode.INVALID_ACCESS_TOKEN, request.getAttribute("exception"));
+		assertEquals(AuthErrorCode.INVALID_TOKEN, request.getAttribute("exception"));
 	}
 
 	@Test
@@ -122,7 +122,7 @@ class JwtAuthenticationFilterTest {
 
 		// then
 		assertNull(SecurityContextHolder.getContext().getAuthentication());
-		assertEquals(AuthErrorCode.UNSUPPORTED_TOKEN, request.getAttribute("exception"));
+		assertEquals(AuthErrorCode.INVALID_TOKEN, request.getAttribute("exception"));
 	}
 
 	@Test

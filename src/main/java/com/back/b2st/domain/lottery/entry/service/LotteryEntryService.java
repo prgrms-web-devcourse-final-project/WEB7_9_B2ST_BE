@@ -1,16 +1,23 @@
 package com.back.b2st.domain.lottery.entry.service;
 
+import java.util.List;
+
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.lottery.constants.LotteryConstants;
 import com.back.b2st.domain.lottery.entry.dto.request.RegisterLotteryEntryReq;
 import com.back.b2st.domain.lottery.entry.dto.response.LotteryEntryInfo;
-import com.back.b2st.domain.lottery.entry.dto.response.SeatLayoutRes;
+import com.back.b2st.domain.lottery.entry.dto.response.SectionLayoutRes;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.error.LotteryEntryErrorCode;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
+import com.back.b2st.domain.seat.seat.service.SeatService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -21,13 +28,16 @@ public class LotteryEntryService {
 
 	private final LotteryEntryRepository lotteryEntryRepository;
 	private final MemberRepository memberRepository;
+	private final PerformanceRepository performanceRepository;
+	private final SeatService seatService;
+	private final PerformanceScheduleRepository performanceScheduleRepository;
 
 	// 선택한 회차의 좌석 배치도 전달
-	public SeatLayoutRes getSeatLayout(Long performanceId) {
-		validatePerformance(performanceId);
-		// TODO : performanceId로 구역 정보 조회
-		// 공연 ID -> 공연장 ID 조회 -> Seat테이블에서 sectionName을 전부 가져오기
-		return SeatLayoutRes.fromEntity(1L, "A", "8", "7");    // A 구역 8번 7번
+	public List<SectionLayoutRes> getSeatLayout(Long performanceId) {
+		Long venudId = validatePerformance(performanceId);
+		List<SeatInfoRes> seatInfo = seatService.getSeatInfoByVenueId(venudId);
+
+		return SectionLayoutRes.from(seatInfo);
 	}
 
 	// 추첨 응모 등록
@@ -47,30 +57,32 @@ public class LotteryEntryService {
 			.build();
 
 		try {
-			return new LotteryEntryInfo(lotteryEntryRepository.save(lotteryEntry));
+			return LotteryEntryInfo.from(lotteryEntryRepository.save(lotteryEntry));
 		} catch (DataAccessException e) {
 			throw new BusinessException(LotteryEntryErrorCode.CREATE_ENTRY_FAILED);
 		}
 	}
 
-	private void validatePerformance(Long performanceId) {
-		// TODO : 공연 Repo 연결
-		if (false) {
-			throw new BusinessException(LotteryEntryErrorCode.INVALID_PERFORMANCE_INFO);
-		}
+	// 공연장 검증 후 장소 확인
+	private Long validatePerformance(Long performanceId) {
+		Performance performance = performanceRepository.findById(performanceId)
+			.orElseThrow(() -> new BusinessException(LotteryEntryErrorCode.PERFORMANCE_NOT_FOUND));
+
+		return performance.getVenue().getVenueId();
 	}
 
+	// 고객 검증
 	private void validateMember(Long memberId) {
 		if (!memberRepository.existsById(memberId)) {
-			throw new BusinessException(LotteryEntryErrorCode.INVALID_MEMBER_INFO);
+			throw new BusinessException(LotteryEntryErrorCode.MEMBER_NOT_FOUND);
 		}
 	}
 
+	// 공연 + 회차 확인
 	private void validateSchedule(Long scheduleId, Long performanceId) {
-		// TODO: 회차정보 Repo 연결
-		// requset.scheduleId() + 공연 ID 확인
-		if (false) {
-			throw new BusinessException(LotteryEntryErrorCode.INVALID_SCHEDULE_INFO);
+		if (!(performanceScheduleRepository.existsByPerformanceScheduleIdAndPerformance_PerformanceId(
+			scheduleId, performanceId))) {
+			throw new BusinessException(LotteryEntryErrorCode.SCHEDULE_NOT_FOUND);
 		}
 	}
 

@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,8 +24,11 @@ import lombok.NoArgsConstructor;
 @Table(
 	name = "schedule_seat",
 	indexes = {
-		@Index(name = "idx_schedule_seat_schedule", columnList = "schedule_id"),
+		@Index(name = "idx_schedule_seat_schedule_seat", columnList = "schedule_id, seat_id"),
 		@Index(name = "idx_schedule_seat_status", columnList = "status")
+	},
+	uniqueConstraints = {
+		@UniqueConstraint(name = "uk_schedule_seat_schedule_seat", columnNames = {"schedule_id", "seat_id"})
 	}
 )
 @SequenceGenerator(
@@ -64,7 +68,7 @@ public class ScheduleSeat extends BaseEntity {
 	}
 
 	/** SOLD(예매 확정) 상태로 변경 */
-	public void markSold() {
+	public void sold() {
 		this.status = SeatStatus.SOLD;
 	}
 

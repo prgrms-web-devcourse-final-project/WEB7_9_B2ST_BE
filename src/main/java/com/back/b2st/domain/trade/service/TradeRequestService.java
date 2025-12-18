@@ -18,6 +18,7 @@ import com.back.b2st.domain.trade.entity.TradeRequestStatus;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
+import com.back.b2st.domain.trade.mapper.TradeRequestMapper;
 import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.domain.trade.repository.TradeRequestRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -42,11 +43,7 @@ public class TradeRequestService {
 		validateNotOwnTrade(trade, requesterId);
 		validateNoDuplicateRequest(trade, requesterId);
 
-		TradeRequest tradeRequest = TradeRequest.builder()
-			.trade(trade)
-			.requesterId(requesterId)
-			.requesterTicketId(request.getRequesterTicketId())
-			.build();
+		TradeRequest tradeRequest = TradeRequestMapper.toEntity(request, trade, requesterId);
 
 		TradeRequest savedRequest = tradeRequestRepository.save(tradeRequest);
 		return TradeRequestRes.from(savedRequest);
@@ -85,7 +82,7 @@ public class TradeRequestService {
 		tradeRequest.accept();
 		trade.complete();
 
-		// 티켓 소유권 이전 처리
+		// 양도: 소유자 → 신청자로 티켓 이전 / 교환: 양쪽 티켓을 서로 교환
 		transferTicketOwnership(trade, tradeRequest);
 	}
 
@@ -181,13 +178,13 @@ public class TradeRequestService {
 
 	private void validateTradeIsActive(Trade trade) {
 		if (trade.getStatus() != TradeStatus.ACTIVE) {
-			throw new BusinessException(TradeErrorCode.INVALID_TRADE_STATUS);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "유효하지 않은 거래 상태입니다.");
 		}
 	}
 
 	private void validateNotOwnTrade(Trade trade, Long requesterId) {
 		if (trade.getMemberId().equals(requesterId)) {
-			throw new BusinessException(TradeErrorCode.CANNOT_REQUEST_OWN_TRADE);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "자신의 게시글에는 신청할 수 없습니다.");
 		}
 	}
 
@@ -201,7 +198,7 @@ public class TradeRequestService {
 			.anyMatch(req -> req.getTrade().getId().equals(trade.getId()));
 
 		if (hasDuplicate) {
-			throw new BusinessException(TradeErrorCode.DUPLICATE_TRADE_REQUEST);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "이미 신청한 게시글입니다.");
 		}
 	}
 
@@ -213,7 +210,7 @@ public class TradeRequestService {
 
 	private void validateTradeRequestIsPending(TradeRequest tradeRequest) {
 		if (tradeRequest.getStatus() != TradeRequestStatus.PENDING) {
-			throw new BusinessException(TradeErrorCode.INVALID_TRADE_REQUEST_STATUS);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "유효하지 않은 교환 신청 상태입니다.");
 		}
 	}
 
@@ -224,7 +221,7 @@ public class TradeRequestService {
 		);
 
 		if (!acceptedRequests.isEmpty()) {
-			throw new BusinessException(TradeErrorCode.TRADE_ALREADY_HAS_ACCEPTED_REQUEST);
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "이미 수락된 신청이 있습니다.");
 		}
 	}
 }

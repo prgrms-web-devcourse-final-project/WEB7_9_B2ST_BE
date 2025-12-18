@@ -16,6 +16,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
 import com.back.b2st.domain.trade.dto.request.UpdateTradeReq;
 import com.back.b2st.domain.trade.dto.response.CreateTradeRes;
@@ -41,18 +47,246 @@ class TradeServiceTest {
 	@Mock
 	private TradeRequestRepository tradeRequestRepository;
 
+	@Mock
+	private TicketRepository ticketRepository;
+
+	@Mock
+	private SeatRepository seatRepository;
+
+	@Mock
+	private ReservationRepository reservationRepository;
+
 	@Test
 	@DisplayName("교환 게시글 생성 성공")
 	void createExchangeTrade_success() {
 		// given
-		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, null, 1);
+		CreateTradeReq request = new CreateTradeReq(java.util.List.of(1L), TradeType.EXCHANGE, null);
 		Long memberId = 100L;
 
 		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
 			.willReturn(false);
 
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+
+		Seat mockSeat = Seat.builder()
+			.venueId(1L)
+			.sectionId(1L)
+			.sectionName("A구역")
+			.rowLabel("5열")
+			.seatNumber(12)
+			.build();
+
+		Reservation mockReservation = Reservation.builder()
+			.performanceId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
+		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
+
 		Trade mockTrade = Trade.builder()
 			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.EXCHANGE)
+			.price(null)
+			.totalCount(1)
+			.section("A구역")
+			.row("5열")
+			.seatNumber("12")
+			.build();
+
+		given(tradeRepository.save(any(Trade.class))).willReturn(mockTrade);
+
+		// when
+		List<CreateTradeRes> response = tradeService.createTrade(request, memberId);
+
+		// then
+		assertThat(response).hasSize(1);
+		assertThat(response.get(0).type()).isEqualTo(TradeType.EXCHANGE);
+		assertThat(response.get(0).totalCount()).isEqualTo(1);
+		assertThat(response.get(0).price()).isNull();
+		verify(tradeRepository).save(any(Trade.class));
+	}
+
+	@Test
+	@DisplayName("양도 게시글 생성 성공")
+	void createTransferTrade_success() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(java.util.List.of(1L), TradeType.TRANSFER, 50000);
+		Long memberId = 100L;
+
+		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
+			.willReturn(false);
+
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+
+		Seat mockSeat = Seat.builder()
+			.venueId(1L)
+			.sectionId(1L)
+			.sectionName("A구역")
+			.rowLabel("5열")
+			.seatNumber(12)
+			.build();
+
+		Reservation mockReservation = Reservation.builder()
+			.performanceId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
+		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
+
+		Trade mockTrade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(1)
+			.section("A구역")
+			.row("5열")
+			.seatNumber("12")
+			.build();
+
+		given(tradeRepository.save(any(Trade.class))).willReturn(mockTrade);
+
+		// when
+		List<CreateTradeRes> response = tradeService.createTrade(request, memberId);
+
+		// then
+		assertThat(response).hasSize(1);
+		assertThat(response.get(0).type()).isEqualTo(TradeType.TRANSFER);
+		assertThat(response.get(0).price()).isEqualTo(50000);
+		assertThat(response.get(0).totalCount()).isEqualTo(1);
+		verify(tradeRepository).save(any(Trade.class));
+	}
+
+	@Test
+	@DisplayName("티켓 중복 등록 실패")
+	void createTrade_fail_duplicateTicket() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(java.util.List.of(1L), TradeType.EXCHANGE, null);
+		Long memberId = 100L;
+
+		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
+			.willReturn(true);
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("교환 - price 검증 실패 (가격 설정)")
+	void createExchangeTrade_fail_invalidPrice() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(java.util.List.of(1L), TradeType.EXCHANGE, 10000);
+		Long memberId = 100L;
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("양도 - price 검증 실패 (가격 미설정)")
+	void createTransferTrade_fail_noPrice() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(java.util.List.of(1L), TradeType.TRANSFER, null);
+		Long memberId = 100L;
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("양도 - price 검증 실패 (0원 이하)")
+	void createTransferTrade_fail_invalidPrice() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(java.util.List.of(1L), TradeType.TRANSFER, 0);
+		Long memberId = 100L;
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("동시성 문제로 중복 발생 시 예외 처리")
+	void createTrade_fail_dataIntegrityViolation() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(java.util.List.of(1L), TradeType.EXCHANGE, null);
+		Long memberId = 100L;
+
+		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
+			.willReturn(false);
+
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+
+		Seat mockSeat = Seat.builder()
+			.venueId(1L)
+			.sectionId(1L)
+			.sectionName("A구역")
+			.rowLabel("5열")
+			.seatNumber(12)
+			.build();
+
+		Reservation mockReservation = Reservation.builder()
+			.performanceId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
+		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
+
+		given(tradeRepository.save(any(Trade.class)))
+			.willThrow(new DataIntegrityViolationException("Unique constraint violation"));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("type과 status로 필터링하여 거래 목록 조회")
+	void getTrades_withTypeAndStatus() {
+		// given
+		TradeType type = TradeType.EXCHANGE;
+		TradeStatus status = TradeStatus.ACTIVE;
+		org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
+
+		Trade trade = Trade.builder()
+			.memberId(100L)
 			.performanceId(1L)
 			.scheduleId(1L)
 			.ticketId(1L)
@@ -64,150 +298,20 @@ class TradeServiceTest {
 			.seatNumber("12석")
 			.build();
 
-		given(tradeRepository.save(any(Trade.class))).willReturn(mockTrade);
+		org.springframework.data.domain.Page<Trade> tradePage =
+			new org.springframework.data.domain.PageImpl<>(List.of(trade));
+
+		given(tradeRepository.findAllByTypeAndStatus(type, status, pageable))
+			.willReturn(tradePage);
 
 		// when
-		CreateTradeRes response = tradeService.createTrade(request, memberId);
+		org.springframework.data.domain.Page<com.back.b2st.domain.trade.dto.response.TradeRes> result =
+			tradeService.getTrades(type, status, pageable);
 
 		// then
-		assertThat(response.getType()).isEqualTo(TradeType.EXCHANGE);
-		assertThat(response.getTotalCount()).isEqualTo(1);
-		assertThat(response.getPrice()).isNull();
-		verify(tradeRepository).save(any(Trade.class));
-	}
-
-	@Test
-	@DisplayName("양도 게시글 생성 성공")
-	void createTransferTrade_success() {
-		// given
-		CreateTradeReq request = new CreateTradeReq(1L, TradeType.TRANSFER, 50000, 2);
-		Long memberId = 100L;
-
-		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
-			.willReturn(false);
-
-		Trade mockTrade = Trade.builder()
-			.memberId(memberId)
-			.performanceId(1L)
-			.scheduleId(1L)
-			.ticketId(1L)
-			.type(TradeType.TRANSFER)
-			.price(50000)
-			.totalCount(2)
-			.section("A")
-			.row("5열")
-			.seatNumber("12석")
-			.build();
-
-		given(tradeRepository.save(any(Trade.class))).willReturn(mockTrade);
-
-		// when
-		CreateTradeRes response = tradeService.createTrade(request, memberId);
-
-		// then
-		assertThat(response.getType()).isEqualTo(TradeType.TRANSFER);
-		assertThat(response.getPrice()).isEqualTo(50000);
-		assertThat(response.getTotalCount()).isEqualTo(2);
-		verify(tradeRepository).save(any(Trade.class));
-	}
-
-	@Test
-	@DisplayName("티켓 중복 등록 실패")
-	void createTrade_fail_duplicateTicket() {
-		// given
-		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, null, 1);
-		Long memberId = 100L;
-
-		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
-			.willReturn(true);
-
-		// when & then
-		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TICKET_ALREADY_REGISTERED);
-	}
-
-	@Test
-	@DisplayName("교환 - totalCount 검증 실패 (1개 초과)")
-	void createExchangeTrade_fail_invalidCount() {
-		// given
-		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, null, 2);
-		Long memberId = 100L;
-
-		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
-			.willReturn(false);
-
-		// when & then
-		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_EXCHANGE_COUNT);
-	}
-
-	@Test
-	@DisplayName("교환 - price 검증 실패 (가격 설정)")
-	void createExchangeTrade_fail_invalidPrice() {
-		// given
-		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, 10000, 1);
-		Long memberId = 100L;
-
-		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
-			.willReturn(false);
-
-		// when & then
-		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_EXCHANGE_PRICE);
-	}
-
-	@Test
-	@DisplayName("양도 - price 검증 실패 (가격 미설정)")
-	void createTransferTrade_fail_noPrice() {
-		// given
-		CreateTradeReq request = new CreateTradeReq(1L, TradeType.TRANSFER, null, 1);
-		Long memberId = 100L;
-
-		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
-			.willReturn(false);
-
-		// when & then
-		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRANSFER_PRICE);
-	}
-
-	@Test
-	@DisplayName("양도 - price 검증 실패 (0원 이하)")
-	void createTransferTrade_fail_invalidPrice() {
-		// given
-		CreateTradeReq request = new CreateTradeReq(1L, TradeType.TRANSFER, 0, 1);
-		Long memberId = 100L;
-
-		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
-			.willReturn(false);
-
-		// when & then
-		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRANSFER_PRICE);
-	}
-
-	@Test
-	@DisplayName("동시성 문제로 중복 발생 시 예외 처리")
-	void createTrade_fail_dataIntegrityViolation() {
-		// given
-		CreateTradeReq request = new CreateTradeReq(1L, TradeType.EXCHANGE, null, 1);
-		Long memberId = 100L;
-
-		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
-			.willReturn(false);
-
-		given(tradeRepository.save(any(Trade.class)))
-			.willThrow(new DataIntegrityViolationException("Unique constraint violation"));
-
-		// when & then
-		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TICKET_ALREADY_REGISTERED);
+		assertThat(result.getContent()).hasSize(1);
+		assertThat(result.getContent().get(0).type()).isEqualTo(TradeType.EXCHANGE);
+		verify(tradeRepository).findAllByTypeAndStatus(type, status, pageable);
 	}
 
 	@Test
@@ -225,7 +329,7 @@ class TradeServiceTest {
 			.ticketId(1L)
 			.type(TradeType.TRANSFER)
 			.price(50000)
-			.totalCount(2)
+			.totalCount(1)
 			.section("A")
 			.row("5열")
 			.seatNumber("12석")
@@ -272,7 +376,7 @@ class TradeServiceTest {
 			.ticketId(1L)
 			.type(TradeType.TRANSFER)
 			.price(50000)
-			.totalCount(2)
+			.totalCount(1)
 			.section("A")
 			.row("5열")
 			.seatNumber("12석")
@@ -301,7 +405,7 @@ class TradeServiceTest {
 			.ticketId(1L)
 			.type(TradeType.TRANSFER)
 			.price(50000)
-			.totalCount(2)
+			.totalCount(1)
 			.section("A")
 			.row("5열")
 			.seatNumber("12석")
@@ -313,7 +417,7 @@ class TradeServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeService.updateTrade(tradeId, request, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -342,7 +446,7 @@ class TradeServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeService.updateTrade(tradeId, request, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.CANNOT_UPDATE_EXCHANGE_TRADE);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -359,7 +463,7 @@ class TradeServiceTest {
 			.ticketId(1L)
 			.type(TradeType.TRANSFER)
 			.price(50000)
-			.totalCount(2)
+			.totalCount(1)
 			.section("A")
 			.row("5열")
 			.seatNumber("12석")
@@ -407,7 +511,7 @@ class TradeServiceTest {
 			.ticketId(1L)
 			.type(TradeType.TRANSFER)
 			.price(50000)
-			.totalCount(2)
+			.totalCount(1)
 			.section("A")
 			.row("5열")
 			.seatNumber("12석")
@@ -435,7 +539,7 @@ class TradeServiceTest {
 			.ticketId(1L)
 			.type(TradeType.TRANSFER)
 			.price(50000)
-			.totalCount(2)
+			.totalCount(1)
 			.section("A")
 			.row("5열")
 			.seatNumber("12석")
@@ -447,7 +551,7 @@ class TradeServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeService.deleteTrade(tradeId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -483,6 +587,70 @@ class TradeServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeService.deleteTrade(tradeId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.CANNOT_DELETE_WITH_PENDING_REQUESTS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("교환 - 티켓이 2개 이상일 때 실패")
+	void createExchangeTrade_fail_moreThanOneTicket() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(
+			java.util.List.of(1L, 2L),
+			TradeType.EXCHANGE,
+			null
+		);
+		Long memberId = 100L;
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("양도 - 티켓이 0개일 때 실패")
+	void createTransferTrade_fail_emptyTickets() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(
+			Collections.emptyList(),
+			TradeType.TRANSFER,
+			50000
+		);
+		Long memberId = 100L;
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("다른 사용자의 티켓으로 거래 생성 실패")
+	void createTrade_fail_notOwnedTicket() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(
+			java.util.List.of(1L),
+			TradeType.TRANSFER,
+			50000
+		);
+		Long memberId = 100L;
+		Long otherMemberId = 200L;
+
+		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
+			.willReturn(false);
+
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(otherMemberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 }

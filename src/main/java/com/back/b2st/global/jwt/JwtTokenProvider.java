@@ -16,12 +16,13 @@ import org.springframework.stereotype.Component;
 
 import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
-import com.back.b2st.global.jwt.dto.TokenInfo;
+import com.back.b2st.global.jwt.dto.response.TokenInfo;
 import com.back.b2st.security.CustomUserDetails;
 import com.back.b2st.security.UserPrincipal;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
@@ -37,6 +38,8 @@ public class JwtTokenProvider {
 	private final long accessTokenValidity;
 	private final long refreshTokenValidity;
 
+	private final JwtParser jwtParser;
+
 	public JwtTokenProvider(@Value("${jwt.secret}") String secret,
 		@Value("${jwt.access-expiration}") long accessTokenValidity,
 		@Value("${jwt.refresh-expiration}") long refreshTokenValidity) {
@@ -44,6 +47,8 @@ public class JwtTokenProvider {
 		this.key = Keys.hmacShaKeyFor(keyBytes);
 		this.accessTokenValidity = accessTokenValidity;
 		this.refreshTokenValidity = refreshTokenValidity;
+
+		this.jwtParser = Jwts.parser().verifyWith(key).build();
 	}
 
 	public TokenInfo generateToken(Authentication authentication) {
@@ -61,7 +66,7 @@ public class JwtTokenProvider {
 		} else if (principal instanceof UserPrincipal userPrincipal) {
 			memberId = userPrincipal.getId();
 		} else {
-			throw new BusinessException(AuthErrorCode.UNSUPPORTED_TOKEN);
+			throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
 		}
 
 		// Access Token 빌더
@@ -79,11 +84,7 @@ public class JwtTokenProvider {
 			.signWith(key)
 			.compact();
 
-		return TokenInfo.builder()
-			.grantType("Bearer")
-			.accessToken(accessToken)
-			.refreshToken(refreshToken)
-			.build();
+		return new TokenInfo("Bearer", accessToken, refreshToken);
 	}
 
 	// 토큰에서 인증 정보 조회 로직
@@ -91,7 +92,7 @@ public class JwtTokenProvider {
 		Claims claims = parseClaims(accessToken);
 
 		if (claims.get("auth") == null) {
-			throw new BusinessException(AuthErrorCode.EMPTY_CLAIMS);
+			throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
 		}
 
 		Collection<? extends GrantedAuthority> authorities =
@@ -113,7 +114,7 @@ public class JwtTokenProvider {
 	// 토큰 유효성 검증
 	public void validateToken(String token) {
 		try {
-			Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+			jwtParser.parseSignedClaims(token);
 		} catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
 			throw new io.jsonwebtoken.security.SignatureException("잘못된 JWT 서명입니다.");
 		} catch (ExpiredJwtException e) {
@@ -128,7 +129,7 @@ public class JwtTokenProvider {
 	// 토큰 서명 검증
 	public boolean validateTokenSignature(String token) {
 		try {
-			Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+			jwtParser.parseSignedClaims(token);
 			return true;
 		} catch (ExpiredJwtException e) {
 			return true;
@@ -140,7 +141,7 @@ public class JwtTokenProvider {
 
 	private Claims parseClaims(String accessToken) {
 		try {
-			return Jwts.parser().verifyWith(key).build().parseSignedClaims(accessToken).getPayload();
+			return jwtParser.parseSignedClaims(accessToken).getPayload();
 		} catch (ExpiredJwtException e) {
 			return e.getClaims();
 		}

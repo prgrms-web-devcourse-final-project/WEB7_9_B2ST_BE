@@ -17,6 +17,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.entity.TicketStatus;
+import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.service.TicketService;
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequestReq;
 import com.back.b2st.domain.trade.dto.response.TradeRequestRes;
@@ -69,7 +71,7 @@ class TradeRequestServiceTest {
 		TradeRequest tradeRequest = TradeRequest.builder()
 			.trade(trade)
 			.requesterId(requesterId)
-			.requesterTicketId(request.getRequesterTicketId())
+			.requesterTicketId(request.requesterTicketId())
 			.build();
 
 		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
@@ -82,9 +84,9 @@ class TradeRequestServiceTest {
 
 		// then
 		assertThat(response).isNotNull();
-		assertThat(response.getRequesterId()).isEqualTo(requesterId);
-		assertThat(response.getRequesterTicketId()).isEqualTo(10L);
-		assertThat(response.getStatus()).isEqualTo(TradeRequestStatus.PENDING);
+		assertThat(response.requesterId()).isEqualTo(requesterId);
+		assertThat(response.requesterTicketId()).isEqualTo(10L);
+		assertThat(response.status()).isEqualTo(TradeRequestStatus.PENDING);
 		verify(tradeRequestRepository).save(any(TradeRequest.class));
 	}
 
@@ -131,7 +133,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.createTradeRequest(tradeId, request, requesterId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -160,7 +162,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.createTradeRequest(tradeId, request, requesterId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.CANNOT_REQUEST_OWN_TRADE);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -202,7 +204,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.createTradeRequest(tradeId, request, requesterId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.DUPLICATE_TRADE_REQUEST);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -236,8 +238,8 @@ class TradeRequestServiceTest {
 
 		// then
 		assertThat(response).isNotNull();
-		assertThat(response.getRequesterId()).isEqualTo(200L);
-		assertThat(response.getRequesterTicketId()).isEqualTo(10L);
+		assertThat(response.requesterId()).isEqualTo(200L);
+		assertThat(response.requesterTicketId()).isEqualTo(10L);
 	}
 
 	@Test
@@ -291,8 +293,8 @@ class TradeRequestServiceTest {
 
 		// then
 		assertThat(responses).hasSize(2);
-		assertThat(responses.get(0).getRequesterId()).isEqualTo(200L);
-		assertThat(responses.get(1).getRequesterId()).isEqualTo(201L);
+		assertThat(responses.get(0).requesterId()).isEqualTo(200L);
+		assertThat(responses.get(1).requesterId()).isEqualTo(201L);
 	}
 
 	@Test
@@ -326,7 +328,7 @@ class TradeRequestServiceTest {
 
 		// then
 		assertThat(responses).hasSize(1);
-		assertThat(responses.get(0).getRequesterId()).isEqualTo(requesterId);
+		assertThat(responses.get(0).requesterId()).isEqualTo(requesterId);
 	}
 
 	@Test
@@ -452,7 +454,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.acceptTradeRequest(tradeRequestId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_REQUEST_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -487,7 +489,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.acceptTradeRequest(tradeRequestId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -530,7 +532,7 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.acceptTradeRequest(tradeRequestId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TRADE_ALREADY_HAS_ACCEPTED_REQUEST);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -634,6 +636,111 @@ class TradeRequestServiceTest {
 		// when & then
 		assertThatThrownBy(() -> tradeRequestService.rejectTradeRequest(tradeRequestId, memberId))
 			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_TRADE_REQUEST_STATUS);
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
+	}
+
+	@Test
+	@DisplayName("양도 신청 수락 성공")
+	void acceptTransferTradeRequest_success() {
+		// given
+		Long tradeRequestId = 1L;
+		Long memberId = 100L;
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(1)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		TradeRequest tradeRequest = TradeRequest.builder()
+			.trade(trade)
+			.requesterId(200L)
+			.requesterTicketId(10L)
+			.build();
+
+		Ticket ownerTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
+			.willReturn(Collections.emptyList());
+		given(ticketService.getTicketById(1L)).willReturn(ownerTicket);
+		given(ticketService.transferTicket(anyLong(), anyLong(), anyLong())).willReturn(ownerTicket);
+		given(ticketService.createTicket(anyLong(), anyLong(), anyLong())).willReturn(ownerTicket);
+
+		// when
+		tradeRequestService.acceptTradeRequest(tradeRequestId, memberId);
+
+		// then
+		assertThat(tradeRequest.getStatus()).isEqualTo(TradeRequestStatus.ACCEPTED);
+		assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
+		verify(ticketService, times(1)).getTicketById(anyLong());
+		verify(ticketService, times(1)).transferTicket(anyLong(), anyLong(), anyLong());
+		verify(ticketService, times(1)).createTicket(anyLong(), anyLong(), anyLong());
+	}
+
+	@Test
+	@DisplayName("교환 신청 수락 실패 - 티켓이 ISSUED 상태가 아님")
+	void acceptTradeRequest_fail_ticketNotIssued() throws Exception {
+		// given
+		Long tradeRequestId = 1L;
+		Long memberId = 100L;
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.EXCHANGE)
+			.price(null)
+			.totalCount(1)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		TradeRequest tradeRequest = TradeRequest.builder()
+			.trade(trade)
+			.requesterId(200L)
+			.requesterTicketId(10L)
+			.build();
+
+		Ticket ownerTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.build();
+
+		Ticket requesterTicket = Ticket.builder()
+			.reservationId(2L)
+			.memberId(200L)
+			.seatId(10L)
+			.build();
+
+		// Use reflection to set status to TRANSFERRED
+		Field statusField = Ticket.class.getDeclaredField("status");
+		statusField.setAccessible(true);
+		statusField.set(ownerTicket, TicketStatus.TRANSFERRED);
+
+		given(tradeRequestRepository.findById(tradeRequestId)).willReturn(Optional.of(tradeRequest));
+		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
+			.willReturn(Collections.emptyList());
+		given(ticketService.getTicketById(1L)).willReturn(ownerTicket);
+		given(ticketService.getTicketById(10L)).willReturn(requesterTicket);
+
+		// when & then
+		assertThatThrownBy(() -> tradeRequestService.acceptTradeRequest(tradeRequestId, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TicketErrorCode.TICKET_NOT_TRANSFERABLE);
 	}
 }

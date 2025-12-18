@@ -1,33 +1,19 @@
 package com.back.b2st.domain.trade.dto.request;
 
+import java.util.List;
+
 import com.back.b2st.domain.trade.entity.TradeType;
 
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
-@Getter
-@NoArgsConstructor
-public class CreateTradeReq {
-
-	@NotNull(message = "티켓 ID는 필수입니다.")
-	private Long ticketId;
+public record CreateTradeReq(
+	@NotEmpty(message = "티켓 ID 목록은 필수입니다.")
+	List<Long> ticketIds,
 
 	@NotNull(message = "거래 유형은 필수입니다.")
-	private TradeType type;
+	TradeType type,
 
-	private Integer price;  // 양도인 경우 필수
-
-	@NotNull(message = "수량은 필수입니다.")
-	@Min(value = 1, message = "수량은 1 이상이어야 합니다.")
-	private Integer totalCount;
-
-	// 테스트용 생성자
-	public CreateTradeReq(Long ticketId, TradeType type, Integer price, Integer totalCount) {
-		this.ticketId = ticketId;
-		this.type = type;
-		this.price = price;
-		this.totalCount = totalCount;
-	}
+	Integer price
+) {
 }

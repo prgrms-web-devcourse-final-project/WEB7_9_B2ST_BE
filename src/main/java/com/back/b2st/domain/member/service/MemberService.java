@@ -37,7 +37,8 @@ public class MemberService {
 			.birth(request.birth())
 			.role(Member.Role.MEMBER) // 기본 가입은 MEMBER
 			.provider(Member.Provider.EMAIL)
-			.isVerified(false) // 초기엔 미인증
+			.isEmailVerified(false) // 이메일 미인증
+			.isIdentityVerified(false) // 본인인증 미완료
 			.build();
 
 		log.info("새로운 회원 가입: ID={}, Email={}", member.getId(), MaskingUtil.maskEmail(member.getEmail()));

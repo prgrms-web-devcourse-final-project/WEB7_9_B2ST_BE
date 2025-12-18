@@ -62,15 +62,18 @@ public class Member extends BaseEntity {
 	@Column(name = "provider_id")
 	private String providerId;
 
-	@Column(name = "is_verified")
-	private boolean isVerified; // 본인인증 여부
+	@Column(name = "is_email_verified", nullable = false)
+	private boolean isEmailVerified; // 가입 시 이메일 인증
+
+	@Column(name = "is_identity_verified")
+	private boolean isIdentityVerified; // SMS 본인인증 여부
 
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
 
 	@Builder
 	public Member(String email, String password, String name, String phone, LocalDate birth, Role role,
-		Provider provider, String providerId, boolean isVerified) {
+		Provider provider, String providerId, boolean isEmailVerified, boolean isIdentityVerified) {
 		this.email = email;
 		this.password = password;
 		this.name = name;
@@ -79,11 +82,16 @@ public class Member extends BaseEntity {
 		this.role = role;
 		this.provider = provider;
 		this.providerId = providerId;
-		this.isVerified = isVerified;
+		this.isEmailVerified = isEmailVerified;
+		this.isIdentityVerified = isIdentityVerified;
 	}
 
 	public void updatePassword(String encodedPassword) {
 		this.password = encodedPassword;
+	}
+
+	public void verifyEmail() {
+		this.isEmailVerified = true;
 	}
 
 	public enum Role {

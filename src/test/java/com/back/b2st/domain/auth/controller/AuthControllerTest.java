@@ -185,7 +185,8 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 			.name("유저일")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		memberRepository.save(member);
 	}

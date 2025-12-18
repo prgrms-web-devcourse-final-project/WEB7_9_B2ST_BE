@@ -77,7 +77,8 @@ public class DataInitializer implements CommandLineRunner {
 			.name("관리자")
 			.role(Member.Role.ADMIN)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 
 		Member savedAdmin = memberRepository.save(admin);
@@ -94,7 +95,8 @@ public class DataInitializer implements CommandLineRunner {
 			.name("유저일")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 
 		Member user2 = Member.builder()
@@ -103,7 +105,8 @@ public class DataInitializer implements CommandLineRunner {
 			.name("유저이")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 
 		memberRepository.save(user1);

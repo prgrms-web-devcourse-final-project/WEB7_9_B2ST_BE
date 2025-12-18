@@ -99,7 +99,8 @@ class LotteryEntryControllerTest {
 			.birth(LocalDate.of(1990, 1, 1))
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build());
 
 		accessToken = getAccessToken(email, password);
@@ -274,7 +275,7 @@ class LotteryEntryControllerTest {
 		Long memberId = member.getId();
 		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		String grade = seatGrade.getGrade().toString();
-		int quantity = 3;
+		int quantity = 4;
 
 		String requestBody = "{"
 			+ "\"memberId\": " + memberId + ","

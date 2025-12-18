@@ -118,7 +118,8 @@ class TradeRequestControllerTest {
 			.birth(LocalDate.of(1990, 1, 1))
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		Member savedTradeOwner = memberRepository.save(tradeOwnerMember);
 		tradeOwnerId = savedTradeOwner.getId();
@@ -130,7 +131,8 @@ class TradeRequestControllerTest {
 			.birth(LocalDate.of(1990, 1, 1))
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		Member savedRequester = memberRepository.save(requesterMember);
 		requesterId = savedRequester.getId();

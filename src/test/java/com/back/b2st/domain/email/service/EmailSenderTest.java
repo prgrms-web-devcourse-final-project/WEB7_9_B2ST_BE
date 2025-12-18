@@ -67,7 +67,7 @@ class EmailSenderTest {
 		given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
 		willThrow(new RuntimeException("SMTP connection failed")).given(mailSender).send(any(MimeMessage.class));
 
-		// when - Exception catch로 인해 예외가 전파되지 않고 정상 종료
+		// when
 		emailSender.sendEmailAsync(to, code);
 
 		// then - 발송 시도는 이루어짐
@@ -120,13 +120,11 @@ class EmailSenderTest {
 
 		given(mailSender.createMimeMessage()).willReturn(mimeMessage);
 		given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
-		// MimeMessageHelper.setFrom이 MessagingException을 던지도록 설정은 어려움
-		// 대신 mailSender.send()에서 MailSendException 래핑된 MessagingException 시뮬레이션
 		willThrow(new org.springframework.mail.MailSendException("Send failed",
-				new jakarta.mail.MessagingException("SMTP error")))
-				.given(mailSender).send(any(MimeMessage.class));
+			new jakarta.mail.MessagingException("SMTP error")))
+			.given(mailSender).send(any(MimeMessage.class));
 
-		// when - 예외가 catch되어 정상 종료
+		// when
 		emailSender.sendEmailAsync(to, code);
 
 		// then
@@ -145,13 +143,10 @@ class EmailSenderTest {
 		given(mailSender.createMimeMessage()).willReturn(realMimeMessage);
 		given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
 
-		// when - setFrom에서 UnsupportedEncodingException이 발생하는 시나리오
-		// MimeMessageHelper 생성 후 setFrom 호출 시 예외 발생 케이스
-		// 실제로는 helper.setFrom()에서 발생하므로 테스트하기 어려움
-		// 대신 Exception catch 블록 테스트로 대체
+		// when
 		emailSender.sendEmailAsync(to, code);
 
-		// then - 정상 실행 확인
+		// then
 		verify(mailSender).createMimeMessage();
 	}
 }

@@ -99,6 +99,74 @@ class PaymentPrepareServiceTest {
 		assertThat(res.expiresAt()).isNotNull().isAfter(LocalDateTime.now().minusSeconds(1));
 	}
 
+	@Test
+	void prepare_blocksWhenExistingPaymentIsReady() {
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		when(handler.supports(DomainType.RESERVATION)).thenReturn(true);
+		when(handler.loadAndValidate(10L, 1L))
+			.thenReturn(new PaymentTarget(DomainType.RESERVATION, 10L, 15000L));
+		when(paymentRepository.findTopByDomainTypeAndDomainIdOrderByCreatedAtDesc(DomainType.RESERVATION, 10L))
+			.thenReturn(Optional.of(withStatusReady()));
+
+		assertThatThrownBy(() -> paymentPrepareService.prepare(
+			1L,
+			new PaymentPrepareReq(DomainType.RESERVATION, 10L, PaymentMethod.CARD)
+		))
+			.isInstanceOf(BusinessException.class)
+			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.DUPLICATE_PAYMENT);
+	}
+
+	@Test
+	void prepare_blocksWhenExistingPaymentIsWaitingForDeposit() {
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		when(handler.supports(DomainType.RESERVATION)).thenReturn(true);
+		when(handler.loadAndValidate(10L, 1L))
+			.thenReturn(new PaymentTarget(DomainType.RESERVATION, 10L, 15000L));
+		when(paymentRepository.findTopByDomainTypeAndDomainIdOrderByCreatedAtDesc(DomainType.RESERVATION, 10L))
+			.thenReturn(Optional.of(withStatusWaitingForDeposit()));
+
+		assertThatThrownBy(() -> paymentPrepareService.prepare(
+			1L,
+			new PaymentPrepareReq(DomainType.RESERVATION, 10L, PaymentMethod.CARD)
+		))
+			.isInstanceOf(BusinessException.class)
+			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.DUPLICATE_PAYMENT);
+	}
+
+	@Test
+	void prepare_allowsWhenExistingPaymentIsFailed() {
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		when(handler.supports(DomainType.RESERVATION)).thenReturn(true);
+		when(handler.loadAndValidate(10L, 1L))
+			.thenReturn(new PaymentTarget(DomainType.RESERVATION, 10L, 15000L));
+		when(paymentRepository.findTopByDomainTypeAndDomainIdOrderByCreatedAtDesc(DomainType.RESERVATION, 10L))
+			.thenReturn(Optional.of(withStatusFailed()));
+		when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> withId(invocation.getArgument(0), 3L));
+
+		PaymentPrepareRes res = paymentPrepareService.prepare(
+			1L,
+			new PaymentPrepareReq(DomainType.RESERVATION, 10L, PaymentMethod.CARD)
+		);
+
+		assertThat(res.paymentId()).isEqualTo(3L);
+	}
+
+	@Test
+	void prepare_throwsWhenHandlerNotFound() {
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		when(handler.supports(DomainType.RESERVATION)).thenReturn(false);
+
+		assertThatThrownBy(() -> paymentPrepareService.prepare(
+			1L,
+			new PaymentPrepareReq(DomainType.RESERVATION, 10L, PaymentMethod.CARD)
+		))
+			.isInstanceOf(BusinessException.class)
+			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_FOUND);
+	}
+
 	private static Payment withStatusDone() {
 		Payment payment = Payment.builder()
 			.orderId("order-1")
@@ -110,6 +178,48 @@ class PaymentPrepareServiceTest {
 			.expiresAt(null)
 			.build();
 		setField(payment, "status", PaymentStatus.DONE);
+		return payment;
+	}
+
+	private static Payment withStatusReady() {
+		Payment payment = Payment.builder()
+			.orderId("order-2")
+			.memberId(1L)
+			.domainType(DomainType.RESERVATION)
+			.domainId(10L)
+			.amount(15000L)
+			.method(PaymentMethod.CARD)
+			.expiresAt(null)
+			.build();
+		setField(payment, "status", PaymentStatus.READY);
+		return payment;
+	}
+
+	private static Payment withStatusWaitingForDeposit() {
+		Payment payment = Payment.builder()
+			.orderId("order-3")
+			.memberId(1L)
+			.domainType(DomainType.RESERVATION)
+			.domainId(10L)
+			.amount(15000L)
+			.method(PaymentMethod.VIRTUAL_ACCOUNT)
+			.expiresAt(LocalDateTime.now().plusDays(1))
+			.build();
+		setField(payment, "status", PaymentStatus.WAITING_FOR_DEPOSIT);
+		return payment;
+	}
+
+	private static Payment withStatusFailed() {
+		Payment payment = Payment.builder()
+			.orderId("order-4")
+			.memberId(1L)
+			.domainType(DomainType.RESERVATION)
+			.domainId(10L)
+			.amount(15000L)
+			.method(PaymentMethod.CARD)
+			.expiresAt(null)
+			.build();
+		setField(payment, "status", PaymentStatus.FAILED);
 		return payment;
 	}
 

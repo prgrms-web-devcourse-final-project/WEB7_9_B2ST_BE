@@ -2,6 +2,7 @@ package com.back.b2st.global.Async;
 
 import java.util.concurrent.Executor;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -11,6 +12,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @EnableAsync
 public class AsyncConfig {
 
+	@Bean
 	public Executor emailExecutor() {
 		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
 
@@ -22,7 +24,7 @@ public class AsyncConfig {
 		executor.setQueueCapacity(50);
 		// 로그에서 식별용
 		executor.setThreadNamePrefix("email-");
-		
+
 		executor.initialize();
 
 		return executor;

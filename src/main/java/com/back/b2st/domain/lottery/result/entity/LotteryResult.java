@@ -2,7 +2,6 @@ package com.back.b2st.domain.lottery.result.entity;
 
 import java.time.LocalDateTime;
 
-import com.back.b2st.domain.lottery.constants.LotteryConstants;
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -37,6 +36,8 @@ import lombok.NoArgsConstructor;
 )
 public class LotteryResult extends BaseEntity {
 
+	public static final int PAYMENT_DEADLINE_DAYS = 3;    // TODO : 생성일 + 3일(임시)
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lottery_result_id_gen")
 	@Column(name = "lottery_result_id")
@@ -62,7 +63,7 @@ public class LotteryResult extends BaseEntity {
 		this.lotteryEntryId = lotteryEntryId;
 		this.memberId = memberId;
 		this.paymentDeadline = LocalDateTime.now()
-			.plusDays(LotteryConstants.PAYMENT_DEADLINE_DAYS);    // TODO : 생성일 + 3일(임시)
+			.plusDays(PAYMENT_DEADLINE_DAYS);
 		this.paid = false;
 	}
 }

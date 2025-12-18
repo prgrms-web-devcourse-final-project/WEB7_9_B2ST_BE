@@ -9,7 +9,6 @@ public record CreateSeatReq(
 	Long sectionId,
 
 	@NotBlank(message = "열 정보는 필수입니다.")
-	// todo 추가 검증 필요, 공백 특수문자 등, 영문과 숫자만 가능
 	String rowLabel,
 
 	@NotNull(message = "좌석 번호는 필수입니다.")

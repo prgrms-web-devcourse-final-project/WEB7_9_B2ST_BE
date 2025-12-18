@@ -46,17 +46,17 @@ public class LotteryEntryService {
 	}
 
 	// 추첨 응모 등록
-	public LotteryEntryInfo createLotteryEntry(Long performanceId, RegisterLotteryEntryReq request) {
+	public LotteryEntryInfo createLotteryEntry(Long memberId, Long performanceId, RegisterLotteryEntryReq request) {
 		validatePerformance(performanceId);
-		validateMember(request.memberId());
+		validateMember(memberId);
 		validateSchedule(request.scheduleId(), performanceId);
 		validateEntryData(request);
-		validateEntryNotDuplicated(request.memberId(), performanceId, request.scheduleId());
+		validateEntryNotDuplicated(memberId, performanceId, request.scheduleId());
 
 		SeatGradeType grade = SeatGradeType.fromString(request.grade());
 
 		LotteryEntry lotteryEntry = LotteryEntry.builder()
-			.memberId(request.memberId())
+			.memberId(memberId)
 			.performanceId(performanceId)
 			.scheduleId(request.scheduleId())
 			.grade(grade)

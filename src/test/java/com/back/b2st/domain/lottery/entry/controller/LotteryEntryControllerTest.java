@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.request.LoginReq;
+import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.domain.lottery.entry.error.LotteryEntryErrorCode;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
@@ -197,7 +198,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			.andReturn().getResponse().getContentAsString();
 
 		JsonNode jsonNode = objectMapper.readTree(loginResponse);
-		return jsonNode.path("data").path("accessToken").asText();
+		return jsonNode.path("data").path("accessToken").textValue();
 	}
 
 	@Test
@@ -234,7 +235,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		int quantity = 4;
 
 		String requestBody = "{"
-			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
 			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
@@ -274,7 +274,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		int quantity = 4;
 
 		String requestBody = "{"
-			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
 			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
@@ -299,17 +298,17 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = performance.getPerformanceId();
 
-		Long memberId = 99999999L;
 		Long scheduleId = 2L;
 		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
 
 		String requestBody = "{"
-			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
 			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
 			+ "}";
+
+		accessToken = "";
 
 		// when & then
 		mvc.perform(
@@ -319,8 +318,8 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 					.content(requestBody)
 			)
 			.andDo(print())
-			.andExpect(status().isNotFound())
-			.andExpect(jsonPath("$.message").value(LotteryEntryErrorCode.MEMBER_NOT_FOUND.getMessage()))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.message").value(AuthErrorCode.INVALID_TOKEN.getMessage()))
 		;
 	}
 
@@ -337,7 +336,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		int quantity = 4;
 
 		String requestBody = "{"
-			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
 			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
@@ -368,7 +366,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		int quantity = 4;
 
 		String requestBody = "{"
-			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
 			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
@@ -399,7 +396,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		int quantity = 0;
 
 		String requestBody = "{"
-			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
 			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
@@ -432,7 +428,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		int quantity = 4 + 1;
 
 		String requestBody = "{"
-			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
 			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
@@ -464,7 +459,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		int quantity = 4;
 
 		String requestBody = "{"
-			+ "\"memberId\": " + memberId + ","
 			+ "\"scheduleId\": " + scheduleId + ","
 			+ "\"grade\": \"" + grade + "\","
 			+ "\"quantity\": " + quantity
@@ -525,7 +519,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			};
 
 			String requestBody = "{"
-				+ "\"memberId\": " + memberId + ","
 				+ "\"scheduleId\": " + scheduleId + ","
 				+ "\"grade\": \"" + grade.toString() + "\","
 				+ "\"quantity\": " + quantity

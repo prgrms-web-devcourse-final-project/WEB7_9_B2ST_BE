@@ -6,14 +6,16 @@ public record MyInfoRes(
 	Long memberId,
 	String email,
 	String name,
-	boolean isVerified
+	boolean isEmailVerified,
+	boolean isIdentityVerified
 ) {
 	public static MyInfoRes from(Member member) {
 		return new MyInfoRes(
 			member.getId(),
 			member.getEmail(),
 			member.getName(),
-			member.isVerified()
+			member.isEmailVerified(),
+			member.isIdentityVerified()
 		);
 	}
 }

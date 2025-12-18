@@ -80,7 +80,8 @@ class LotteryEntryControllerTest {
 			.name("추첨응모")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 
 		tMember = memberRepository.save(user1);

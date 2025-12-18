@@ -64,7 +64,8 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.name("마이페이지")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		memberRepository.save(member);
 
@@ -109,7 +110,8 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.name("비번변경")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		memberRepository.save(member);
 
@@ -143,7 +145,8 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.name("비번실패")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		memberRepository.save(member);
 
@@ -172,7 +175,8 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.name("동일비번")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		memberRepository.save(member);
 
@@ -201,7 +205,8 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.name("계좌주인")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		memberRepository.save(member);
 
@@ -236,7 +241,8 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.name("수정맨")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		memberRepository.save(member);
 		String accessToken = getAccessToken(email, password);
@@ -271,7 +277,8 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.name("뱅크테스터")
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
-			.isVerified(true)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
 			.build();
 		memberRepository.save(member);
 

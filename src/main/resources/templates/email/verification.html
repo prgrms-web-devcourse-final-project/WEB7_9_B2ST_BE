@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이메일 인증</title>
+    <style>
+        body {
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .code-box {
+            background-color: #f8f9fa;
+            border: 2px dashed #6366f1;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+
+        .code {
+            font-size: 36px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            color: #6366f1;
+            font-family: 'Courier New', monospace;
+        }
+
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>B2ST TT</h1>
+    </div>
+    <div class="content">
+        <h2>이메일 인증 코드</h2>
+        <p>아래 인증 코드를 입력하여 이메일 인증을 완료해주세요.</p>
+
+        <div class="code-box">
+            <span class="code" th:text="${code}">123456</span>
+        </div>
+
+        <div class="warning">
+            ⚠️ 이 코드는 <strong th:text="${expireMinutes}">5</strong>분 후에 만료됩니다.<br>
+            본인이 요청하지 않은 경우 이 이메일을 무시하세요.
+        </div>
+    </div>
+    <div class="footer">
+        <p>본 메일은 발신 전용이며, 회신되지 않습니다.</p>
+        <p>&copy; 2025 B2ST TT(Ticket&Trade). All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

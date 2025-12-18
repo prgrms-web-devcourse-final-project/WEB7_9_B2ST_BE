@@ -72,13 +72,9 @@ public class SeatService {
 	}
 
 	// 조회 - 공연장 id
-	// todo seatInfo 만들어서 필요한 정보만 받아오도록 쿼리 작성
 	public List<SeatInfoRes> getSeatInfoByVenueId(Long venudId) {
 		validateVenueId(venudId);
-		List<SeatInfoRes> seats = seatRepository.findSeatInfoResByVenueId(venudId);
-		System.out.println("seats = " + seats);
-
-		return seats.stream().toList();
+		return seatRepository.findSeatInfoResByVenueId(venudId);
 	}
 
 	private void validateVenueId(Long venudId) {

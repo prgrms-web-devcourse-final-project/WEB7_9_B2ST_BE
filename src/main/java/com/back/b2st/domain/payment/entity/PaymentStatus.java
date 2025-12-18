@@ -7,20 +7,18 @@ import lombok.Getter;
 
 @Getter
 public enum PaymentStatus {
-	READY("결제 준비", true),
-	WAITING_FOR_DEPOSIT("입금 대기", true),
-	DONE("결제 완료", false),
-	FAILED("결제 실패", false),
-	CANCELED("결제 취소", false),
-	EXPIRED("입금 만료", false);
+	READY("결제 준비"),
+	WAITING_FOR_DEPOSIT("입금 대기"),
+	DONE("결제 완료"),
+	FAILED("결제 실패"),
+	CANCELED("결제 취소"),
+	EXPIRED("입금 만료");
 
 	private final String description;
-	private final boolean canTransition;
 	private List<PaymentStatus> allowedNextStatuses;
 
-	PaymentStatus(String description, boolean canTransition) {
+	PaymentStatus(String description) {
 		this.description = description;
-		this.canTransition = canTransition;
 	}
 
 	// enum 상수가 모두 초기화된 후 상태 전이표 설정
@@ -37,8 +35,11 @@ public enum PaymentStatus {
 		return this == DONE;
 	}
 
+	/**
+	 * 최종 상태 여부 (전이표 기준: 다음 상태가 없으면 final)
+	 */
 	public boolean isFinal() {
-		return !canTransition;
+		return allowedNextStatuses.isEmpty();
 	}
 
 	/**

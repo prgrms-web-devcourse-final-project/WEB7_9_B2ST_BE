@@ -46,10 +46,10 @@ public class Payment extends BaseEntity {
 	@Column(name = "payment_id")
 	private Long id;
 
-	@Column(name = "order_id", nullable = false, unique = true, length = 100)
+	@Column(name = "order_id", nullable = false, length = 100)
 	private String orderId;
 
-	@Column(name = "payment_key", unique = true, length = 200)
+	@Column(name = "payment_key", length = 200)
 	private String paymentKey;
 
 	@Column(name = "member_id", nullable = false)
@@ -63,7 +63,7 @@ public class Payment extends BaseEntity {
 	private Long domainId;
 
 	@Column(name = "amount", nullable = false)
-	private Integer amount;
+	private Long amount;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "method", nullable = false, length = 20)
@@ -87,7 +87,7 @@ public class Payment extends BaseEntity {
 
 	@Builder
 	public Payment(String orderId, Long memberId, DomainType domainType, Long domainId,
-		Integer amount, PaymentMethod method, LocalDateTime expiresAt) {
+		Long amount, PaymentMethod method, LocalDateTime expiresAt) {
 		this.orderId = orderId;
 		this.memberId = memberId;
 		this.domainType = domainType;
@@ -111,11 +111,6 @@ public class Payment extends BaseEntity {
 	public void complete(String paymentKey) {
 		validateTransition(PaymentStatus.DONE);
 
-		if (status != PaymentStatus.READY && status != PaymentStatus.WAITING_FOR_DEPOSIT) {
-			throw new BusinessException(PaymentErrorCode.INVALID_STATUS,
-				"결제 완료 처리는 READY 또는 WAITING_FOR_DEPOSIT 상태에서만 가능합니다.");
-		}
-
 		this.paymentKey = paymentKey;
 		this.status = PaymentStatus.DONE;
 		this.paidAt = LocalDateTime.now();
@@ -128,11 +123,6 @@ public class Payment extends BaseEntity {
 	public void fail(String reason) {
 		validateTransition(PaymentStatus.FAILED);
 
-		if (status != PaymentStatus.READY) {
-			throw new BusinessException(PaymentErrorCode.INVALID_STATUS,
-				"결제 실패 처리는 READY 상태에서만 가능합니다.");
-		}
-
 		this.status = PaymentStatus.FAILED;
 		this.failureReason = reason;
 	}
@@ -143,11 +133,6 @@ public class Payment extends BaseEntity {
 	 */
 	public void cancel(String reason) {
 		validateTransition(PaymentStatus.CANCELED);
-
-		if (status != PaymentStatus.DONE && status != PaymentStatus.READY) {
-			throw new BusinessException(PaymentErrorCode.INVALID_STATUS,
-				"결제 취소는 DONE 또는 READY 상태에서만 가능합니다.");
-		}
 
 		this.status = PaymentStatus.CANCELED;
 		this.canceledAt = LocalDateTime.now();
@@ -161,29 +146,29 @@ public class Payment extends BaseEntity {
 	public void expire() {
 		validateTransition(PaymentStatus.EXPIRED);
 
-		if (status != PaymentStatus.WAITING_FOR_DEPOSIT) {
-			throw new BusinessException(PaymentErrorCode.INVALID_STATUS,
-				"입금 만료 처리는 WAITING_FOR_DEPOSIT 상태에서만 가능합니다.");
-		}
-
 		this.status = PaymentStatus.EXPIRED;
 		this.failureReason = "입금 기한 초과";
 	}
 
 	/**
-	 * 상태 전이 가능 여부 검증
+	 * 상태 전이 가능 여부 검증 (상태 전이표 기반)
 	 */
 	private void validateTransition(PaymentStatus targetStatus) {
 		if (status.isFinal()) {
 			throw new BusinessException(PaymentErrorCode.INVALID_STATUS,
 				String.format("현재 상태(%s)에서는 더 이상 상태 변경이 불가능합니다.", status));
 		}
+
+		if (!status.canTransitionTo(targetStatus)) {
+			throw new BusinessException(PaymentErrorCode.INVALID_STATUS,
+				String.format("현재 상태(%s)에서 %s 상태로 전이할 수 없습니다.", status, targetStatus));
+		}
 	}
 
 	/**
 	 * 금액 검증 (변조 방지)
 	 */
-	public void validateAmount(Integer requestAmount) {
+	public void validateAmount(Long requestAmount) {
 		if (!this.amount.equals(requestAmount)) {
 			throw new BusinessException(PaymentErrorCode.AMOUNT_MISMATCH,
 				String.format("금액이 일치하지 않습니다. 예상: %d, 요청: %d", this.amount, requestAmount));

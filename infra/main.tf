@@ -222,6 +222,15 @@ resource "aws_iam_instance_profile" "instance_profile_1" {
   name = "${local.name}-instance-profile-1"
   role = aws_iam_role.ec2_role_1.name
 }
+# Elastic IP
+# 이미 콘솔로 할당받음
+#resource "aws_eip" "ec2" {
+ # domain = "vpc"
+
+#  tags = {
+#    Name = "${local.name}-eip"
+# }
+#}
 
 locals {
   ec2_user_data_base = <<-END_OF_FILE
@@ -232,12 +241,15 @@ sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
 sudo sh -c 'echo "/swapfile swap swap defaults 0 0" >> /etc/fstab'
+
 # 도커 설치 및 실행/활성화
 yum install docker -y
 systemctl enable docker
 systemctl start docker
+
 # 도커 네트워크 생성
 docker network create common
+
 # nginx 설치
 docker run -d \
   --name npm_1 \
@@ -296,6 +308,7 @@ docker run \
   -e TZ=Asia/Seoul \
   --name ha_proxy_1 \
   haproxy
+
 # redis 설치
 docker run -d \
   --name=redis_1 \
@@ -304,6 +317,7 @@ docker run -d \
   -p 6379:6379 \
   -e TZ=Asia/Seoul \
   redis --requirepass ${var.password_1}
+
 echo "${var.github_access_token_1}" | docker login ghcr.io -u ${var.github_access_token_1_owner} --password-stdin
 END_OF_FILE
 }
@@ -342,3 +356,8 @@ ${local.ec2_user_data_base}
 EOF
 }
 
+# 생성한 EIP와 실행 중인 EC2를 연결
+#resource "aws_eip_association" "ec2" {
+#  instance_id   = aws_instance.ec2.id
+#  allocation_id = aws_eip.ec2.id
+#}

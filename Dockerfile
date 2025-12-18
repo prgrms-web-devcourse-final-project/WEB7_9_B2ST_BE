@@ -9,13 +9,13 @@ COPY gradle gradle
 COPY gradlew .
 RUN chmod +x gradlew
 
-# 의존성 캐시
+# 종속성 설치
 RUN ./gradlew dependencies --no-daemon
 
 # 소스 코드 복사
 COPY src src
 
-# 애플리케이션 빌드
+# 애플리케이션 빌드(테스트 제외)
 RUN ./gradlew bootJar --no-daemon -x test
 
 # 2단계: 실행용 이미지

@@ -177,6 +177,6 @@ class SeatGradeServiceTest {
 			() -> seatGradeService.createSeatGradeInfo(performanceId, req));
 
 		// then
-		assertThat(e.getErrorCode()).isEqualTo(SeatGradeErrorCode.SEAT_NOT_FOUND);
+		assertThat(e.getErrorCode()).isEqualTo(SeatGradeErrorCode.INVALID_GRADE_TYPE);
 	}
 }

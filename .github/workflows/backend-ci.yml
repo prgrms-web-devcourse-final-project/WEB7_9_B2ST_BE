@@ -45,7 +45,12 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: 🏗️ Gradle 빌드 및 테스트
+        env:
+            AWS_ACCESS_KEY_ID: dummy-access-key
+            AWS_SECRET_ACCESS_KEY: dummy-secret-key
+            AWS_REGION: ap-northeast-2
         run: ./gradlew build
+
 
       - name: 📊 테스트 결과 업로드
         uses: actions/upload-artifact@v4

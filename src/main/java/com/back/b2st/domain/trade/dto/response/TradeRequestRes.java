@@ -5,7 +5,8 @@ import java.time.LocalDateTime;
 import com.back.b2st.domain.trade.entity.TradeRequest;
 import com.back.b2st.domain.trade.entity.TradeRequestStatus;
 
-public record TradeRequestRes(
+public record
+TradeRequestRes(
 	Long tradeRequestId,
 	Long tradeId,
 	Long requesterId,

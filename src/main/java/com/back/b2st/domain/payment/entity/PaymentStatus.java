@@ -1,10 +1,11 @@
 package com.back.b2st.domain.payment.entity;
 
+import java.util.Collections;
+import java.util.List;
+
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
 public enum PaymentStatus {
 	READY("결제 준비", true),
 	WAITING_FOR_DEPOSIT("입금 대기", true),
@@ -15,6 +16,22 @@ public enum PaymentStatus {
 
 	private final String description;
 	private final boolean canTransition;
+	private List<PaymentStatus> allowedNextStatuses;
+
+	PaymentStatus(String description, boolean canTransition) {
+		this.description = description;
+		this.canTransition = canTransition;
+	}
+
+	// enum 상수가 모두 초기화된 후 상태 전이표 설정
+	static {
+		READY.allowedNextStatuses = List.of(DONE, FAILED, CANCELED);
+		WAITING_FOR_DEPOSIT.allowedNextStatuses = List.of(DONE, EXPIRED);
+		DONE.allowedNextStatuses = List.of(CANCELED);
+		FAILED.allowedNextStatuses = Collections.emptyList();
+		CANCELED.allowedNextStatuses = Collections.emptyList();
+		EXPIRED.allowedNextStatuses = Collections.emptyList();
+	}
 
 	public boolean isCompleted() {
 		return this == DONE;
@@ -24,7 +41,10 @@ public enum PaymentStatus {
 		return !canTransition;
 	}
 
-	public boolean canCancelFrom() {
-		return this == DONE;
+	/**
+	 * 특정 상태로 전이 가능한지 검증
+	 */
+	public boolean canTransitionTo(PaymentStatus targetStatus) {
+		return allowedNextStatuses.contains(targetStatus);
 	}
 }

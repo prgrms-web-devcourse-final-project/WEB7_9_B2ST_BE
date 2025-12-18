@@ -28,6 +28,7 @@ import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.global.error.exception.BusinessException;
 
 @SpringBootTest
 @Transactional
@@ -153,13 +154,36 @@ class ScheduleSeatServiceTest {
 	@Test
 	void getSeats_empty_result() {
 		// given
-		Long notExistScheduleId = 9999L;
+		PerformanceSchedule emptySchedule = performanceScheduleRepository.save(
+			PerformanceSchedule.builder()
+				.performance(performanceRepository.findAll().get(0))
+				.roundNo(99)
+				.startAt(LocalDateTime.now().plusDays(3))
+				.bookingType(BookingType.FIRST_COME)
+				.bookingOpenAt(LocalDateTime.now())
+				.bookingCloseAt(LocalDateTime.now().plusDays(2))
+				.build()
+		);
 
 		// when
 		List<ScheduleSeatViewRes> seats =
-			scheduleSeatService.getSeats(notExistScheduleId);
+			scheduleSeatService.getSeats(emptySchedule.getPerformanceScheduleId());
 
 		// then
 		assertThat(seats).isEmpty();
 	}
+
+	@DisplayName("존재하지 않는 회차를 조회하면 예외가 발생한다")
+	@Test
+	void getSeats_schedule_not_found() {
+		// given
+		Long notExistScheduleId = 9999L;
+
+		// when & then
+		assertThatThrownBy(() ->
+			scheduleSeatService.getSeats(notExistScheduleId)
+		)
+			.isInstanceOf(BusinessException.class);
+	}
+
 }

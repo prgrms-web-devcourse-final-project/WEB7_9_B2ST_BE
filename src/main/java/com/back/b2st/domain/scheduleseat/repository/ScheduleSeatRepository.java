@@ -1,12 +1,12 @@
-package com.back.b2st.domain.reservation.repository;
+package com.back.b2st.domain.scheduleseat.repository;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.back.b2st.domain.reservation.entity.ScheduleSeat;
-import com.back.b2st.domain.reservation.entity.SeatStatus;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 
 public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long> {
 

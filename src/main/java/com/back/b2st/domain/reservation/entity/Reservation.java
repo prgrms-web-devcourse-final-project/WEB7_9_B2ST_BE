@@ -28,7 +28,7 @@ import lombok.NoArgsConstructor;
 		@Index(name = "idx_reservation_member", columnList = "member_id")
 	},
 	uniqueConstraints = {
-		@UniqueConstraint(name = "uk_reservation_performance_seat", columnNames = {"performance_id", "seat_id"})
+		@UniqueConstraint(name = "uk_reservation_schedule_seat", columnNames = {"schedule_id", "seat_id"})
 	}
 )
 @SequenceGenerator(
@@ -43,8 +43,8 @@ public class Reservation extends BaseEntity {
 	@Column(name = "reservation_id")
 	private Long id;    // PK
 
-	@Column(name = "performance_id", nullable = false)
-	private Long performanceId;    // 회차 FK PerformanceSchedule = schedule TODO: 변수명..
+	@Column(name = "schedule_id", nullable = false)
+	private Long scheduleId;    // 회차 FK
 
 	@Column(name = "member_id", nullable = false)
 	private Long memberId;    // 예매자 FK
@@ -65,11 +65,11 @@ public class Reservation extends BaseEntity {
 
 	@Builder
 	public Reservation(
-		Long performanceId,
+		Long scheduleId,
 		Long memberId,
 		Long seatId
 	) {
-		this.performanceId = performanceId;
+		this.scheduleId = scheduleId;
 		this.memberId = memberId;
 		this.seatId = seatId;
 		this.status = ReservationStatus.PENDING;

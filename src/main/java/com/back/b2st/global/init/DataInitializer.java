@@ -20,6 +20,8 @@ import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
@@ -51,6 +53,7 @@ public class DataInitializer implements CommandLineRunner {
 	private final PerformanceRepository performanceRepository;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final SeatGradeRepository seatGradeRepository;
+	private final ReservationRepository reservationRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -218,6 +221,34 @@ public class DataInitializer implements CommandLineRunner {
 						.build()
 				);
 			}
+
+			Member user1 = memberRepository.findByEmail("user1@tt.com")
+				.orElseThrow(() -> new IllegalStateException("user1 not found"));
+
+			// 첫 번째 좌석 선택
+			Seat reservedSeat = seats.get(0);
+
+			// 회차별 좌석 조회
+			ScheduleSeat reservedScheduleSeat = scheduleSeatRepository
+				.findByScheduleIdAndSeatId(
+					performanceSchedule.getPerformanceScheduleId(),
+					reservedSeat.getId()
+				)
+				.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
+
+			// 좌석 상태 SOLD 처리
+			reservedScheduleSeat.sold();
+
+			// 예매 생성 (PENDING → COMPLETED)
+			Reservation reservation = Reservation.builder()
+				.scheduleId(performanceSchedule.getPerformanceScheduleId())
+				.memberId(user1.getId())
+				.seatId(reservedSeat.getId())
+				.build();
+
+			reservation.complete();
+
+			reservationRepository.save(reservation);
 		}
 
 		for (int row = 1; row <= 3; row++) {

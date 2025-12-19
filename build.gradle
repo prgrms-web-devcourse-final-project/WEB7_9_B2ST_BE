@@ -140,7 +140,8 @@ jacocoTestReport {
                     '**/Q*.class',
                     '**/entity/**',
                     '**/domain/**/*Entity.class',
-                    '**/controller/**'
+                    '**/controller/**',
+                    '**/toss/**'
             ])
         }))
     }
@@ -184,7 +185,8 @@ jacocoTestCoverageVerification {
                     '**/Q*.class',
                     '**/entity/**',
                     '**/domain/**/*Entity.class',
-                    '**/controller/**'
+                    '**/controller/**',
+                    '**/toss/**'
             ])
         }))
     }

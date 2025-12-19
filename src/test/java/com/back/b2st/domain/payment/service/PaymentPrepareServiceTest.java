@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -17,7 +18,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.back.b2st.domain.payment.dto.request.PaymentPrepareReq;
-import com.back.b2st.domain.payment.dto.response.PaymentPrepareRes;
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentMethod;
@@ -40,7 +40,7 @@ class PaymentPrepareServiceTest {
 
 	@Test
 	void prepare_createsReadyPayment_forCard() {
-		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler), Clock.systemDefaultZone());
 		when(handler.supports(DomainType.RESERVATION)).thenReturn(true);
 		when(handler.loadAndValidate(10L, 1L))
 			.thenReturn(new PaymentTarget(DomainType.RESERVATION, 10L, 15000L));
@@ -48,21 +48,21 @@ class PaymentPrepareServiceTest {
 			.thenReturn(Optional.empty());
 		when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> withId(invocation.getArgument(0), 1L));
 
-		PaymentPrepareRes res = paymentPrepareService.prepare(
+		Payment res = paymentPrepareService.prepare(
 			1L,
 			new PaymentPrepareReq(DomainType.RESERVATION, 10L, PaymentMethod.CARD)
 		);
 
-		assertThat(res.paymentId()).isEqualTo(1L);
-		assertThat(res.amount()).isEqualTo(15000L);
-		assertThat(res.status()).isEqualTo(PaymentStatus.READY);
-		assertThat(res.expiresAt()).isNull();
-		assertThat(res.orderId()).isNotBlank();
+		assertThat(res.getId()).isEqualTo(1L);
+		assertThat(res.getAmount()).isEqualTo(15000L);
+		assertThat(res.getStatus()).isEqualTo(PaymentStatus.READY);
+		assertThat(res.getExpiresAt()).isNull();
+		assertThat(res.getOrderId()).isNotBlank();
 	}
 
 	@Test
 	void prepare_blocksWhenExistingPaymentIsDone() {
-		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler), Clock.systemDefaultZone());
 		when(handler.supports(DomainType.RESERVATION)).thenReturn(true);
 		when(handler.loadAndValidate(10L, 1L))
 			.thenReturn(new PaymentTarget(DomainType.RESERVATION, 10L, 15000L));
@@ -80,7 +80,7 @@ class PaymentPrepareServiceTest {
 
 	@Test
 	void prepare_createsWaitingForDeposit_forVirtualAccount() {
-		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler), Clock.systemDefaultZone());
 		when(handler.supports(DomainType.RESERVATION)).thenReturn(true);
 		when(handler.loadAndValidate(10L, 1L))
 			.thenReturn(new PaymentTarget(DomainType.RESERVATION, 10L, 15000L));
@@ -88,20 +88,20 @@ class PaymentPrepareServiceTest {
 			.thenReturn(Optional.empty());
 		when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> withId(invocation.getArgument(0), 2L));
 
-		PaymentPrepareRes res = paymentPrepareService.prepare(
+		Payment res = paymentPrepareService.prepare(
 			1L,
 			new PaymentPrepareReq(DomainType.RESERVATION, 10L, PaymentMethod.VIRTUAL_ACCOUNT)
 		);
 
-		assertThat(res.paymentId()).isEqualTo(2L);
-		assertThat(res.amount()).isEqualTo(15000L);
-		assertThat(res.status()).isEqualTo(PaymentStatus.WAITING_FOR_DEPOSIT);
-		assertThat(res.expiresAt()).isNotNull().isAfter(LocalDateTime.now().minusSeconds(1));
+		assertThat(res.getId()).isEqualTo(2L);
+		assertThat(res.getAmount()).isEqualTo(15000L);
+		assertThat(res.getStatus()).isEqualTo(PaymentStatus.WAITING_FOR_DEPOSIT);
+		assertThat(res.getExpiresAt()).isNotNull().isAfter(LocalDateTime.now().minusSeconds(1));
 	}
 
 	@Test
 	void prepare_blocksWhenExistingPaymentIsReady() {
-		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler), Clock.systemDefaultZone());
 		when(handler.supports(DomainType.RESERVATION)).thenReturn(true);
 		when(handler.loadAndValidate(10L, 1L))
 			.thenReturn(new PaymentTarget(DomainType.RESERVATION, 10L, 15000L));
@@ -119,7 +119,7 @@ class PaymentPrepareServiceTest {
 
 	@Test
 	void prepare_blocksWhenExistingPaymentIsWaitingForDeposit() {
-		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler), Clock.systemDefaultZone());
 		when(handler.supports(DomainType.RESERVATION)).thenReturn(true);
 		when(handler.loadAndValidate(10L, 1L))
 			.thenReturn(new PaymentTarget(DomainType.RESERVATION, 10L, 15000L));
@@ -137,7 +137,7 @@ class PaymentPrepareServiceTest {
 
 	@Test
 	void prepare_allowsWhenExistingPaymentIsFailed() {
-		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler), Clock.systemDefaultZone());
 		when(handler.supports(DomainType.RESERVATION)).thenReturn(true);
 		when(handler.loadAndValidate(10L, 1L))
 			.thenReturn(new PaymentTarget(DomainType.RESERVATION, 10L, 15000L));
@@ -145,17 +145,17 @@ class PaymentPrepareServiceTest {
 			.thenReturn(Optional.of(withStatusFailed()));
 		when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> withId(invocation.getArgument(0), 3L));
 
-		PaymentPrepareRes res = paymentPrepareService.prepare(
+		Payment res = paymentPrepareService.prepare(
 			1L,
 			new PaymentPrepareReq(DomainType.RESERVATION, 10L, PaymentMethod.CARD)
 		);
 
-		assertThat(res.paymentId()).isEqualTo(3L);
+		assertThat(res.getId()).isEqualTo(3L);
 	}
 
 	@Test
 	void prepare_throwsWhenHandlerNotFound() {
-		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler));
+		paymentPrepareService = new PaymentPrepareService(paymentRepository, List.of(handler), Clock.systemDefaultZone());
 		when(handler.supports(DomainType.RESERVATION)).thenReturn(false);
 
 		assertThatThrownBy(() -> paymentPrepareService.prepare(

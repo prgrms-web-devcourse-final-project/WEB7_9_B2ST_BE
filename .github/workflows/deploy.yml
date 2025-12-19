@@ -14,8 +14,8 @@ on:
 
 # 권한 최소화/명시화
 permissions:
-  contents: write # 태그/릴리즈
-  packages: write # GHCR 푸시
+  contents: write
+  packages: write
 
 jobs:
   makeTagAndRelease:
@@ -115,19 +115,17 @@ jobs:
           working-directory: /
           comment: Deploy Spring Boot with Prod Profile
           command: |
-            # 1. 최신 이미지 가져오기
-            docker pull ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest && \
+            # 1. 찾은 경로로 이동
+                     cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/docker/
             
-            # 2. 기존 컨테이너 중지 및 제거
-            docker stop tt_app>/dev/null || true && \
-            docker rm tt_app>/dev/null || true && \
+            # 2. GHCR 로그인 (이미지 pull 권한 확인)
+                     echo "${{ secrets.PERSONAL_ACCESS_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # 3. 새 컨테이너 실행 
-            docker run -d --name app1 \
-              --network common \
-              -p 8080:8080 \
-              -e SPRING_PROFILES_ACTIVE=prod \
-              -e DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN }} \
-              ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest && \
+            # 3. 최신 이미지 가져오기
+                     docker compose pull
             
-            docker image prune -f
+            # 4. 컨테이너 재시작 (변경사항 반영)
+                     docker compose up -d
+            
+            # 5. 미사용 이미지 정리
+                     docker image prune -f

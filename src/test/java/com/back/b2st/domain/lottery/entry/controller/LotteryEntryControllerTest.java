@@ -298,7 +298,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		String url = "/api/performances/{performanceId}/lottery/entry";
 		Long param = performance.getPerformanceId();
 
-		Long scheduleId = 2L;
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		String grade = seatGrade.getGrade().toString();
 		int quantity = 4;
 
@@ -391,7 +391,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		Long param = performance.getPerformanceId();
 
 		Long memberId = member.getId();
-		Long scheduleId = 2L;
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		String grade = seatGrade.getGrade().toString();
 		int quantity = 0;
 
@@ -422,8 +422,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		Long param = performance.getPerformanceId();
 
 		Long memberId = member.getId();
-		;
-		Long scheduleId = 2L;
+		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
 		String grade = seatGrade.getGrade().toString();
 		int quantity = 4 + 1;
 

@@ -20,6 +20,9 @@ import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
@@ -56,6 +59,9 @@ class TradeServiceTest {
 	@Mock
 	private ReservationRepository reservationRepository;
 
+	@Mock
+	private PerformanceScheduleRepository performanceScheduleRepository;
+
 	@Test
 	@DisplayName("교환 게시글 생성 성공")
 	void createExchangeTrade_success() {
@@ -90,6 +96,12 @@ class TradeServiceTest {
 		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
 		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
 		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		Performance performance = mock(Performance.class);
+		given(schedule.getPerformance()).willReturn(performance);
+		given(performance.getPerformanceId()).willReturn(1L);
+		given(performanceScheduleRepository.findById(anyLong())).willReturn(Optional.of(schedule));
 
 		Trade mockTrade = Trade.builder()
 			.memberId(memberId)
@@ -151,6 +163,12 @@ class TradeServiceTest {
 		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
 		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
 		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		Performance performance = mock(Performance.class);
+		given(schedule.getPerformance()).willReturn(performance);
+		given(performance.getPerformanceId()).willReturn(1L);
+		given(performanceScheduleRepository.findById(anyLong())).willReturn(Optional.of(schedule));
 
 		Trade mockTrade = Trade.builder()
 			.memberId(memberId)
@@ -267,6 +285,12 @@ class TradeServiceTest {
 		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
 		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
 		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		Performance performance = mock(Performance.class);
+		given(schedule.getPerformance()).willReturn(performance);
+		given(performance.getPerformanceId()).willReturn(1L);
+		given(performanceScheduleRepository.findById(anyLong())).willReturn(Optional.of(schedule));
 
 		given(tradeRepository.save(any(Trade.class)))
 			.willThrow(new DataIntegrityViolationException("Unique constraint violation"));

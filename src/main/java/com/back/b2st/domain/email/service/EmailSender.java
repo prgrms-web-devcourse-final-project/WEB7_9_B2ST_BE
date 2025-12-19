@@ -25,7 +25,7 @@ public class EmailSender {
 
 	@Value("${app.mail.from-address:noreply@b2st.com}")
 	private String fromAddress;
-	@Value("${app.mail.from-name:B2ST 티켓팅}")
+	@Value("${app.mail.from-name:B2ST TT}")
 	private String fromName;
 
 	@Async("emailExecutor")
@@ -62,5 +62,18 @@ public class EmailSender {
 		context.setVariable("expireMinutes", 5);
 
 		return this.templateEngine.process("email/verification", context);
+	}
+
+	@Async("emailExecutor")
+	public void sendRecoveryEmail(String to, String name, String recoveryLink) {
+		Context context = new Context();
+		context.setVariable("name", name);
+		context.setVariable("recoveryLink", recoveryLink);
+		context.setVariable("expiryHours", 24);
+
+		String subject = "[TT] 계정 복구 안내";
+		String templateName = "recovery-email";
+
+		sendHtmlEmail(to, subject, templateName, context);
 	}
 }

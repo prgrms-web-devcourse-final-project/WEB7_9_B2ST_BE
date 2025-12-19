@@ -2,7 +2,9 @@ package com.back.b2st.domain.auth.entity;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
+import org.springframework.data.redis.core.TimeToLive;
 
+import lombok.Builder;
 import lombok.Getter;
 
 @Getter
@@ -16,10 +18,12 @@ public class WithdrawalRecoveryToken {
 
 	private Long memberId;
 
+	@TimeToLive
 	private long ttl;
 
 	private static final long DEFAULT_TTL = 3600 * 24; // 24시간
 
+	@Builder
 	public WithdrawalRecoveryToken(String token, String email, Long memberId) {
 		this.token = token;
 		this.email = email;

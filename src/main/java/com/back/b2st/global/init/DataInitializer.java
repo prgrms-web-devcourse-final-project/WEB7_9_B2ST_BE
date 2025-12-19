@@ -14,6 +14,10 @@ import org.springframework.stereotype.Component;
 
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.payment.entity.DomainType;
+import com.back.b2st.domain.payment.entity.Payment;
+import com.back.b2st.domain.payment.entity.PaymentMethod;
+import com.back.b2st.domain.payment.repository.PaymentRepository;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
@@ -29,6 +33,8 @@ import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
@@ -54,6 +60,8 @@ public class DataInitializer implements CommandLineRunner {
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final SeatGradeRepository seatGradeRepository;
 	private final ReservationRepository reservationRepository;
+	private final PaymentRepository paymentRepository;
+	private final TicketRepository ticketRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -225,30 +233,126 @@ public class DataInitializer implements CommandLineRunner {
 			Member user1 = memberRepository.findByEmail("user1@tt.com")
 				.orElseThrow(() -> new IllegalStateException("user1 not found"));
 
-			// 첫 번째 좌석 선택
-			Seat reservedSeat = seats.get(0);
+			// user1@tt.com에 3개의 티켓 생성 (다중 선택 테스트용)
+			for (int i = 0; i < 3; i++) {
+				Seat reservedSeat = seats.get(i);
 
-			// 회차별 좌석 조회
-			ScheduleSeat reservedScheduleSeat = scheduleSeatRepository
-				.findByScheduleIdAndSeatId(
-					performanceSchedule.getPerformanceScheduleId(),
-					reservedSeat.getId()
-				)
-				.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
+				// 회차별 좌석 조회
+				ScheduleSeat reservedScheduleSeat = scheduleSeatRepository
+					.findByScheduleIdAndSeatId(
+						performanceSchedule.getPerformanceScheduleId(),
+						reservedSeat.getId()
+					)
+					.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
 
-			// 좌석 상태 SOLD 처리
-			reservedScheduleSeat.sold();
+				// 좌석 상태 SOLD 처리
+				reservedScheduleSeat.sold();
 
-			// 예매 생성 (PENDING → COMPLETED)
-			Reservation reservation = Reservation.builder()
-				.scheduleId(performanceSchedule.getPerformanceScheduleId())
-				.memberId(user1.getId())
-				.seatId(reservedSeat.getId())
-				.build();
+				// 예매 생성 (PENDING → COMPLETED)
+				Reservation reservation = Reservation.builder()
+					.scheduleId(performanceSchedule.getPerformanceScheduleId())
+					.memberId(user1.getId())
+					.seatId(reservedSeat.getId())
+					.build();
 
-			reservation.complete();
+				reservation.complete();
+				Reservation savedReservation = reservationRepository.save(reservation);
 
-			reservationRepository.save(reservation);
+				// 결제 생성 (DONE 상태)
+				Payment payment = Payment.builder()
+					.orderId("ORDER-INIT-" + System.currentTimeMillis() + "-" + i)
+					.memberId(user1.getId())
+					.domainType(DomainType.RESERVATION)
+					.domainId(savedReservation.getId())
+					.amount(10000L)
+					.method(PaymentMethod.CARD)
+					.expiresAt(null)
+					.build();
+
+				payment.complete(LocalDateTime.now());
+				paymentRepository.save(payment);
+
+				// 티켓 생성
+				Ticket ticket = Ticket.builder()
+					.reservationId(savedReservation.getId())
+					.memberId(user1.getId())
+					.seatId(reservedSeat.getId())
+					.build();
+
+				ticketRepository.save(ticket);
+
+				log.info("[DataInit] user1@tt.com - 예매/결제/티켓 생성 완료 (좌석: {}구역 {}행 {}번)",
+					reservedSeat.getSectionName(), reservedSeat.getRowLabel(), reservedSeat.getSeatNumber());
+
+				// orderId 중복 방지를 위한 짧은 대기
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+			}
+
+			// codeisneverodd@gmail.com에 2개의 티켓 생성
+			Member user3 = memberRepository.findByEmail("codeisneverodd@gmail.com")
+				.orElseThrow(() -> new IllegalStateException("user3 not found"));
+
+			for (int i = 3; i < 5; i++) {
+				Seat reservedSeat = seats.get(i);
+
+				// 회차별 좌석 조회
+				ScheduleSeat reservedScheduleSeat = scheduleSeatRepository
+					.findByScheduleIdAndSeatId(
+						performanceSchedule.getPerformanceScheduleId(),
+						reservedSeat.getId()
+					)
+					.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
+
+				// 좌석 상태 SOLD 처리
+				reservedScheduleSeat.sold();
+
+				// 예매 생성 (PENDING → COMPLETED)
+				Reservation reservation = Reservation.builder()
+					.scheduleId(performanceSchedule.getPerformanceScheduleId())
+					.memberId(user3.getId())
+					.seatId(reservedSeat.getId())
+					.build();
+
+				reservation.complete();
+				Reservation savedReservation = reservationRepository.save(reservation);
+
+				// 결제 생성 (DONE 상태)
+				Payment payment = Payment.builder()
+					.orderId("ORDER-INIT-" + System.currentTimeMillis() + "-" + i)
+					.memberId(user3.getId())
+					.domainType(DomainType.RESERVATION)
+					.domainId(savedReservation.getId())
+					.amount(10000L)
+					.method(PaymentMethod.CARD)
+					.expiresAt(null)
+					.build();
+
+				payment.complete(LocalDateTime.now());
+				paymentRepository.save(payment);
+
+				// 티켓 생성
+				Ticket ticket = Ticket.builder()
+					.reservationId(savedReservation.getId())
+					.memberId(user3.getId())
+					.seatId(reservedSeat.getId())
+					.build();
+
+				ticketRepository.save(ticket);
+
+				log.info("[DataInit] codeisneverodd@gmail.com - 예매/결제/티켓 생성 완료 (좌석: {}구역 {}행 {}번)",
+					reservedSeat.getSectionName(), reservedSeat.getRowLabel(), reservedSeat.getSeatNumber());
+
+				// orderId 중복 방지를 위한 짧은 대기
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+			}
 		}
 
 		for (int row = 1; row <= 3; row++) {

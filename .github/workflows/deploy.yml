@@ -6,9 +6,9 @@ on:
   push:
     paths:
       - ".github/workflows/**"
-      - "backend/src/**"
-      - "backend/build.gradle.kts"
-      - "backend/Dockerfile"
+      - "src/**"
+      - "build.gradle.kts"
+      - "Dockerfile"
     branches:
       - develop
 
@@ -44,9 +44,6 @@ jobs:
   buildImageAndPush:
     name: 도커 이미지 빌드와 푸시
     needs: makeTagAndRelease
-    defaults:
-      run:
-        working-directory: backend # 원하는 디렉토리
     runs-on: ubuntu-latest
     outputs:
       owner_lc: ${{ steps.export_owner.outputs.owner_lc }}
@@ -77,7 +74,7 @@ jobs:
       - name: 빌드 앤 푸시
         uses: docker/build-push-action@v3
         with:
-          context: ./backend
+          context: .
           push: true
           build-args: |
             DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN }}
@@ -112,7 +109,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           instance-ids: ${{ env.INSTANCE_ID }}
-          working-directory: /
           comment: Deploy Spring Boot with Prod Profile
           command: |
             # 1. 찾은 경로로 이동

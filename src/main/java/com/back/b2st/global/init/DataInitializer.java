@@ -221,34 +221,6 @@ public class DataInitializer implements CommandLineRunner {
 						.build()
 				);
 			}
-
-			Member user1 = memberRepository.findByEmail("user1@tt.com")
-				.orElseThrow(() -> new IllegalStateException("user1 not found"));
-
-			// 첫 번째 좌석 선택
-			Seat reservedSeat = seats.get(0);
-
-			// 회차별 좌석 조회
-			ScheduleSeat reservedScheduleSeat = scheduleSeatRepository
-				.findByScheduleIdAndSeatId(
-					performanceSchedule.getPerformanceScheduleId(),
-					reservedSeat.getId()
-				)
-				.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
-
-			// 좌석 상태 SOLD 처리
-			reservedScheduleSeat.sold();
-
-			// 예매 생성 (PENDING → COMPLETED)
-			Reservation reservation = Reservation.builder()
-				.scheduleId(performanceSchedule.getPerformanceScheduleId())
-				.memberId(user1.getId())
-				.seatId(reservedSeat.getId())
-				.build();
-
-			reservation.complete();
-
-			reservationRepository.save(reservation);
 		}
 
 		for (int row = 1; row <= 3; row++) {
@@ -311,6 +283,34 @@ public class DataInitializer implements CommandLineRunner {
 		}
 		seatRepository.saveAll(seats);
 		log.info("[DataInit/Test] Seat initialized. count=25 (section=A11 ~ A115, A21 ~ A215, ... , A51 ~ A55");
+
+		Member user1 = memberRepository.findByEmail("user1@tt.com")
+			.orElseThrow(() -> new IllegalStateException("user1 not found"));
+
+		// 첫 번째 좌석 선택
+		Seat reservedSeat = seats.get(0);
+
+		// 회차별 좌석 조회
+		ScheduleSeat reservedScheduleSeat = scheduleSeatRepository
+			.findByScheduleIdAndSeatId(
+				performanceSchedule.getPerformanceScheduleId(),
+				reservedSeat.getId()
+			)
+			.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
+
+		// 좌석 상태 SOLD 처리
+		reservedScheduleSeat.sold();
+
+		// 예매 생성 (PENDING → COMPLETED)
+		Reservation reservation = Reservation.builder()
+			.scheduleId(performanceSchedule.getPerformanceScheduleId())
+			.memberId(user1.getId())
+			.seatId(reservedSeat.getId())
+			.build();
+
+		reservation.complete();
+
+		reservationRepository.save(reservation);
 	}
 
 	private void initConnectedSet() {

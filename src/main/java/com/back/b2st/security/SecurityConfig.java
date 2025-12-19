@@ -38,24 +38,24 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
-				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-				.csrf(AbstractHttpConfigurer::disable)
-				.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+			.csrf(AbstractHttpConfigurer::disable)
+			.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
-				.authorizeHttpRequests(auth -> auth
-						.requestMatchers(
-								"/api/members/signup", "/api/auth/**", "/h2-console/**", "/error", "/api/banks",
-								"/api/email/**",
-								"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html" // Swagger
-						).permitAll()
-						.anyRequest().authenticated())
-				.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-				.exceptionHandling(exception -> exception
-						.authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401 에러 처리
-						.accessDeniedHandler(jwtAccessDeniedHandler) // 403 에러 처리
-				)
-				.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
-						UsernamePasswordAuthenticationFilter.class);
+			.authorizeHttpRequests(auth -> auth
+				.requestMatchers(
+					"/api/members/signup", "/api/auth/**", "/h2-console/**", "/error", "/api/banks",
+					"/api/email/**",
+					"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html" // Swagger
+				).permitAll()
+				.anyRequest().authenticated())
+			.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+			.exceptionHandling(exception -> exception
+				.authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401 에러 처리
+				.accessDeniedHandler(jwtAccessDeniedHandler) // 403 에러 처리
+			)
+			.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+				UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
 	}
@@ -66,8 +66,10 @@ public class SecurityConfig {
 
 		// 프엔주소
 		configuration.setAllowedOrigins(List.of(
-				"http://localhost:3000",
-				"http://저희 도메인 칸만 뚫어놨고, 생기면 여기다 적겠습니다."));
+			"http://localhost:3000",
+			"https://b2st.doncrytt.online",
+			"https://www.doncrytt.online"
+		));
 
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("*"));

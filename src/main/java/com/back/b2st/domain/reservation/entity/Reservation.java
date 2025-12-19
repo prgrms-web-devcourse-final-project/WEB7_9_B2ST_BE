@@ -54,7 +54,6 @@ public class Reservation extends BaseEntity {
 	@Column(name = "completed_at")
 	private LocalDateTime completedAt;
 
-	/** === 예매 상태 === */
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
 	private ReservationStatus status;
@@ -71,13 +70,43 @@ public class Reservation extends BaseEntity {
 		this.status = ReservationStatus.CREATED;
 	}
 
-	/** === 상태 변경 === */
-	public void paid() {
-		this.status = ReservationStatus.PAID;
+	/** === 상태 가능 여부 판단 === */
+
+	// 결제 대기 가능 여부
+	public boolean canPending() {
+		return this.status == ReservationStatus.CREATED;
 	}
 
-	public void cancel() {
-		cancel(LocalDateTime.now());
+	//  결제 가능 여부
+	public boolean canPay() {
+		return this.status == ReservationStatus.CREATED
+			|| this.status == ReservationStatus.PENDING;
+	}
+
+	// 확정 가능 여부
+	public boolean canComplete() {
+		return this.status == ReservationStatus.PAID;
+	}
+
+	// 취소 가능 여부
+	public boolean canCancel() {
+		return this.status == ReservationStatus.CREATED
+			|| this.status == ReservationStatus.PENDING;
+	}
+
+	// 만료 가능 여부
+	public boolean canExpire() {
+		return this.status == ReservationStatus.CREATED
+			|| this.status == ReservationStatus.PENDING;
+	}
+
+	/** === 상태 변경 === */
+	public void pending() {
+		this.status = ReservationStatus.PENDING;
+	}
+
+	public void paid() {
+		this.status = ReservationStatus.PAID;
 	}
 
 	public void cancel(LocalDateTime canceledAt) {
@@ -85,18 +114,16 @@ public class Reservation extends BaseEntity {
 		this.canceledAt = canceledAt;
 	}
 
-	public void complete() {
-		complete(LocalDateTime.now());
-	}
-
 	public void complete(LocalDateTime completedAt) {
 		this.status = ReservationStatus.COMPLETED;
 		this.completedAt = completedAt;
 	}
 
-	/**
-	 * ===== 임시 호환 코드 =====
-	 */
+	public void expire() {
+		this.status = ReservationStatus.EXPIRED;
+	}
+
+	/** === 임시 호환 코드 === */
 	@Deprecated
 	public static class ReservationBuilder {
 

@@ -68,7 +68,7 @@ public class Reservation extends BaseEntity {
 		this.scheduleId = scheduleId;
 		this.memberId = memberId;
 		this.seatId = seatId;
-		this.status = ReservationStatus.PENDING;
+		this.status = ReservationStatus.CREATED;
 	}
 
 	/** === 상태 변경 === */

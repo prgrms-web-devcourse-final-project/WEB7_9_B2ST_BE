@@ -14,7 +14,7 @@ import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
-import com.back.b2st.domain.scheduleseat.service.ScheduleSeatCommandService;
+import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -26,47 +26,26 @@ public class ReservationService {
 	private final ReservationRepository reservationRepository;
 	private final ScheduleSeatRepository scheduleSeatRepository;
 
-	private final SeatLockService seatLockService;
-	private final ScheduleSeatCommandService scheduleSeatCommandService;
 	private final SeatHoldTokenService seatHoldTokenService;
 
 	/** === 예매 생성 === */
 	@Transactional
-	public Long reserveSeat(Long memberId, ReservationReq request) {
+	public ReservationDetailRes createReservation(Long memberId, ReservationReq request) {
 
 		Long scheduleId = request.scheduleId();
 		Long seatId = request.seatId();
 
-		// 1. 락 걸기
-		String lockValue = seatLockService.tryLock(scheduleId, seatId, memberId);
+		// 1. HOLD 소유권 검증 (Redis)
+		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
 
-		if (lockValue == null) {
-			throw new BusinessException(ReservationErrorCode.SEAT_LOCK_FAILED);
-		}
+		// 2. Reservation 생성
+		Reservation reservation = request.toEntity(memberId);
 
-		try {
-			// 2. AVAILABLE → HOLD
-			scheduleSeatCommandService.holdSeat(scheduleId, seatId);
+		// 3. 저장
+		Reservation saved = reservationRepository.save(reservation);
 
-			// 3. Redis HOLD TTL 저장
-			seatHoldTokenService.save(scheduleId, seatId, memberId);
-
-			// 4. Reservation 생성
-			Reservation reservation = request.toEntity(memberId);
-			Reservation saved = reservationRepository.save(reservation);
-
-			return saved.getId();
-
-		} finally {
-			seatLockService.unlock(scheduleId, seatId, lockValue);
-		}
-
-	}
-
-	@Transactional
-	public ReservationDetailRes createReservation(Long memberId, ReservationReq request) {
-		Long reservationId = reserveSeat(memberId, request);
-		return getReservationDetail(reservationId, memberId);
+		// 4. 반환
+		return getReservationDetail(saved.getId(), memberId);
 	}
 
 	/** === 예매 취소 (일단 결제 완료 시 취소 불가) === */

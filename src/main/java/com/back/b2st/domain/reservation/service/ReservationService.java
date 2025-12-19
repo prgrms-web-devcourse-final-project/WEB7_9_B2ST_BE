@@ -51,10 +51,7 @@ public class ReservationService {
 			// 3. Redis HOLD TTL 저장
 			seatHoldTokenService.save(scheduleId, seatId, memberId);
 
-			// 4. 중복 예매 방지
-			validateNotAlreadyReserved(request.scheduleId(), request.seatId());
-
-			// 5. Reservation 생성
+			// 4. Reservation 생성
 			Reservation reservation = request.toEntity(memberId);
 			Reservation saved = reservationRepository.save(reservation);
 
@@ -168,13 +165,6 @@ public class ReservationService {
 	@Transactional(readOnly = true)
 	public List<ReservationDetailRes> getMyReservationsDetail(Long memberId) {
 		return reservationRepository.findMyReservationDetails(memberId);
-	}
-
-	// === 중복 예매 방지 로직 === //
-	private void validateNotAlreadyReserved(Long scheduleId, Long seatId) {
-		if (reservationRepository.existsByScheduleIdAndSeatId(scheduleId, seatId)) {
-			throw new BusinessException(ReservationErrorCode.SEAT_ALREADY_SOLD);
-		}
 	}
 
 }

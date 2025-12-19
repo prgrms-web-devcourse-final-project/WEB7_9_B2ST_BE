@@ -22,6 +22,10 @@ import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.repository.PaymentRepository;
+import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.security.UserPrincipal;
 
 @SpringBootTest
@@ -35,12 +39,20 @@ class PaymentConfirmControllerTest {
 	@Autowired
 	private PaymentRepository paymentRepository;
 
+	@Autowired
+	private ReservationRepository reservationRepository;
+
+	@Autowired
+	private ScheduleSeatRepository scheduleSeatRepository;
+
 	private Authentication memberAuth;
 	private Long memberId;
 
 	@BeforeEach
 	void setup() {
 		paymentRepository.deleteAll();
+		reservationRepository.deleteAll();
+		scheduleSeatRepository.deleteAll();
 		memberId = 1L;
 
 		UserPrincipal member = UserPrincipal.builder()
@@ -57,12 +69,29 @@ class PaymentConfirmControllerTest {
 		// given
 		String orderId = "ORDER-123";
 		Long amount = 15000L;
+		Long scheduleId = 100L;
+		Long seatId = 200L;
+
+		// 예매 및 좌석 생성
+		Reservation reservation = Reservation.builder()
+			.memberId(memberId)
+			.scheduleId(scheduleId)
+			.seatId(seatId)
+			.build();
+		reservationRepository.save(reservation);
+
+		ScheduleSeat scheduleSeat = ScheduleSeat.builder()
+			.scheduleId(scheduleId)
+			.seatId(seatId)
+			.build();
+		scheduleSeat.hold();
+		scheduleSeatRepository.save(scheduleSeat);
 
 		Payment payment = Payment.builder()
 			.orderId(orderId)
 			.memberId(memberId)
 			.domainType(DomainType.RESERVATION)
-			.domainId(10L)
+			.domainId(reservation.getId())
 			.amount(amount)
 			.method(PaymentMethod.CARD)
 			.expiresAt(null)
@@ -93,12 +122,30 @@ class PaymentConfirmControllerTest {
 		// given
 		String orderId = "ORDER-456";
 		Long amount = 20000L;
+		Long scheduleId = 101L;
+		Long seatId = 201L;
+
+		// 이미 확정된 예매 및 좌석 생성
+		Reservation reservation = Reservation.builder()
+			.memberId(memberId)
+			.scheduleId(scheduleId)
+			.seatId(seatId)
+			.build();
+		reservation.complete(LocalDateTime.now());
+		reservationRepository.save(reservation);
+
+		ScheduleSeat scheduleSeat = ScheduleSeat.builder()
+			.scheduleId(scheduleId)
+			.seatId(seatId)
+			.build();
+		scheduleSeat.sold();
+		scheduleSeatRepository.save(scheduleSeat);
 
 		Payment payment = Payment.builder()
 			.orderId(orderId)
 			.memberId(memberId)
 			.domainType(DomainType.RESERVATION)
-			.domainId(11L)
+			.domainId(reservation.getId())
 			.amount(amount)
 			.method(PaymentMethod.CARD)
 			.expiresAt(null)

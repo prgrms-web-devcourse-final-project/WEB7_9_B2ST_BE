@@ -77,13 +77,21 @@ public class Reservation extends BaseEntity {
 	}
 
 	public void cancel() {
+		cancel(LocalDateTime.now());
+	}
+
+	public void cancel(LocalDateTime canceledAt) {
 		this.status = ReservationStatus.CANCELED;
-		this.canceledAt = LocalDateTime.now();
+		this.canceledAt = canceledAt;
 	}
 
 	public void complete() {
+		complete(LocalDateTime.now());
+	}
+
+	public void complete(LocalDateTime completedAt) {
 		this.status = ReservationStatus.COMPLETED;
-		this.completedAt = LocalDateTime.now();
+		this.completedAt = completedAt;
 	}
 
 	/**

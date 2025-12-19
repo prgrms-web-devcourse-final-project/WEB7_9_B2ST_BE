@@ -1,6 +1,7 @@
 package com.back.b2st.domain.payment.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.payment.dto.request.PaymentConfirmReq;
 import com.back.b2st.domain.payment.entity.Payment;
@@ -17,7 +18,9 @@ public class PaymentConfirmService {
 
 	private final PaymentRepository paymentRepository;
 	private final PaymentConfirmTransactionService paymentConfirmTransactionService;
+	private final PaymentFinalizeService paymentFinalizeService;
 
+	@Transactional
 	public Payment confirm(Long memberId, PaymentConfirmReq request) {
 		Payment payment = paymentRepository.findByOrderId(request.orderId())
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.NOT_FOUND));
@@ -26,6 +29,7 @@ public class PaymentConfirmService {
 		payment.validateAmount(request.amount());
 
 		if (payment.getStatus() == PaymentStatus.DONE) {
+			paymentFinalizeService.finalizeByOrderId(request.orderId());
 			return payment;
 		}
 
@@ -34,6 +38,8 @@ public class PaymentConfirmService {
 		}
 
 		paymentConfirmTransactionService.completeIdempotently(request.orderId());
+
+		paymentFinalizeService.finalizeByOrderId(request.orderId());
 
 		return paymentRepository.findByOrderId(request.orderId())
 			.map(confirmed -> {

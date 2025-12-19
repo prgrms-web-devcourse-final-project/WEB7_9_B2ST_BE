@@ -52,3 +52,6 @@ src/main/generated/
 !docker-compose.yml
 !docker/docker-compose.yml
 !.github/workflows/*.yml
+
+### custom ###
+src/main/resources/application-secret.yml

@@ -17,11 +17,7 @@ public enum ReservationErrorCode implements ErrorCode {
 	RESERVATION_ALREADY_COMPLETED(HttpStatus.CONFLICT, "R009", "이미 결제가 완료된 예매입니다."),
 	RESERVATION_ALREADY_CANCELED(HttpStatus.CONFLICT, "R010", "이미 취소된 예매입니다."),
 
-	/* ===== 좌석 관련 ===== */
-	SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "좌석을 찾을 수 없습니다."),
-	SEAT_ALREADY_HOLD(HttpStatus.CONFLICT, "R002", "이미 다른 사용자가 선택한 좌석입니다."),
 	SEAT_ALREADY_SOLD(HttpStatus.CONFLICT, "R003", "이미 판매된 좌석입니다."),
-	SEAT_NOT_HOLD(HttpStatus.CONFLICT, "R011", "선점되지 않은 좌석입니다."),
 	SEAT_HOLD_FORBIDDEN(HttpStatus.FORBIDDEN, "R012", "본인이 선점한 좌석이 아닙니다."),
 	SEAT_HOLD_EXPIRED(HttpStatus.GONE, "R013", "좌석 선점 시간이 만료되었습니다."),
 

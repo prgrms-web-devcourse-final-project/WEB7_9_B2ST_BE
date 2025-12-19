@@ -10,10 +10,11 @@ import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
-import com.back.b2st.domain.reservation.entity.ScheduleSeat;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.reservation.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.scheduleseat.service.ScheduleSeatCommandService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class ReservationService {
 	private final ScheduleSeatRepository scheduleSeatRepository;
 
 	private final SeatLockService seatLockService;
-	private final SeatHoldService seatHoldService;
+	private final ScheduleSeatCommandService scheduleSeatCommandService;
 	private final SeatHoldTokenService seatHoldTokenService;
 
 	/** === 예매 생성 === */
@@ -45,7 +46,7 @@ public class ReservationService {
 
 		try {
 			// 2. AVAILABLE → HOLD
-			seatHoldService.holdSeat(scheduleId, seatId);
+			scheduleSeatCommandService.holdSeat(scheduleId, seatId);
 
 			// 3. Redis HOLD TTL 저장
 			seatHoldTokenService.save(scheduleId, seatId, memberId);

@@ -5,9 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 public record RegisterLotteryEntryReq(
-	@NotNull(message = "사용자ID는 필수입니다.")
-	Long memberId,
-
 	@NotNull(message = "회차 정보는 필수입니다.")
 	Long scheduleId,
 

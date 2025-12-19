@@ -9,6 +9,7 @@ import com.back.b2st.domain.seat.grade.entity.SeatGrade;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.grade.error.SeatGradeErrorCode;
 import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class SeatGradeService {
 
 	private final SeatGradeRepository seatGradeRepository;
 	private final PerformanceRepository performanceRepository;
+	private final SeatRepository seatRepository;
 
 	// 생성 - 단건?
 	public SeatGradeInfoRes createSeatGradeInfo(Long performanceId, CreateSeatGradeReq request) {
@@ -37,7 +39,7 @@ public class SeatGradeService {
 	}
 
 	private void validateSeat(Long seatId) {
-		if (!performanceRepository.existsById(seatId)) {
+		if (!seatRepository.existsById(seatId)) {
 			throw new BusinessException(SeatGradeErrorCode.SEAT_NOT_FOUND);
 		}
 	}

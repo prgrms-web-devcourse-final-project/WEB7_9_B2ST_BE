@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
@@ -48,6 +49,7 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 @Profile("!test")
+@Transactional
 public class DataInitializer implements CommandLineRunner {
 
 	private final MemberRepository memberRepository;
@@ -67,9 +69,7 @@ public class DataInitializer implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		// 서버 재시작시 중복 생성 방지 차
 		initMemberData();
-		initConnectedSet3();
-		// initConnectedSet();
-		// initConnectedSet2();
+		initConnectedSet();
 	}
 
 	private void initMemberData() {
@@ -145,7 +145,7 @@ public class DataInitializer implements CommandLineRunner {
 	}
 
 	// 데이터 생성 1
-	private void initConnectedSet3() {
+	private void initConnectedSet() {
 		Venue venue;
 		Performance performance;
 		PerformanceSchedule performanceSchedule;
@@ -415,118 +415,129 @@ public class DataInitializer implements CommandLineRunner {
 		}
 		seatRepository.saveAll(seats);
 		log.info("[DataInit/Test] Seat initialized. count=25 (section=A11 ~ A115, A21 ~ A215, ... , A51 ~ A55");
-	}
 
-	private void initConnectedSet() {
+		Member user1 = memberRepository.findByEmail("user1@tt.com")
+			.orElseThrow(() -> new IllegalStateException("user1 not found"));
 
-		// 공연장 생성
-		Venue connectedVenue = venueRepository.save(
-			Venue.builder()
-				.name("QueryDSL 연결 테스트 공연장")
-				.build()
-		);
+		// user1@tt.com에 3개의 티켓 생성 (다중 선택 테스트용)
+		for (int i = 0; i < 3; i++) {
+			Seat reservedSeat = seats.get(i);
 
-		// 공연 생성
-		Performance connectedPerformance = performanceRepository.save(
-			Performance.builder()
-				.venue(connectedVenue)
-				.title("QueryDSL 연결 테스트 공연")
-				.category("콘서트")
-				.posterUrl("")
-				.description(null)
-				.startDate(LocalDateTime.now().plusDays(5))
-				.endDate(LocalDateTime.now().plusDays(7))
-				.status(PerformanceStatus.ON_SALE)
-				.build()
-		);
+			// 회차별 좌석 조회
+			ScheduleSeat reservedScheduleSeat = scheduleSeatRepository
+				.findByScheduleIdAndSeatId(
+					performanceSchedule.getPerformanceScheduleId(),
+					reservedSeat.getId()
+				)
+				.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
 
-		// 공연 회차 생성
-		PerformanceSchedule connectedSchedule = performanceScheduleRepository.save(
-			PerformanceSchedule.builder()
-				.performance(connectedPerformance)
-				.roundNo(1)
-				.startAt(LocalDateTime.now().plusDays(5))
-				.bookingType(BookingType.FIRST_COME)
-				.bookingOpenAt(LocalDateTime.now().minusDays(1))
-				.bookingCloseAt(LocalDateTime.now().plusDays(3))
-				.build()
-		);
+			// 좌석 상태 SOLD 처리
+			reservedScheduleSeat.sold();
 
-		// 구역 생성
-		Section connectedSection = sectionRepository.save(
-			Section.builder()
-				.venueId(connectedVenue.getVenueId())
-				.sectionName("A")
-				.build()
-		);
+			// 예매 생성 (PENDING → COMPLETED)
+			Reservation reservation = Reservation.builder()
+				.scheduleId(performanceSchedule.getPerformanceScheduleId())
+				.memberId(user1.getId())
+				.seatId(reservedSeat.getId())
+				.build();
 
-		// === 좌석 10개 + 회차별 좌석 10개 생성 ===
-		for (int seatNumber = 1; seatNumber <= 10; seatNumber++) {
+			reservation.complete();
+			Reservation savedReservation = reservationRepository.save(reservation);
 
-			// 좌석 생성
-			Seat connectedSeat = seatRepository.save(
-				Seat.builder()
-					.venueId(connectedVenue.getVenueId())
-					.sectionId(connectedSection.getId())
-					.sectionName(connectedSection.getSectionName())
-					.rowLabel("1")
-					.seatNumber(seatNumber)
-					.build()
-			);
+			// 결제 생성 (DONE 상태)
+			Payment payment = Payment.builder()
+				.orderId("ORDER-INIT-" + System.currentTimeMillis() + "-" + i)
+				.memberId(user1.getId())
+				.domainType(DomainType.RESERVATION)
+				.domainId(savedReservation.getId())
+				.amount(10000L)
+				.method(PaymentMethod.CARD)
+				.expiresAt(null)
+				.build();
 
-			// 회차별 좌석 생성
-			scheduleSeatRepository.save(
-				ScheduleSeat.builder()
-					.scheduleId(connectedSchedule.getPerformanceScheduleId())
-					.seatId(connectedSeat.getId())
-					.build()
-			);
+			payment.complete(LocalDateTime.now());
+			paymentRepository.save(payment);
+
+			// 티켓 생성
+			Ticket ticket = Ticket.builder()
+				.reservationId(savedReservation.getId())
+				.memberId(user1.getId())
+				.seatId(reservedSeat.getId())
+				.build();
+
+			ticketRepository.save(ticket);
+
+			log.info("[DataInit] user1@tt.com - 예매/결제/티켓 생성 완료 (좌석: {}구역 {}행 {}번)",
+				reservedSeat.getSectionName(), reservedSeat.getRowLabel(), reservedSeat.getSeatNumber());
+
+			// orderId 중복 방지를 위한 짧은 대기
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
+
+		// codeisneverodd@gmail.com에 2개의 티켓 생성
+		Member user3 = memberRepository.findByEmail("codeisneverodd@gmail.com")
+			.orElseThrow(() -> new IllegalStateException("user3 not found"));
+
+		for (int i = 3; i < 5; i++) {
+			Seat reservedSeat = seats.get(i);
+
+			// 회차별 좌석 조회
+			ScheduleSeat reservedScheduleSeat = scheduleSeatRepository
+				.findByScheduleIdAndSeatId(
+					performanceSchedule.getPerformanceScheduleId(),
+					reservedSeat.getId()
+				)
+				.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
+
+			// 좌석 상태 SOLD 처리
+			reservedScheduleSeat.sold();
+
+			// 예매 생성 (PENDING → COMPLETED)
+			Reservation reservation = Reservation.builder()
+				.scheduleId(performanceSchedule.getPerformanceScheduleId())
+				.memberId(user3.getId())
+				.seatId(reservedSeat.getId())
+				.build();
+
+			reservation.complete();
+			Reservation savedReservation = reservationRepository.save(reservation);
+
+			// 결제 생성 (DONE 상태)
+			Payment payment = Payment.builder()
+				.orderId("ORDER-INIT-" + System.currentTimeMillis() + "-" + i)
+				.memberId(user3.getId())
+				.domainType(DomainType.RESERVATION)
+				.domainId(savedReservation.getId())
+				.amount(10000L)
+				.method(PaymentMethod.CARD)
+				.expiresAt(null)
+				.build();
+
+			payment.complete(LocalDateTime.now());
+			paymentRepository.save(payment);
+
+			// 티켓 생성
+			Ticket ticket = Ticket.builder()
+				.reservationId(savedReservation.getId())
+				.memberId(user3.getId())
+				.seatId(reservedSeat.getId())
+				.build();
+
+			ticketRepository.save(ticket);
+
+			log.info("[DataInit] codeisneverodd@gmail.com - 예매/결제/티켓 생성 완료 (좌석: {}구역 {}행 {}번)",
+				reservedSeat.getSectionName(), reservedSeat.getRowLabel(), reservedSeat.getSeatNumber());
+
+			// orderId 중복 방지를 위한 짧은 대기
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
 		}
 	}
-
-	private void initConnectedSet2() {
-
-		// 공연장 생성
-		Venue venue = venueRepository.save(Venue.builder().name("QueryDSL 연결 테스트 공연장 2").build());
-
-		// 공연 생성
-		Performance performance = performanceRepository.save(Performance.builder()
-			.venue(venue)
-			.title("QueryDSL 연결 테스트 공연 2")
-			.category("뮤지컬")
-			.posterUrl("")
-			.description(null)
-			.startDate(LocalDateTime.now().plusDays(10))
-			.endDate(LocalDateTime.now().plusDays(12))
-			.status(PerformanceStatus.ON_SALE)
-			.build());
-
-		// 공연 회차 생성
-		PerformanceSchedule schedule = performanceScheduleRepository.save(PerformanceSchedule.builder()
-			.performance(performance)
-			.roundNo(1)
-			.startAt(LocalDateTime.now().plusDays(10))
-			.bookingType(BookingType.FIRST_COME)
-			.bookingOpenAt(LocalDateTime.now().minusDays(1))
-			.bookingCloseAt(LocalDateTime.now().plusDays(8))
-			.build());
-
-		// 구역 생성
-		Section section = sectionRepository.save(
-			Section.builder().venueId(venue.getVenueId()).sectionName("A").build());
-
-		// 좌석 생성
-		Seat seat = seatRepository.save(Seat.builder()
-			.venueId(venue.getVenueId())
-			.sectionId(section.getId())
-			.sectionName(section.getSectionName())
-			.rowLabel("1")
-			.seatNumber(1)
-			.build());
-
-		// 회차별 좌석 생성
-		scheduleSeatRepository.save(
-			ScheduleSeat.builder().scheduleId(schedule.getPerformanceScheduleId()).seatId(seat.getId()).build());
-	}
-
 }

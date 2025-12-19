@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  # 1. 데이터베이스 설정
+  # 데이터베이스 설정
   postgres:
     image: postgres:16-alpine
     container_name: tt_postgres
@@ -14,38 +14,58 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - common
 
-  # 2. 레디스 설정
+  # 레디스 설정
   redis:
     image: redis:alpine
     container_name: tt_redis
     restart: always
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    #추후 보안을 위해 비밀번호 설정 가능
+    #command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
-      - "${REDIS_PORT}:6379"
-      -
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - common
+
   # 스프링 부트 애플리케이션 설정
   app:
-    build:
-      context: .           # Dockerfile이 있는 현재 폴더 기준
-      dockerfile: Dockerfile
+    image: ghcr.io/chehyeon-kim23/tt_backend:latest # 조직이름 대신 아이디로 변경
+    #build:             # 로컬에서 빌드할 때는 이 경로를 참고
+    #  context: ..
+    # dockerfile: Dockerfile
     container_name: tt_app
     restart: always
     depends_on:
       - postgres
       - redis
     ports:
-      - "8080:8080"        # 외부 8080 포트를 컨테이너 8080 포트로 연결
-    env_file:
-      - ../.env               # .env 파일에 저장된 모든 환경 변수 로드
+      - "8080:8080"
     environment:
-      # 스프링 부트가 인식할 DB 및 Redis 주소 설정
+      # 스프링 부트가 도커 네트워크 내부의 서비스 이름으로 접속하도록 설정
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+       # 메일 설정
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+
+      JWT_SECRET: ${JWT_SECRET}
+      DDL_AUTO: ${DDL_AUTO}
+    networks:
+        - common
+networks:
+  common:
+    driver: bridge
 
 volumes:
   postgres_data:

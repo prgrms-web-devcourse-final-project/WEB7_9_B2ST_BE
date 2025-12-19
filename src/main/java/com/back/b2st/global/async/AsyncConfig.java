@@ -1,4 +1,4 @@
-package com.back.b2st.global.Async;
+package com.back.b2st.global.async;
 
 import java.util.concurrent.Executor;
 

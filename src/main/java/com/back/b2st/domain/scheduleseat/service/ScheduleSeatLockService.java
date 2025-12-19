@@ -1,4 +1,4 @@
-package com.back.b2st.domain.reservation.service;
+package com.back.b2st.domain.scheduleseat.service;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class SeatLockService {
+public class ScheduleSeatLockService {
 
 	private final StringRedisTemplate redisTemplate;
 

@@ -1,4 +1,4 @@
-package com.back.b2st.domain.reservation.service;
+package com.back.b2st.domain.scheduleseat.service;
 
 import java.time.Duration;
 

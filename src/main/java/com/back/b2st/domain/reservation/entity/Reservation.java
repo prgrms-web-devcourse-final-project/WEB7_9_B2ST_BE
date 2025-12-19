@@ -137,4 +137,12 @@ public class Reservation extends BaseEntity {
 	public Long getPerformanceId() {
 		return scheduleId;
 	}
+
+	public void cancel() {
+		cancel(LocalDateTime.now());
+	}
+
+	public void complete() {
+		complete(LocalDateTime.now());
+	}
 }

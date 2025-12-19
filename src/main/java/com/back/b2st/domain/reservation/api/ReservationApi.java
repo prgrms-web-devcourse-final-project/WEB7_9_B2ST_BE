@@ -18,9 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "예매", description = "예매 생성 / 조회 / 취소 / 확정 API")
 public interface ReservationApi {
 
-	/* =======================
-	 * 1. 예매 생성
-	 * ======================= */
+	//* 1. 예매 생성
 	@Operation(
 		summary = "예매 생성",
 		description = """
@@ -41,9 +39,7 @@ public interface ReservationApi {
 		ReservationReq request
 	);
 
-	/* =======================
-	 * 2. 예매 단건 조회 (기본)
-	 * ======================= */
+	// * 2. 예매 단건 조회 (기본)
 	@Operation(
 		summary = "예매 단건 조회",
 		description = """
@@ -64,9 +60,7 @@ public interface ReservationApi {
 		UserPrincipal user
 	);
 
-	/* =======================
-	 * 3. 예매 단건 조회 (디테일)
-	 * ======================= */
+	// * 3. 예매 단건 조회 (디테일)
 	@Operation(
 		summary = "예매 상세 조회",
 		description = """
@@ -87,9 +81,7 @@ public interface ReservationApi {
 		UserPrincipal user
 	);
 
-	/* =======================
-	 * 4. 내 예매 목록 조회 (간단)
-	 * ======================= */
+	//* 4. 내 예매 목록 조회 (간단)
 	@Operation(
 		summary = "내 예매 목록 조회 (간단)",
 		description = """
@@ -107,9 +99,7 @@ public interface ReservationApi {
 		UserPrincipal user
 	);
 
-	/* =======================
-	 * 5. 내 예매 목록 조회 (디테일)
-	 * ======================= */
+	// * 5. 내 예매 목록 조회 (디테일)
 	@Operation(
 		summary = "내 예매 목록 조회 (디테일)",
 		description = """
@@ -127,9 +117,7 @@ public interface ReservationApi {
 		UserPrincipal user
 	);
 
-	/* =======================
-	 * 6. 예매 취소
-	 * ======================= */
+	//* 6. 예매 취소
 	@Operation(
 		summary = "예매 취소",
 		description = """
@@ -151,9 +139,7 @@ public interface ReservationApi {
 		UserPrincipal user
 	);
 
-	/* =======================
-	 * 7. 예매 확정 (결제 완료)
-	 * ======================= */
+	//* 7. 예매 확정 (결제 완료)
 	@Operation(
 		summary = "예매 확정 (결제 완료)",
 		description = """

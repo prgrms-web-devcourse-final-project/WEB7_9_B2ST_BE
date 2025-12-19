@@ -1,5 +1,6 @@
 package com.back.b2st.domain.payment.entity;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import com.back.b2st.domain.payment.error.PaymentErrorCode;
@@ -108,12 +109,16 @@ public class Payment extends BaseEntity {
 	 * 결제 승인 완료 처리
 	 * READY → DONE 또는 WAITING_FOR_DEPOSIT → DONE
 	 */
-	public void complete(String paymentKey) {
+	public void complete(LocalDateTime paidAt) {
+		complete(null, paidAt);
+	}
+
+	public void complete(String paymentKey, LocalDateTime paidAt) {
 		validateTransition(PaymentStatus.DONE);
 
 		this.paymentKey = paymentKey;
 		this.status = PaymentStatus.DONE;
-		this.paidAt = LocalDateTime.now();
+		this.paidAt = paidAt;
 	}
 
 	/**
@@ -131,11 +136,11 @@ public class Payment extends BaseEntity {
 	 * 결제 취소 처리 (환불)
 	 * DONE → CANCELED 또는 READY → CANCELED
 	 */
-	public void cancel(String reason) {
+	public void cancel(String reason, LocalDateTime canceledAt) {
 		validateTransition(PaymentStatus.CANCELED);
 
 		this.status = PaymentStatus.CANCELED;
-		this.canceledAt = LocalDateTime.now();
+		this.canceledAt = canceledAt;
 		this.failureReason = reason;
 	}
 
@@ -178,7 +183,11 @@ public class Payment extends BaseEntity {
 	/**
 	 * 무통장 입금 만료 여부 확인
 	 */
-	public boolean isExpired() {
-		return expiresAt != null && LocalDateTime.now().isAfter(expiresAt);
+	public boolean isExpired(LocalDateTime now) {
+		return expiresAt != null && now.isAfter(expiresAt);
+	}
+
+	public boolean isExpired(Clock clock) {
+		return isExpired(LocalDateTime.now(clock));
 	}
 }

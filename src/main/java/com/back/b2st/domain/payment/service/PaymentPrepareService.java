@@ -1,5 +1,6 @@
 package com.back.b2st.domain.payment.service;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -9,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.payment.dto.request.PaymentPrepareReq;
-import com.back.b2st.domain.payment.dto.response.PaymentPrepareRes;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.entity.PaymentStatus;
@@ -27,9 +27,10 @@ public class PaymentPrepareService {
 
 	private final PaymentRepository paymentRepository;
 	private final List<PaymentDomainHandler> domainHandlers;
+	private final Clock clock;
 
 	@Transactional
-	public PaymentPrepareRes prepare(Long memberId, PaymentPrepareReq request) {
+	public Payment prepare(Long memberId, PaymentPrepareReq request) {
 		PaymentDomainHandler handler = domainHandlers.stream()
 			.filter(h -> h.supports(request.domainType()))
 			.findFirst()
@@ -51,15 +52,7 @@ public class PaymentPrepareService {
 			.expiresAt(expiresAt)
 			.build();
 
-		Payment saved = paymentRepository.save(payment);
-
-		return new PaymentPrepareRes(
-			saved.getId(),
-			saved.getOrderId(),
-			saved.getAmount(),
-			saved.getStatus(),
-			saved.getExpiresAt()
-		);
+		return paymentRepository.save(payment);
 	}
 
 	private void validateNoDuplicatePayment(PaymentTarget target) {
@@ -78,7 +71,6 @@ public class PaymentPrepareService {
 		if (!method.isRequiresDeposit()) {
 			return null;
 		}
-		return LocalDateTime.now().plus(VIRTUAL_ACCOUNT_EXPIRES_IN);
+		return LocalDateTime.now(clock).plus(VIRTUAL_ACCOUNT_EXPIRES_IN);
 	}
 }
-

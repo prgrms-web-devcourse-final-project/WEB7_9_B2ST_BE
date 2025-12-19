@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
 import com.back.b2st.domain.payment.entity.DomainType;
@@ -40,6 +41,17 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 	 * 예: 예매(BOOKING) ID 123의 가장 최근 결제 시도
 	 */
 	Optional<Payment> findTopByDomainTypeAndDomainIdOrderByCreatedAtDesc(DomainType domainType, Long domainId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("UPDATE Payment p "
+		+ "SET p.status = com.back.b2st.domain.payment.entity.PaymentStatus.DONE, "
+		+ "p.paidAt = :paidAt "
+		+ "WHERE p.orderId = :orderId "
+		+ "AND p.status = com.back.b2st.domain.payment.entity.PaymentStatus.READY")
+	int completeIfReady(
+		@Param("orderId") String orderId,
+		@Param("paidAt") LocalDateTime paidAt
+	);
 
 	/**
 	 * 만료된 무통장 입금 대기 건 조회 (배치 작업용)

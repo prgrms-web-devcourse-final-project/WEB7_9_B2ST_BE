@@ -11,7 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
-import com.back.b2st.domain.reservation.error.ReservationErrorCode;
+import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -50,7 +50,7 @@ class SeatHoldTokenServiceTest {
 			seatHoldTokenService.validateOwnership(1001L, 55L, 1L)
 		)
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(ReservationErrorCode.SEAT_HOLD_EXPIRED.getMessage());
+			.hasMessageContaining(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED.getMessage());
 	}
 
 	@Test
@@ -64,6 +64,6 @@ class SeatHoldTokenServiceTest {
 			seatHoldTokenService.validateOwnership(1001L, 55L, 1L)
 		)
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(ReservationErrorCode.SEAT_HOLD_FORBIDDEN.getMessage());
+			.hasMessageContaining(ScheduleSeatErrorCode.SEAT_HOLD_FORBIDDEN.getMessage());
 	}
 }

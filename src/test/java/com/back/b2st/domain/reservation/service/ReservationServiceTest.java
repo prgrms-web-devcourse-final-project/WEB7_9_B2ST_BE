@@ -16,8 +16,8 @@ import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
-import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -97,7 +97,7 @@ class ReservationServiceTest {
 		Long memberId = 1L;
 		ReservationReq request = new ReservationReq(10L, 100L);
 
-		willThrow(new BusinessException(ReservationErrorCode.SEAT_HOLD_EXPIRED))
+		willThrow(new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED))
 			.given(seatHoldTokenService)
 			.validateOwnership(any(), any(), any());
 
@@ -107,7 +107,7 @@ class ReservationServiceTest {
 		)
 			.isInstanceOf(BusinessException.class)
 			.hasMessageContaining(
-				ReservationErrorCode.SEAT_HOLD_EXPIRED.getMessage()
+				ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED.getMessage()
 			);
 	}
 
@@ -118,7 +118,7 @@ class ReservationServiceTest {
 		Long memberId = 1L;
 		ReservationReq request = new ReservationReq(10L, 100L);
 
-		willThrow(new BusinessException(ReservationErrorCode.SEAT_HOLD_FORBIDDEN))
+		willThrow(new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_FORBIDDEN))
 			.given(seatHoldTokenService)
 			.validateOwnership(any(), any(), eq(memberId));
 
@@ -128,7 +128,7 @@ class ReservationServiceTest {
 		)
 			.isInstanceOf(BusinessException.class)
 			.hasMessageContaining(
-				ReservationErrorCode.SEAT_HOLD_FORBIDDEN.getMessage()
+				ScheduleSeatErrorCode.SEAT_HOLD_FORBIDDEN.getMessage()
 			);
 	}
 }

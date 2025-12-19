@@ -327,4 +327,85 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		String holderName) throws Exception {
 		return new RefundAccountReq(bankCode, accountNumber, holderName);
 	}
+
+	private Member createMemberForIntegration(String email, String rawPassword) {
+		return Member.builder()
+			.email(email)
+			.password(passwordEncoder.encode(rawPassword))
+			.name("테스트유저")
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
+			.build();
+	}
+
+	@Test
+	@DisplayName("통합: 회원 탈퇴 성공")
+	void withdraw_success() throws Exception {
+		String email = "withdraw@test.com";
+		String password = "Password123!";
+		Member member = createMemberForIntegration(email, password);
+		memberRepository.save(member);
+
+		String accessToken = getAccessToken(email, password);
+		String requestBody = "{\"password\": \"" + password + "\"}";
+
+		mockMvc.perform(delete("/api/mypage/withdraw")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestBody))
+			.andDo(print())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.code").value(200));
+
+		// DB 검증
+		Member deleted = memberRepository.findByEmail(email).orElseThrow();
+		if (!deleted.isDeleted()) {
+			throw new IllegalStateException("회원 탈퇴가 정상 처리되지 않았습니다.");
+		}
+	}
+
+	@Test
+	@DisplayName("통합: 회원 탈퇴 실패 - 비밀번호 불일치")
+	void withdraw_fail_wrongPassword() throws Exception {
+		String email = "withdraw_fail@test.com";
+		String password = "Password123!";
+		Member member = createMemberForIntegration(email, password);
+		memberRepository.save(member);
+
+		String accessToken = getAccessToken(email, password);
+		String requestBody = "{\"password\": \"WrongPass123!\"}";
+
+		mockMvc.perform(delete("/api/mypage/withdraw")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestBody))
+			.andDo(print())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.message").value(MemberErrorCode.PASSWORD_MISMATCH.getMessage()));
+	}
+
+	@Test
+	@DisplayName("통합: 탈퇴 철회 성공")
+	void cancelWithdrawal_success() throws Exception {
+		String email = "cancel@test.com";
+		String password = "Password123!";
+		Member member = createMemberForIntegration(email, password);
+		member.softDelete();
+		memberRepository.save(member);
+
+		String accessToken = getAccessToken(email, password);
+
+		mockMvc.perform(post("/api/mypage/cancel-withdrawal")
+				.header("Authorization", "Bearer " + accessToken))
+			.andDo(print())
+			.andExpect(status().isOk());
+
+		// DB 검증
+		Member restored = memberRepository.findByEmail(email).orElseThrow();
+		if (restored.isDeleted()) {
+			throw new IllegalStateException("탈퇴 철회가 정상 처리되지 않았습니다.");
+		}
+	}
 }

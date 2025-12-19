@@ -102,12 +102,12 @@ public class EmailService {
 		// 성공하면 redis서 삭제
 		emailVerificationRepository.deleteById(email);
 
-		Member member = memberRepository.findByEmail(email)
-				.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+		// 회원이 이미 있으면 isEmailVerified = true로 업데이트
+		// 회원이 없으면 (회원가입 전 인증) 스킵 → 회원가입 시 isEmailVerified=true로 생성
+		memberRepository.findByEmail(email)
+			.ifPresent(Member::verifyEmail);
 
-		member.verifyEmail();
-
-		log.info("이메일 인증 성공: memberId={}", member.getId());
+		log.info("이메일 인증 성공: email={}", maskEmail(email));
 	}
 
 	// 밑으로 헬퍼 메서드

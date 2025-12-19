@@ -1,4 +1,4 @@
-package com.back.b2st.global.Async;
+package com.back.b2st.global.async;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -22,7 +22,7 @@ class AsyncConfigTest {
 		// then
 		assertThat(executor).isInstanceOf(ThreadPoolTaskExecutor.class);
 
-		ThreadPoolTaskExecutor taskExecutor = (ThreadPoolTaskExecutor) executor;
+		ThreadPoolTaskExecutor taskExecutor = (ThreadPoolTaskExecutor)executor;
 		assertThat(taskExecutor.getCorePoolSize()).isEqualTo(5);
 		assertThat(taskExecutor.getMaxPoolSize()).isEqualTo(10);
 		assertThat(taskExecutor.getThreadNamePrefix()).isEqualTo("email-");
@@ -35,7 +35,7 @@ class AsyncConfigTest {
 		Executor executor = asyncConfig.emailExecutor();
 
 		// then
-		ThreadPoolTaskExecutor taskExecutor = (ThreadPoolTaskExecutor) executor;
+		ThreadPoolTaskExecutor taskExecutor = (ThreadPoolTaskExecutor)executor;
 		ThreadPoolExecutor threadPoolExecutor = taskExecutor.getThreadPoolExecutor();
 
 		assertThat(threadPoolExecutor).isNotNull();
@@ -50,7 +50,7 @@ class AsyncConfigTest {
 		Executor executor = asyncConfig.emailExecutor();
 
 		// then
-		ThreadPoolTaskExecutor taskExecutor = (ThreadPoolTaskExecutor) executor;
+		ThreadPoolTaskExecutor taskExecutor = (ThreadPoolTaskExecutor)executor;
 		// QueueCapacity는 직접 getter가 없으므로 ThreadPoolExecutor의 Queue로 확인
 		ThreadPoolExecutor threadPoolExecutor = taskExecutor.getThreadPoolExecutor();
 		assertThat(threadPoolExecutor.getQueue().remainingCapacity()).isEqualTo(50);

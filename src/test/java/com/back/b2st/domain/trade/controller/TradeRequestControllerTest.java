@@ -21,6 +21,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.entity.PerformanceStatus;
+import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
@@ -31,6 +37,8 @@ import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.domain.trade.repository.TradeRequestRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
+import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.security.UserPrincipal;
 
 import jakarta.persistence.EntityManager;
@@ -49,6 +57,15 @@ class TradeRequestControllerTest {
 
 	@Autowired
 	private MemberRepository memberRepository;
+
+	@Autowired
+	private VenueRepository venueRepository;
+
+	@Autowired
+	private PerformanceRepository performanceRepository;
+
+	@Autowired
+	private PerformanceScheduleRepository performanceScheduleRepository;
 
 	@Autowired
 	private SectionRepository sectionRepository;
@@ -76,6 +93,7 @@ class TradeRequestControllerTest {
 
 	private Long tradeOwnerId;
 	private Long requesterId;
+	private Long scheduleId;
 
 	private Long ticket100Id;  // tradeOwner 소유
 	private Long ticket101Id;  // requester 소유
@@ -108,6 +126,9 @@ class TradeRequestControllerTest {
 		reservationRepository.deleteAll();
 		seatRepository.deleteAll();
 		sectionRepository.deleteAll();
+		performanceScheduleRepository.deleteAll();
+		performanceRepository.deleteAll();
+		venueRepository.deleteAll();
 		memberRepository.deleteAll();
 
 		// Create test members
@@ -137,9 +158,38 @@ class TradeRequestControllerTest {
 		Member savedRequester = memberRepository.save(requesterMember);
 		requesterId = savedRequester.getId();
 
+		// Create test venue
+		Venue venue = Venue.builder()
+			.name("Test Venue")
+			.build();
+		Venue savedVenue = venueRepository.save(venue);
+
+		// Create test performance
+		Performance performance = Performance.builder()
+			.venue(savedVenue)
+			.title("Test Performance")
+			.category("Test")
+			.startDate(java.time.LocalDateTime.now())
+			.endDate(java.time.LocalDateTime.now().plusDays(1))
+			.status(PerformanceStatus.ON_SALE)
+			.build();
+		Performance savedPerformance = performanceRepository.save(performance);
+
+		// Create test performance schedule
+		PerformanceSchedule schedule = PerformanceSchedule.builder()
+			.performance(savedPerformance)
+			.roundNo(1)
+			.startAt(java.time.LocalDateTime.now())
+			.bookingType(BookingType.FIRST_COME)
+			.bookingOpenAt(java.time.LocalDateTime.now().minusDays(1))
+			.bookingCloseAt(java.time.LocalDateTime.now().plusDays(1))
+			.build();
+		PerformanceSchedule savedSchedule = performanceScheduleRepository.save(schedule);
+		scheduleId = savedSchedule.getPerformanceScheduleId();
+
 		// Create test section
 		Section section = Section.builder()
-			.venueId(1L)
+			.venueId(savedVenue.getVenueId())
 			.sectionName("A")
 			.build();
 		Section savedSection = sectionRepository.save(section);
@@ -147,7 +197,7 @@ class TradeRequestControllerTest {
 		// Create seats and reservations for tickets
 		for (int i = 1; i <= 200; i++) {
 			Seat seat = Seat.builder()
-				.venueId(1L)
+				.venueId(savedVenue.getVenueId())
 				.sectionId(savedSection.getId())
 				.sectionName(savedSection.getSectionName())
 				.rowLabel("1")
@@ -205,7 +255,7 @@ class TradeRequestControllerTest {
 			.findFirst()
 			.orElseThrow();
 		Reservation reservation = reservationRepository.save(Reservation.builder()
-			.scheduleId(1L)
+			.scheduleId(scheduleId)
 			.memberId(memberId)
 			.seatId(seat.getId())
 			.build());

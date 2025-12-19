@@ -229,12 +229,13 @@ public class DataInitializer implements CommandLineRunner {
 						.build()
 				);
 			}
+		}
 
-			Member user1 = memberRepository.findByEmail("user1@tt.com")
-				.orElseThrow(() -> new IllegalStateException("user1 not found"));
+		Member user1 = memberRepository.findByEmail("user1@tt.com")
+			.orElseThrow(() -> new IllegalStateException("user1 not found"));
 
-			// user1@tt.com에 3개의 티켓 생성 (다중 선택 테스트용)
-			for (int i = 0; i < 3; i++) {
+		// user1@tt.com에 3개의 티켓 생성 (다중 선택 테스트용)
+		for (int i = 0; i < 3; i++) {
 				Seat reservedSeat = seats.get(i);
 
 				// 회차별 좌석 조회
@@ -353,7 +354,6 @@ public class DataInitializer implements CommandLineRunner {
 					Thread.currentThread().interrupt();
 				}
 			}
-		}
 
 		for (int row = 1; row <= 3; row++) {
 			for (int number = 1; number <= 5; number++) {

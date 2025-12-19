@@ -16,13 +16,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
-import com.back.b2st.domain.performance.entity.Performance;
-import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
-import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.domain.trade.dto.request.CreateTradeReq;

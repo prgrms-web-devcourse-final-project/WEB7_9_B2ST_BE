@@ -5,20 +5,21 @@ import java.time.LocalDateTime;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentStatus;
 
-public record PaymentPrepareRes(
+public record PaymentConfirmRes(
 	Long paymentId,
 	String orderId,
 	Long amount,
 	PaymentStatus status,
-	LocalDateTime expiresAt
+	LocalDateTime paidAt
 ) {
-	public static PaymentPrepareRes from(Payment payment) {
-		return new PaymentPrepareRes(
+
+	public static PaymentConfirmRes from(Payment payment) {
+		return new PaymentConfirmRes(
 			payment.getId(),
 			payment.getOrderId(),
 			payment.getAmount(),
 			payment.getStatus(),
-			payment.getExpiresAt()
+			payment.getPaidAt()
 		);
 	}
 }

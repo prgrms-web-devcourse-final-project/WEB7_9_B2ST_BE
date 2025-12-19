@@ -26,7 +26,13 @@ public enum PaymentErrorCode implements ErrorCode {
 	UNAUTHORIZED_PAYMENT_ACCESS(HttpStatus.FORBIDDEN, "P006", "결제 접근 권한이 없습니다."),
 
 	// 일반 에러
-	NOT_FOUND(HttpStatus.NOT_FOUND, "P007", "결제 정보를 찾을 수 없습니다.");
+	NOT_FOUND(HttpStatus.NOT_FOUND, "P007", "결제 정보를 찾을 수 없습니다."),
+
+	// 외부 연동 에러
+	TOSS_CONFIRM_FAILED(HttpStatus.BAD_GATEWAY, "P008", "결제 승인 처리에 실패했습니다."),
+
+	// 멱등성 충돌
+	IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "P009", "중복 요청 처리 중 충돌이 발생했습니다.");
 
 	private final HttpStatus status;
 	private final String code;

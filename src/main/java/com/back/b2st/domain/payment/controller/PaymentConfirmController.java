@@ -1,14 +1,15 @@
 package com.back.b2st.domain.payment.controller;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.back.b2st.domain.payment.dto.request.PaymentPrepareReq;
-import com.back.b2st.domain.payment.dto.response.PaymentPrepareRes;
+import com.back.b2st.domain.payment.dto.request.PaymentConfirmReq;
+import com.back.b2st.domain.payment.dto.response.PaymentConfirmRes;
 import com.back.b2st.domain.payment.entity.Payment;
-import com.back.b2st.domain.payment.service.PaymentPrepareService;
+import com.back.b2st.domain.payment.service.PaymentConfirmService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.security.UserPrincipal;
@@ -19,16 +20,16 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/payments")
-public class PaymentPrepareController {
+public class PaymentConfirmController {
 
-	private final PaymentPrepareService paymentPrepareService;
+	private final PaymentConfirmService paymentConfirmService;
 
-	@PostMapping("/prepare")
-	public BaseResponse<PaymentPrepareRes> prepare(
+	@PostMapping("/confirm")
+	public ResponseEntity<BaseResponse<PaymentConfirmRes>> confirm(
 		@CurrentUser UserPrincipal user,
-		@Valid @RequestBody PaymentPrepareReq request
+		@Valid @RequestBody PaymentConfirmReq request
 	) {
-		Payment payment = paymentPrepareService.prepare(user.getId(), request);
-		return BaseResponse.created(PaymentPrepareRes.from(payment));
+		Payment payment = paymentConfirmService.confirm(user.getId(), request);
+		return ResponseEntity.ok(BaseResponse.success(PaymentConfirmRes.from(payment)));
 	}
 }

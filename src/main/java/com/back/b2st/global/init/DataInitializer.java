@@ -22,6 +22,9 @@ import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
+import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
@@ -47,20 +50,15 @@ public class DataInitializer implements CommandLineRunner {
 	private final VenueRepository venueRepository;
 	private final PerformanceRepository performanceRepository;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
-
-	private Venue venue;
-	private Performance performance;
-	private PerformanceSchedule performanceSchedule;
+	private final SeatGradeRepository seatGradeRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
 		// 서버 재시작시 중복 생성 방지 차
 		initMemberData();
-		initPerformance();
-		initSectionData();
-		initSectData();
-		//initConnectedSet();
-		//initConnectedSet2();
+		initConnectedSet3();
+		// initConnectedSet();
+		// initConnectedSet2();
 	}
 
 	private void initMemberData() {
@@ -123,104 +121,153 @@ public class DataInitializer implements CommandLineRunner {
 		SecurityContextHolder.getContext().setAuthentication(auth);
 	}
 
-	// 공연장 - 공연 데이터 생성
-	private void initPerformance() {
-		if (!(venueRepository.count() > 0)) {
-			venue = venueRepository.save(Venue.builder().name("잠실실내체육관").build());
-		} else {
-			log.info("[DataInit] 장소 데이터 초기화 스킵");
-		}
+	// 데이터 생성 1
+	private void initConnectedSet3() {
+		Venue venue;
+		Performance performance;
+		PerformanceSchedule performanceSchedule;
+		PerformanceSchedule performanceSchedule2;
 
-		if (!(performanceRepository.count() < 0)) {
-			performance = performanceRepository.save(Performance.builder()
-				.venue(venue)
-				.title("2024 아이유 콘서트 - HEREH WORLD TOUR")
-				.category("콘서트")
-				.posterUrl("")
-				.description(null)
-				.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
-				.endDate(LocalDateTime.of(2024, 12, 22, 21, 0))
-				.status(PerformanceStatus.ON_SALE)
-				.build());
+		Section sectionA;
+		Section sectionB;
+		Section sectionC;
 
-			// 회차
-			performanceSchedule = performanceScheduleRepository.save(PerformanceSchedule.builder()
-				.performance(performance)
-				.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
-				.roundNo(1)
-				.bookingType(BookingType.LOTTERY)
-				.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
-				.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
-				.build());
-		} else {
-			log.info("[DataInit] 공연 데이터 초기화 스킵");
-		}
+		// 공연장 생성
+		venue = venueRepository.save(Venue.builder().name("잠실실내체육관").build());
 
-	}
+		// 공연 정보 생성
+		performance = performanceRepository.save(Performance.builder()
+			.venue(venue)
+			.title("2024 아이유 콘서트 - HEREH WORLD TOUR")
+			.category("콘서트")
+			.posterUrl("")
+			.description(null)
+			.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
+			.endDate(LocalDateTime.of(2024, 12, 29, 21, 0))
+			.status(PerformanceStatus.ON_SALE)
+			.build());
 
-	private void initSectionData() {
-		if (sectionRepository.count() > 0) {
-			log.info("[DataInit] 구역 데이터 초기화 스킵");
-			return;
-		}
+		// 공연 회차
+		performanceSchedule = performanceScheduleRepository.save(PerformanceSchedule.builder()
+			.performance(performance)
+			.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
+			.roundNo(1)
+			.bookingType(BookingType.LOTTERY)
+			.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
+			.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
+			.build());
 
-		Long venueId1 = venue.getVenueId();
-		Long venueId2 = 2L;
+		performanceSchedule2 = performanceScheduleRepository.save(PerformanceSchedule.builder()
+			.performance(performance)
+			.startAt(LocalDateTime.of(2024, 12, 27, 19, 0))
+			.roundNo(2)
+			.bookingType(BookingType.LOTTERY)
+			.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
+			.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
+			.build());
 
-		Section section1A = Section.builder().venueId(venueId1).sectionName("A").build();
-
-		Section section1B = Section.builder().venueId(venueId1).sectionName("B").build();
-
-		Section section2A = Section.builder().venueId(venueId2).sectionName("A").build();
-
-		Section sectionA = sectionRepository.save(section1A);
-		Section sectionB = sectionRepository.save(section1B);
-		sectionRepository.save(section2A);
-
-		log.info("[DataInit/Test] Section initialized. count=3 (venueId=1[A,B], venueId=2[A])");
-		log.info("[DataInit/Test] Section initialized. " + sectionA.getId());
-	}
-
-	private void initSectData() {
-		if (seatRepository.count() > 0) {
-			log.info("[DataInit] 좌석 데이터 초기화 스킵");
-			return;
-		}
 		Long venueId = venue.getVenueId();
-		List<Section> sections = sectionRepository.findByVenueId(venueId);
-		Section section1A = sections.get(0);
-		Section section1B = sections.get(1);
 
+		// 구역 생성
+		sectionA = sectionRepository.save(Section.builder().venueId(venueId).sectionName("A").build());
+		sectionB = sectionRepository.save(Section.builder().venueId(venueId).sectionName("B").build());
+		sectionC = sectionRepository.save(Section.builder().venueId(venueId).sectionName("C").build());
+		log.info("[DataInit/Test] Section initialized. count=3 (venueId=1[A,B,C])");
+
+		// 좌석 생성
 		List<Seat> seats = new ArrayList<>();
 
-		for (int row = 1; row <= 3; row++) {
+		for (int row = 1; row <= 2; row++) {
 			for (int number = 1; number <= 5; number++) {
-				seats.add(Seat.builder()
-					.venueId(venueId)
-					.sectionId(section1A.getId())
-					.sectionName("A")
-					.rowLabel(String.valueOf(row))
-					.seatNumber(number)
+				// 좌석
+				Seat seat = seatRepository.save(
+					Seat.builder()
+						.venueId(venueId)
+						.sectionId(sectionA.getId())
+						.sectionName(sectionA.getSectionName())
+						.rowLabel(String.valueOf(row))
+						.seatNumber(number)
+						.build());
+				seats.add(seat);
+
+				// 좌석 등급
+				seatGradeRepository.save(SeatGrade.builder()
+					.performanceId(performance.getPerformanceId())
+					.seatId(seat.getId())
+					.grade(SeatGradeType.STANDARD)
+					.price(10000)
 					.build());
+
+				// 회차별 좌석
+				scheduleSeatRepository.save(
+					ScheduleSeat.builder()
+						.scheduleId(performanceSchedule.getPerformanceScheduleId())
+						.seatId(seat.getId())
+						.build()
+				);
 			}
 		}
 
 		for (int row = 1; row <= 3; row++) {
 			for (int number = 1; number <= 5; number++) {
-				seats.add(Seat.builder()
-					.venueId(venueId)
-					.sectionId(section1A.getId())
-					.sectionName("B")
-					.rowLabel(String.valueOf(row))
-					.seatNumber(number)
+				// 좌석
+				Seat seat = seatRepository.save(
+					Seat.builder()
+						.venueId(venueId)
+						.sectionId(sectionB.getId())
+						.sectionName(sectionB.getSectionName())
+						.rowLabel(String.valueOf(row))
+						.seatNumber(number)
+						.build());
+				seats.add(seat);
+
+				// 좌석 등급 VIP
+				seatGradeRepository.save(SeatGrade.builder()
+					.performanceId(performance.getPerformanceId())
+					.seatId(seat.getId())
+					.grade(SeatGradeType.VIP)
+					.price(30000)
 					.build());
+
+				// 2회차 좌석
+				scheduleSeatRepository.save(
+					ScheduleSeat.builder()
+						.scheduleId(performanceSchedule2.getPerformanceScheduleId())
+						.seatId(seat.getId())
+						.build()
+				);
 			}
 		}
 
+		for (int row = 1; row <= 3; row++) {
+			for (int number = 1; number <= 5; number++) {
+				Seat seat = seatRepository.save(
+					Seat.builder()
+						.venueId(venueId)
+						.sectionId(sectionC.getId())
+						.sectionName(sectionC.getSectionName())
+						.rowLabel(String.valueOf(row))
+						.seatNumber(number)
+						.build());
+				seats.add(seat);
+
+				seatGradeRepository.save(SeatGrade.builder()
+					.performanceId(performance.getPerformanceId())
+					.seatId(seat.getId())
+					.grade(SeatGradeType.ROYAL)
+					.price(20000)
+					.build());
+
+				scheduleSeatRepository.save(
+					ScheduleSeat.builder()
+						.scheduleId(performanceSchedule.getPerformanceScheduleId())
+						.seatId(seat.getId())
+						.build()
+				);
+			}
+		}
 		seatRepository.saveAll(seats);
-
 		log.info("[DataInit/Test] Seat initialized. count=25 (section=A11 ~ A115, A21 ~ A215, ... , A51 ~ A55");
-
 	}
 
 	private void initConnectedSet() {

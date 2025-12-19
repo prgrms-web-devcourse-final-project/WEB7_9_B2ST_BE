@@ -109,12 +109,24 @@ public class DataInitializer implements CommandLineRunner {
 			.isIdentityVerified(true)
 			.build();
 
+		Member user3 = Member.builder()
+			.email("codeisneverodd@gmail.com")
+			.password(passwordEncoder.encode("1234567a!"))
+			.name("유저삼")
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
+			.build();
+
 		memberRepository.save(user1);
 		memberRepository.save(user2);
+		memberRepository.save(user3);
 
 		log.info("[DataInit] 계정 생성 완");
 		log.info("   - 유저1 : user1@tt.com / 1234567a!");
 		log.info("   - 유저2 : user2@tt.com / 1234567a!");
+		log.info("   - 유저3 : codeisneverodd@gmail.com / 1234567a!");
 	}
 
 	private void setAuthenticationContext(Member admin) {

@@ -33,6 +33,9 @@ class PaymentConfirmServiceTest {
 	@Mock
 	private PaymentConfirmTransactionService paymentConfirmTransactionService;
 
+	@Mock
+	private PaymentFinalizeService paymentFinalizeService;
+
 	@InjectMocks
 	private PaymentConfirmService paymentConfirmService;
 
@@ -75,6 +78,7 @@ class PaymentConfirmServiceTest {
 			.isEqualTo(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
 
 		verify(paymentConfirmTransactionService, never()).completeIdempotently(any());
+		verify(paymentFinalizeService, never()).finalizeByOrderId(any());
 	}
 
 	@Test
@@ -100,6 +104,7 @@ class PaymentConfirmServiceTest {
 
 		assertThat(result.getStatus()).isEqualTo(PaymentStatus.DONE);
 		verify(paymentConfirmTransactionService, never()).completeIdempotently(any());
+		verify(paymentFinalizeService).finalizeByOrderId(orderId);
 	}
 
 	@Test
@@ -127,6 +132,7 @@ class PaymentConfirmServiceTest {
 			.isEqualTo(PaymentErrorCode.INVALID_STATUS);
 
 		verify(paymentConfirmTransactionService, never()).completeIdempotently(any());
+		verify(paymentFinalizeService, never()).finalizeByOrderId(any());
 	}
 
 	@Test

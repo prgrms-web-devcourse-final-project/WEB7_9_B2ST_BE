@@ -3,6 +3,7 @@ package com.back.b2st.domain.ticket.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,13 +30,21 @@ public class TicketService {
 	private final ReservationRepository reservationRepository;
 
 	public Ticket createTicket(Long reservationId, Long memberId, Long seatId) {
-		// TODO QR코드 로직, 중복 생성 방지
-		Ticket ticket = Ticket.builder()
-			.reservationId(reservationId)
-			.memberId(memberId)
-			.seatId(seatId)
-			.build();
-		return ticketRepository.save(ticket);
+		return ticketRepository.findByReservationIdAndMemberIdAndSeatId(reservationId, memberId, seatId)
+			.orElseGet(() -> {
+				// TODO QR코드 로직
+				Ticket ticket = Ticket.builder()
+					.reservationId(reservationId)
+					.memberId(memberId)
+					.seatId(seatId)
+					.build();
+				try {
+					return ticketRepository.save(ticket);
+				} catch (DataIntegrityViolationException e) {
+					return ticketRepository.findByReservationIdAndMemberIdAndSeatId(reservationId, memberId, seatId)
+						.orElseThrow(() -> e);
+				}
+			});
 	}
 
 	private Ticket getTicket(Long reservationId, Long memberId, Long seatId) {

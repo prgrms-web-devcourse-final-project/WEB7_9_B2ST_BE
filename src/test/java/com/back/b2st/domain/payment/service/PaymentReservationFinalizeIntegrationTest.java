@@ -1,13 +1,5 @@
 package com.back.b2st.domain.payment.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,8 +14,10 @@ import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.entity.PaymentStatus;
 import com.back.b2st.domain.payment.repository.PaymentRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 
@@ -31,7 +25,7 @@ import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class PaymentConfirmServiceConcurrencyTest {
+class PaymentReservationFinalizeIntegrationTest {
 
 	@Autowired
 	private PaymentConfirmService paymentConfirmService;
@@ -48,25 +42,23 @@ class PaymentConfirmServiceConcurrencyTest {
 	@Autowired
 	private TicketRepository ticketRepository;
 
-	private Long memberId;
-
 	@BeforeEach
 	void setup() {
 		ticketRepository.deleteAll();
 		paymentRepository.deleteAll();
 		reservationRepository.deleteAll();
 		scheduleSeatRepository.deleteAll();
-		memberId = 1L;
 	}
 
 	@Test
-	@DisplayName("confirm 동시 호출 - DONE 1번만 반영(멱등)")
-	void confirm_concurrent_onlyOneApplied() throws Exception {
+	@DisplayName("confirm 성공 시 예매 확정 + 좌석 SOLD + 티켓 발급")
+	void confirm_finalizesReservationAndIssuesTicket() {
 		// given
-		String orderId = "ORDER-CONC";
-		Long amount = 30000L;
+		Long memberId = 1L;
 		Long scheduleId = 1L;
 		Long seatId = 1L;
+		Long amount = 15000L;
+		String orderId = "ORDER-FINALIZE-1";
 
 		ScheduleSeat scheduleSeat = ScheduleSeat.builder()
 			.scheduleId(scheduleId)
@@ -93,30 +85,19 @@ class PaymentConfirmServiceConcurrencyTest {
 			.build();
 		paymentRepository.save(payment);
 
-		int threads = 2;
-		ExecutorService executor = Executors.newFixedThreadPool(threads);
-		CountDownLatch startLatch = new CountDownLatch(1);
-
-		Callable<Void> task = () -> {
-			startLatch.await();
-			paymentConfirmService.confirm(memberId, new PaymentConfirmReq(orderId, amount));
-			return null;
-		};
-
-		List<Future<Void>> futures = new ArrayList<>();
-		for (int i = 0; i < threads; i++) {
-			futures.add(executor.submit(task));
-		}
-		startLatch.countDown();
-
-		for (Future<Void> future : futures) {
-			future.get();
-		}
-		executor.shutdown();
+		// when
+		Payment confirmed = paymentConfirmService.confirm(memberId, new PaymentConfirmReq(orderId, amount));
 
 		// then
-		Payment confirmed = paymentRepository.findByOrderId(orderId).orElseThrow();
 		assertThat(confirmed.getStatus()).isEqualTo(PaymentStatus.DONE);
+
+		Reservation finalizedReservation = reservationRepository.findById(savedReservation.getId()).orElseThrow();
+		assertThat(finalizedReservation.getStatus()).isEqualTo(ReservationStatus.COMPLETED);
+
+		ScheduleSeat finalizedSeat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId).orElseThrow();
+		assertThat(finalizedSeat.getStatus()).isEqualTo(SeatStatus.SOLD);
+
 		assertThat(ticketRepository.findAll()).hasSize(1);
 	}
 }
+

@@ -14,8 +14,6 @@ on:
 
 # 권한 최소화/명시화
 permissions:
-  contents: write
-  packages: write
 
 jobs:
   makeTagAndRelease:

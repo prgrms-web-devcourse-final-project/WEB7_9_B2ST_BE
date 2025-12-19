@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -104,7 +105,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓생성() {
+	@DisplayName("티켓생성_성공")
+	void createTicket_success() {
 		// given
 		Ticket ticket = Ticket.builder()
 			.reservationId(99L)
@@ -124,12 +126,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓생성_중복요청() {
-		// TODO 개발 필요
-	}
-
-	@Test
-	void 티켓_취소변경() {
+	@DisplayName("티켓취소_성공")
+	void cancelTicket_success() {
 		// when
 		Long rId = ticket.getReservationId();
 		Long mId = ticket.getMemberId();
@@ -147,7 +145,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓취소_이미취소된티켓() {
+	@DisplayName("티켓취소_실패_취소티켓")
+	void cancelTicket_fail_already() {
 		// given
 		ticketService.cancelTicket(rId, mId, sId);
 
@@ -160,7 +159,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓취소_존재하지않는티켓() {
+	@DisplayName("티켓취소_실패_없는티켓")
+	void cancelTicket_fail_noTicket() {
 		// given
 		rId = 99L;
 		mId = 99L;
@@ -175,7 +175,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓취소_사용티켓취소불가() {
+	@DisplayName("티켓취소_실패_사용티켓")
+	void cancelTicket_fail_used() {
 		// given
 		ticketService.useTicket(rId, mId, sId);
 
@@ -188,7 +189,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓취소_교환티켓취소불가() {
+	@DisplayName("티켓취소_실패_교환티켓")
+	void cancelTicket_fail_exchanged() {
 		// given
 		ticketService.exchangeTicket(rId, mId, sId);
 
@@ -201,7 +203,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓취소_양도티켓취소불가() {
+	@DisplayName("티켓취소_실패_양도티켓")
+	void cancelTicket_fail_transferred() {
 		// given
 		ticketService.transferTicket(rId, mId, sId);
 
@@ -214,7 +217,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓취소_만료티켓취소불가() {
+	@DisplayName("티켓취소_실패_만료티켓")
+	void cancelTicket_fail_expired() {
 		// given
 		ticketService.expireTicket(rId, mId, sId);
 
@@ -227,7 +231,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓_사용변경() {
+	@DisplayName("티켓사용_성공")
+	void changeTicket_success_used() {
 		// when
 		Long rId = ticket.getReservationId();
 		Long mId = ticket.getMemberId();
@@ -245,7 +250,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓_교환변경() {
+	@DisplayName("티켓교환_성공")
+	void changeTicket_success_exchanged() {
 		// when
 		Long rId = ticket.getReservationId();
 		Long mId = ticket.getMemberId();
@@ -263,7 +269,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓_양도변경() {
+	@DisplayName("티켓양도_성공")
+	void changeTicket_success_transferred() {
 		// when
 		Long rId = ticket.getReservationId();
 		Long mId = ticket.getMemberId();
@@ -281,7 +288,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 티켓_만료변경() {
+	@DisplayName("티켓만료_성공")
+	void changeTicket_success_expired() {
 		// when
 		Long rId = ticket.getReservationId();
 		Long mId = ticket.getMemberId();
@@ -299,7 +307,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 내티켓목록조회() {
+	@DisplayName("내티켓조회_성공")
+	void getMyTicket_success() {
 		// given - using the member created in setUp
 		Long memberId = mId;
 
@@ -323,7 +332,8 @@ class TicketServiceTest {
 	}
 
 	@Test
-	void 내티켓목록조회_빈목록() {
+	@DisplayName("내티켓조회_성공_빈목록")
+	void getMyTicket_success_empty() {
 		// given
 		Long memberId = 9999L; // 존재하지 않는 회원 ID
 

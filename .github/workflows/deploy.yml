@@ -115,14 +115,21 @@ jobs:
             # 1. 찾은 경로로 이동
                      cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/docker/
             
-            # 2. GHCR 로그인 (이미지 pull 권한 확인)
+            # 2. 설계도(docker-compose.yml)를 깃허브 최신본으로 갱신
+                    git fetch --all
+                    git reset --hard origin/develop
+            
+            # 3. docker 폴더로 진입
+                     cd docker/
+            
+            # 4. GHCR 로그인 (이미지 pull 권한)
                      echo "${{ secrets.PERSONAL_ACCESS_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # 3. 최신 이미지 가져오기
+            # 5. 최신 이미지 가져오기 
                      docker compose pull
-            
-            # 4. 컨테이너 재시작 (변경사항 반영)
+          
+            # 6. 재시작        
                      docker compose up -d
             
-            # 5. 미사용 이미지 정리
+            # 7. 미사용 이미지 정리
                      docker image prune -f

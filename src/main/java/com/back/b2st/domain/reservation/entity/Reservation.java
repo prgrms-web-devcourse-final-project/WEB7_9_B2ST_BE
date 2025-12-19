@@ -14,7 +14,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,9 +25,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "reservation",
 	indexes = {
 		@Index(name = "idx_reservation_member", columnList = "member_id")
-	},
-	uniqueConstraints = {
-		@UniqueConstraint(name = "uk_reservation_schedule_seat", columnNames = {"schedule_id", "seat_id"})
 	}
 )
 @SequenceGenerator(

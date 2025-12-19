@@ -31,7 +31,8 @@ services:
 
   # 스프링 부트 애플리케이션 설정
   app:
-    build:
+    image: tt_backend  #서버에서는 이 이름의 이미지를 찾아서 실행
+    build:             # 로컬에서 빌드할 때는 이 경로를 참고
       context: ..
       dockerfile: Dockerfile
     container_name: tt_app

@@ -1,6 +1,6 @@
 name: deploy
 env:
-  IMAGE_NAME: waitfair
+  IMAGE_NAME: tt_backend
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
       - "backend/build.gradle.kts"
       - "backend/Dockerfile"
     branches:
-      - main
+      - develop
 
 # 권한 최소화/명시화
 permissions:

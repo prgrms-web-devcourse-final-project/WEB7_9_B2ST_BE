@@ -8,6 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
@@ -41,6 +43,7 @@ public class TradeService {
 	private final TicketRepository ticketRepository;
 	private final SeatRepository seatRepository;
 	private final ReservationRepository reservationRepository;
+	private final PerformanceScheduleRepository performanceScheduleRepository;
 
 	public TradeRes getTrade(Long tradeId) {
 		Trade trade = tradeRepository.findById(tradeId)
@@ -97,7 +100,20 @@ public class TradeService {
 			Reservation reservation = reservationRepository.findById(ticket.getReservationId())
 				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다."));
 
-		Trade trade = TradeMapper.toEntity(request, ticket, seat, reservation, memberId);
+			Long scheduleId = reservation.getScheduleId();
+			PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
+				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다."));
+			Long performanceId = schedule.getPerformance().getPerformanceId();
+
+			Trade trade = TradeMapper.toEntity(
+				request,
+				ticket,
+				seat,
+				reservation,
+				performanceId,
+				scheduleId,
+				memberId
+			);
 
 			try {
 				Trade savedTrade = tradeRepository.save(trade);

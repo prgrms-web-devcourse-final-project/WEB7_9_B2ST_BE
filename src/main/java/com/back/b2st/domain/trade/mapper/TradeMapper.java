@@ -13,12 +13,14 @@ public class TradeMapper {
 		Ticket ticket,
 		Seat seat,
 		Reservation reservation,
+		Long performanceId,
+		Long scheduleId,
 		Long memberId
 	) {
 		return Trade.builder()
 			.memberId(memberId)
-			.performanceId(reservation.getScheduleId())
-			.scheduleId(1L)  // 회차 연결 전까지 하드코딩 유지
+			.performanceId(performanceId)
+			.scheduleId(scheduleId)
 			.ticketId(ticket.getId())
 			.type(request.type())
 			.price(request.price())

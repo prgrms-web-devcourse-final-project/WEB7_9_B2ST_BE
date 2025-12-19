@@ -146,6 +146,12 @@ public class DataInitializer implements CommandLineRunner {
 
 	// 데이터 생성 1
 	private void initConnectedSet() {
+		// 중복 생성 방지: 이미 공연장이 있으면 스킵
+		if (venueRepository.count() > 0) {
+			log.info("[DataInit] 이미 데이터 존재하여 초기화 스킵");
+			return;
+		}
+
 		Venue venue;
 		Performance performance;
 		PerformanceSchedule performanceSchedule;

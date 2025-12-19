@@ -16,6 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.entity.PerformanceStatus;
+import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
@@ -27,6 +33,8 @@ import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
+import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import jakarta.persistence.EntityManager;
@@ -49,6 +57,12 @@ class TicketServiceTest {
 	@Autowired
 	private ReservationRepository reservationRepository;
 	@Autowired
+	private VenueRepository venueRepository;
+	@Autowired
+	private PerformanceRepository performanceRepository;
+	@Autowired
+	private PerformanceScheduleRepository performanceScheduleRepository;
+	@Autowired
 	private EntityManager em;
 
 	private Ticket ticket;
@@ -69,16 +83,44 @@ class TicketServiceTest {
 			.build();
 		Member savedMember = memberRepository.save(testMember);
 
+		// Create test venue
+		Venue venue = Venue.builder()
+			.name("Test Venue")
+			.build();
+		Venue savedVenue = venueRepository.save(venue);
+
+		// Create test performance
+		Performance performance = Performance.builder()
+			.venue(savedVenue)
+			.title("Test Performance")
+			.category("Test")
+			.startDate(java.time.LocalDateTime.now())
+			.endDate(java.time.LocalDateTime.now().plusDays(1))
+			.status(PerformanceStatus.ON_SALE)
+			.build();
+		Performance savedPerformance = performanceRepository.save(performance);
+
+		// Create test performance schedule
+		PerformanceSchedule schedule = PerformanceSchedule.builder()
+			.performance(savedPerformance)
+			.roundNo(1)
+			.startAt(java.time.LocalDateTime.now())
+			.bookingType(BookingType.FIRST_COME)
+			.bookingOpenAt(java.time.LocalDateTime.now().minusDays(1))
+			.bookingCloseAt(java.time.LocalDateTime.now().plusDays(1))
+			.build();
+		PerformanceSchedule savedSchedule = performanceScheduleRepository.save(schedule);
+
 		// Create test section
 		Section section = Section.builder()
-			.venueId(1L)
+			.venueId(savedVenue.getVenueId())
 			.sectionName("A")
 			.build();
 		Section savedSection = sectionRepository.save(section);
 
 		// Create test seat
 		Seat seat = Seat.builder()
-			.venueId(1L)
+			.venueId(savedVenue.getVenueId())
 			.sectionId(savedSection.getId())
 			.sectionName(savedSection.getSectionName())
 			.rowLabel("1")
@@ -88,7 +130,7 @@ class TicketServiceTest {
 
 		// Create test reservation
 		Reservation reservation = Reservation.builder()
-			.scheduleId(1L)
+			.scheduleId(savedSchedule.getPerformanceScheduleId())
 			.memberId(savedMember.getId())
 			.seatId(savedSeat.getId())
 			.build();

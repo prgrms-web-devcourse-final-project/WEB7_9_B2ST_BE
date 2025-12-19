@@ -7,6 +7,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
@@ -28,6 +30,7 @@ public class TicketService {
 	private final TicketRepository ticketRepository;
 	private final SeatRepository seatRepository;
 	private final ReservationRepository reservationRepository;
+	private final PerformanceScheduleRepository performanceScheduleRepository;
 
 	public Ticket createTicket(Long reservationId, Long memberId, Long seatId) {
 		return ticketRepository.findByReservationIdAndMemberIdAndSeatId(reservationId, memberId, seatId)
@@ -111,6 +114,8 @@ public class TicketService {
 					.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
 				Reservation reservation = reservationRepository.findById(ticket.getReservationId())
 					.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
+				PerformanceSchedule schedule = performanceScheduleRepository.findById(reservation.getScheduleId())
+					.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
 
 				return TicketRes.builder()
 					.ticketId(ticket.getId())
@@ -120,7 +125,7 @@ public class TicketService {
 					.sectionName(seat.getSectionName())
 					.rowLabel(seat.getRowLabel())
 					.seatNumber(seat.getSeatNumber())
-					.performanceId(reservation.getScheduleId())
+					.performanceId(schedule.getPerformance().getPerformanceId())
 					.build();
 			})
 			.collect(Collectors.toList());

@@ -2,14 +2,18 @@ package com.back.b2st.domain.scheduleseat.service;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
-import org.junit.jupiter.api.BeforeEach;
+import java.util.Optional;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
@@ -17,73 +21,185 @@ import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
-@SpringBootTest
-@Transactional
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class ScheduleSeatStateServiceTest {
 
-	@Autowired
-	private ScheduleSeatStateService scheduleSeatStateService;
+	@Mock
+	private ScheduleSeatLockService scheduleSeatLockService;
 
-	@Autowired
+	@Mock
+	private SeatHoldTokenService seatHoldTokenService;
+
+	@Mock
 	private ScheduleSeatRepository scheduleSeatRepository;
 
-	private Long scheduleId = 1000L;
-	private Long seatId = 50L;
+	@InjectMocks
+	private ScheduleSeatStateService scheduleSeatStateService;
 
-	@BeforeEach
-	void setUp() {
-		// given 테스트용 좌석 데이터 생성
-		ScheduleSeat seat = ScheduleSeat.builder()
-			.scheduleId(scheduleId)
-			.seatId(seatId)
-			.build();
+	private static final Long MEMBER_ID = 1L;
+	private static final Long SCHEDULE_ID = 10L;
+	private static final Long SEAT_ID = 100L;
 
-		scheduleSeatRepository.save(seat);
+	@Test
+	@DisplayName("holdSeat(): 락 획득 실패 시 SEAT_LOCK_FAILED 예외를 던지고, 상태변경/토큰저장/언락을 수행하지 않는다")
+	void holdSeat_lockFailed_throw() {
+		// given
+		when(scheduleSeatLockService.tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID)).thenReturn(null);
+
+		// when & then
+		assertThrows(BusinessException.class, () -> scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID));
+
+		verify(scheduleSeatRepository, never()).findByScheduleIdAndSeatId(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).save(anyLong(), anyLong(), anyLong());
+		verify(scheduleSeatLockService, never()).unlock(anyLong(), anyLong(), org.mockito.ArgumentMatchers.anyString());
 	}
 
 	@Test
-	@DisplayName("좌석 HOLD 성공 - AVAILABLE → HOLD")
-	void changeToHold_success() {
-		// when 좌석 HOLD 서비스 호출
-		scheduleSeatStateService.changeToHold(scheduleId, seatId);
+	@DisplayName("holdSeat(): 락 획득 성공 시 changeToHold → 토큰 저장 → unlock 순서로 수행한다")
+	void holdSeat_success_flowOrder() {
+		// given
+		String lockValue = "lock-value";
+		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
 
-		// then 해당 좌석 상태가 HOLD 로 변경되었는지 검증
-		ScheduleSeat updated = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
-			.orElseThrow();
+		when(scheduleSeatLockService.tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID)).thenReturn(lockValue);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.AVAILABLE);
 
-		assertThat(updated.getStatus()).isEqualTo(SeatStatus.HOLD);
+		// when
+		assertThatNoException().isThrownBy(() -> scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID));
+
+		// then (order)
+		InOrder inOrder = inOrder(seat, seatHoldTokenService, scheduleSeatLockService);
+		inOrder.verify(seat).hold();
+		inOrder.verify(seatHoldTokenService).save(SCHEDULE_ID, SEAT_ID, MEMBER_ID);
+		inOrder.verify(scheduleSeatLockService).unlock(SCHEDULE_ID, SEAT_ID, lockValue);
 	}
 
 	@Test
-	@DisplayName("이미 SOLD 좌석을 HOLD 시도하면 실패해야 한다")
-	void changeToHold() {
-		// given 해당 좌석 상태를 SOLD 로 설정
-		ScheduleSeat seat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
-			.orElseThrow();
-		seat.sold(); // SOLD로 상태 변경
+	@DisplayName("holdSeat(): changeToHold에서 예외 발생해도 finally로 unlock은 반드시 수행되고, 토큰 저장은 수행하지 않는다")
+	void holdSeat_changeToHoldThrows_unlockAlways() {
+		// given
+		String lockValue = "lock-value";
+		ScheduleSeatStateService spyService = spy(
+			new ScheduleSeatStateService(scheduleSeatLockService, seatHoldTokenService, scheduleSeatRepository));
 
-		// when / then BusinessException 발생해야 함
-		BusinessException ex = assertThrows(
-			BusinessException.class,
-			() -> scheduleSeatStateService.changeToHold(scheduleId, seatId)
-		);
+		when(scheduleSeatLockService.tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID)).thenReturn(lockValue);
+		doThrow(new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD)).when(spyService)
+			.changeToHold(SCHEDULE_ID, SEAT_ID);
 
-		assertThat(ex.getErrorCode()).isEqualTo(ScheduleSeatErrorCode.SEAT_ALREADY_SOLD);
+		// when & then
+		assertThrows(BusinessException.class, () -> spyService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID));
+
+		verify(seatHoldTokenService, never()).save(anyLong(), anyLong(), anyLong());
+		verify(scheduleSeatLockService).unlock(SCHEDULE_ID, SEAT_ID, lockValue);
 	}
 
 	@Test
-	@DisplayName("이미 HOLD 된 좌석을 다시 HOLD 시도하면 실패해야 한다")
-	void holdSeat_fail_changeToHold() {
-		// given 먼저 HOLD 처리
-		scheduleSeatStateService.changeToHold(scheduleId, seatId);
+	@DisplayName("changeToHold(): 좌석이 없으면 SEAT_NOT_FOUND 예외")
+	void changeToHold_notFound_throw() {
+		// given
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.empty());
 
-		// when / then 같은 좌석 다시 HOLD 시 예외 발생
-		BusinessException ex = assertThrows(
-			BusinessException.class,
-			() -> scheduleSeatStateService.changeToHold(scheduleId, seatId)
-		);
+		// when & then
+		assertThrows(BusinessException.class, () -> scheduleSeatStateService.changeToHold(SCHEDULE_ID, SEAT_ID));
+	}
 
-		assertThat(ex.getErrorCode()).isEqualTo(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD);
+	@Test
+	@DisplayName("changeToHold(): SOLD면 SEAT_ALREADY_SOLD 예외")
+	void changeToHold_sold_throw() {
+		// given
+		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.SOLD);
+
+		// when & then
+		assertThrows(BusinessException.class, () -> scheduleSeatStateService.changeToHold(SCHEDULE_ID, SEAT_ID));
+		verify(seat, never()).hold();
+	}
+
+	@Test
+	@DisplayName("changeToHold(): 이미 HOLD면 SEAT_ALREADY_HOLD 예외")
+	void changeToHold_alreadyHold_throw() {
+		// given
+		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.HOLD);
+
+		// when & then
+		assertThrows(BusinessException.class, () -> scheduleSeatStateService.changeToHold(SCHEDULE_ID, SEAT_ID));
+		verify(seat, never()).hold();
+	}
+
+	@Test
+	@DisplayName("changeToHold(): AVAILABLE이면 hold() 호출")
+	void changeToHold_available_holdCalled() {
+		// given
+		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.AVAILABLE);
+
+		// when
+		assertThatNoException().isThrownBy(() -> scheduleSeatStateService.changeToHold(SCHEDULE_ID, SEAT_ID));
+
+		// then
+		verify(seat).hold();
+	}
+
+	@Test
+	@DisplayName("changeToAvailable(): HOLD가 아니면 아무 것도 하지 않는다(예외 없음)")
+	void changeToAvailable_notHold_noop() {
+		// given
+		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.AVAILABLE);
+
+		// when
+		assertThatNoException().isThrownBy(() -> scheduleSeatStateService.changeToAvailable(SCHEDULE_ID, SEAT_ID));
+
+		// then
+		verify(seat, never()).release();
+	}
+
+	@Test
+	@DisplayName("changeToAvailable(): HOLD면 release() 호출")
+	void changeToAvailable_hold_releaseCalled() {
+		// given
+		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.HOLD);
+
+		// when
+		assertThatNoException().isThrownBy(() -> scheduleSeatStateService.changeToAvailable(SCHEDULE_ID, SEAT_ID));
+
+		// then
+		verify(seat).release();
+	}
+
+	@Test
+	@DisplayName("changeToSold(): HOLD가 아니면 SEAT_NOT_HOLD 예외")
+	void changeToSold_notHold_throw() {
+		// given
+		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.AVAILABLE);
+
+		// when & then
+		assertThrows(BusinessException.class, () -> scheduleSeatStateService.changeToSold(SCHEDULE_ID, SEAT_ID));
+		verify(seat, never()).sold();
+	}
+
+	@Test
+	@DisplayName("changeToSold(): HOLD면 sold() 호출")
+	void changeToSold_hold_soldCalled() {
+		// given
+		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.HOLD);
+
+		// when
+		assertThatNoException().isThrownBy(() -> scheduleSeatStateService.changeToSold(SCHEDULE_ID, SEAT_ID));
+
+		// then
+		verify(seat).sold();
 	}
 }

@@ -1,5 +1,6 @@
 package com.back.b2st.domain.reservation.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -27,6 +29,7 @@ public class ReservationService {
 	private final ScheduleSeatRepository scheduleSeatRepository;
 
 	private final SeatHoldTokenService seatHoldTokenService;
+	private final ScheduleSeatStateService scheduleSeatStateService;
 
 	/** === 예매 생성 === */
 	@Transactional
@@ -52,65 +55,66 @@ public class ReservationService {
 	@Transactional
 	public void cancelReservation(Long reservationId, Long memberId) {
 
-		Reservation reservation = reservationRepository.findById(reservationId)
-			.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+		Reservation reservation = getMyReservation(reservationId, memberId);
 
-		// 본인 확인
-		if (!reservation.getMemberId().equals(memberId)) {
-			throw new BusinessException(ReservationErrorCode.RESERVATION_FORBIDDEN);
+		if (!reservation.getStatus().canCancel()) {
+			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
 		}
 
-		// 이미 결제 완료된 건 취소 불가 TODO: 추후 논의
-		if (reservation.getStatus() == ReservationStatus.COMPLETED) {
-			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_COMPLETED);
-		}
+		reservation.cancel(LocalDateTime.now());
 
-		// 상태 변경
-		reservation.cancel();
-
-		// 좌석 AVAILABLE로 복구
-		scheduleSeatRepository
-			.findByScheduleIdAndSeatId(reservation.getScheduleId(), reservation.getSeatId())
-			.ifPresent(ScheduleSeat::release);
+		// 좌석 상태 복구 (HOLD → AVAILABLE) TODO: 일단 HOLD만 가능
+		scheduleSeatStateService.changeToAvailable(
+			reservation.getScheduleId(),
+			reservation.getSeatId()
+		);
 	}
 
 	/** === 예매 확정 === */
 	@Transactional
-	public void completeReservation(Long reservationId, Long memberId) {
+	public void completeReservation(Long reservationId) {
 
-		Reservation reservation = reservationRepository.findById(reservationId)
-			.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+		Reservation reservation = getReservation(reservationId);
 
-		// 본인 확인
-		if (!reservation.getMemberId().equals(memberId)) {
-			throw new BusinessException(ReservationErrorCode.RESERVATION_FORBIDDEN);
-		}
-
-		// 이미 취소된 예매는 결제 완료 불가
-		if (reservation.getStatus() == ReservationStatus.CANCELED) {
-			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_CANCELED);
-		}
-
-		// 결제 완료 종료
 		if (reservation.getStatus() == ReservationStatus.COMPLETED) {
 			return;
 		}
 
-		// 상태 변경
-		reservation.complete();
+		if (!reservation.getStatus().canComplete()) {
+			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
+		}
 
-		// 좌석 SOLD 변경
+		reservation.complete(LocalDateTime.now());
+
+		// 좌석 상태 변경 (HOLD → SOLD)
+		scheduleSeatStateService.changeToSold(
+			reservation.getScheduleId(),
+			reservation.getSeatId()
+		);
+	}
+
+	/** === 예매 만료 === */
+	@Transactional
+	public void expireReservation(Long reservationId) {
+
+		Reservation reservation = getReservation(reservationId);
+
+		if (!reservation.getStatus().canExpire()) {
+			return;
+		}
+
+		reservation.expire();
+
 		scheduleSeatRepository
 			.findByScheduleIdAndSeatId(reservation.getScheduleId(), reservation.getSeatId())
-			.ifPresent(ScheduleSeat::sold);
+			.ifPresent(ScheduleSeat::release);
 	}
 
 	/** === 예매 단건 조회 === */
 	@Transactional(readOnly = true)
 	public ReservationRes getReservation(Long reservationId, Long memberId) {
 
-		Reservation reservation = reservationRepository.findById(reservationId)
-			.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+		Reservation reservation = getReservation(reservationId);
 
 		if (!reservation.getMemberId().equals(memberId)) {
 			throw new BusinessException(ReservationErrorCode.RESERVATION_FORBIDDEN);
@@ -144,6 +148,22 @@ public class ReservationService {
 	@Transactional(readOnly = true)
 	public List<ReservationDetailRes> getMyReservationsDetail(Long memberId) {
 		return reservationRepository.findMyReservationDetails(memberId);
+	}
+
+	// === 공통 유틸 === //
+	private Reservation getReservation(Long reservationId) {
+		return reservationRepository.findById(reservationId)
+			.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+	}
+
+	private Reservation getMyReservation(Long reservationId, Long memberId) {
+		Reservation reservation = reservationRepository.findById(reservationId)
+			.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+
+		if (!reservation.getMemberId().equals(memberId)) {
+			throw new BusinessException(ReservationErrorCode.RESERVATION_FORBIDDEN);
+		}
+		return reservation;
 	}
 
 }

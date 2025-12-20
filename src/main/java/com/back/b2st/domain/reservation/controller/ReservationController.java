@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.back.b2st.domain.reservation.api.ReservationApi;
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationRes;
@@ -53,11 +52,9 @@ public class ReservationController implements ReservationApi {
 	/** === 예매 확정(결제 완료) === */
 	@PostMapping("/{reservationId}/complete")
 	public BaseResponse<Void> completeReservation(
-		@PathVariable Long reservationId,
-		@CurrentUser UserPrincipal user
+		@PathVariable Long reservationId
 	) {
-		Long memberId = user.getId();
-		reservationService.completeReservation(reservationId, memberId);
+		reservationService.completeReservation(reservationId);
 		return BaseResponse.success();
 	}
 

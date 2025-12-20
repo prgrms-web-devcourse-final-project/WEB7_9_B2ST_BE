@@ -70,45 +70,7 @@ public class Reservation extends BaseEntity {
 		this.status = ReservationStatus.CREATED;
 	}
 
-	/** === 상태 가능 여부 판단 === */
-
-	// 결제 대기 가능 여부
-	public boolean canPending() {
-		return this.status == ReservationStatus.CREATED;
-	}
-
-	//  결제 가능 여부
-	public boolean canPay() {
-		return this.status == ReservationStatus.CREATED
-			|| this.status == ReservationStatus.PENDING;
-	}
-
-	// 확정 가능 여부
-	public boolean canComplete() {
-		return this.status == ReservationStatus.PAID;
-	}
-
-	// 취소 가능 여부
-	public boolean canCancel() {
-		return this.status == ReservationStatus.CREATED
-			|| this.status == ReservationStatus.PENDING;
-	}
-
-	// 만료 가능 여부
-	public boolean canExpire() {
-		return this.status == ReservationStatus.CREATED
-			|| this.status == ReservationStatus.PENDING;
-	}
-
 	/** === 상태 변경 === */
-	public void pending() {
-		this.status = ReservationStatus.PENDING;
-	}
-
-	public void paid() {
-		this.status = ReservationStatus.PAID;
-	}
-
 	public void cancel(LocalDateTime canceledAt) {
 		this.status = ReservationStatus.CANCELED;
 		this.canceledAt = canceledAt;

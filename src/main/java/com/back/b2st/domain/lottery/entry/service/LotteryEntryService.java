@@ -1,9 +1,12 @@
 package com.back.b2st.domain.lottery.entry.service;
 
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.List;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.lottery.entry.dto.request.RegisterLotteryEntryReq;
@@ -34,8 +37,8 @@ public class LotteryEntryService {
 	private final SeatService seatService;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 
+	private static final Period LOOKUP_PERIOD = Period.ofMonths(3);
 	private static final int MAX_LOTTERY_ENTRY_COUNT = 4;
-	private static final int MONTHS = 3;
 
 	/**
 	 * 선택한 회차의 좌석 배치도 전달
@@ -78,10 +81,10 @@ public class LotteryEntryService {
 	/**
 	 * 내 응모 내역 조회
 	 */
-	public List<AppliedLotteryInfo> getMyLotteryEntry(Long memberId) {
+	public Slice<AppliedLotteryInfo> getMyLotteryEntry(Long memberId, Pageable pageable) {
 		validateMember(memberId);
-		LocalDateTime fromMonthsAgo = LocalDateTime.now().minusMonths(MONTHS);
-		return lotteryEntryRepository.findAppliedLotteryByMemberId(memberId, fromMonthsAgo);
+		LocalDateTime fromDate = LocalDateTime.now().minus(LOOKUP_PERIOD);
+		return lotteryEntryRepository.findAppliedLotteryByMemberId(memberId, fromDate, pageable);
 	}
 
 	/**

@@ -1,8 +1,9 @@
 package com.back.b2st.domain.lottery.entry.repository;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,6 +25,9 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 			  AND le.createdAt >= :month
 			ORDER BY le.createdAt DESC
 		""")
-	List<AppliedLotteryInfo> findAppliedLotteryByMemberId(    // todo 페이징 추가
-		@Param("memberId") Long memberId, @Param("month") LocalDateTime month);
+	Slice<AppliedLotteryInfo> findAppliedLotteryByMemberId(
+		@Param("memberId") Long memberId,
+		@Param("month") LocalDateTime month,
+		Pageable pageable
+	);
 }

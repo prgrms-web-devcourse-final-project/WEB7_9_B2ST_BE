@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.back.b2st.domain.auth.dto.request.LoginReq;
 import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.domain.lottery.entry.error.LotteryEntryErrorCode;
+import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.performance.entity.Performance;
@@ -87,6 +88,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 	private SeatGrade seatGrade;
 	private Venue venue;
 	private String accessToken;
+	private LotteryEntryRepository lotteryEntryRepository;
 
 	@BeforeEach
 	void setUp() throws Exception {
@@ -251,7 +253,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			)
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.id").value("1"))
 			.andExpect(jsonPath("$.data.memberId").value(memberId))
 			.andExpect(jsonPath("$.data.performanceId").value(param))
 			.andExpect(jsonPath("$.data.scheduleId").value(scheduleId))

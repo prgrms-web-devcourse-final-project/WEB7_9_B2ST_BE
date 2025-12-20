@@ -1,9 +1,11 @@
 package com.back.b2st.domain.lottery.entry.dto.response;
 
+import java.util.UUID;
+
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 
 public record LotteryEntryInfo(
-	Long id,
+	UUID id,
 	Long memberId,
 	Long performanceId,
 	Long scheduleId,
@@ -13,7 +15,7 @@ public record LotteryEntryInfo(
 ) {
 	public static LotteryEntryInfo from(LotteryEntry entry) {
 		return new LotteryEntryInfo(
-			entry.getId(),
+			entry.getUuid(),
 			entry.getMemberId(),
 			entry.getPerformanceId(),
 			entry.getScheduleId(),

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDate;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,57 +31,42 @@ class MemberControllerTest {
 	private MockMvc mockMvc;
 
 	@Autowired
-	private ObjectMapper objectMapper; // JSON 변환용
+	private ObjectMapper objectMapper;
 
-	@Test
-	@DisplayName("통합: 회원가입 성공")
-	void signup_integration_success() throws Exception {
-		// given
-		SignupReq request = createSignupRequest("newuser@test.com", "StrongP@ss123", "신규유저");
+	@Nested
+	@DisplayName("회원가입 API")
+	class SignupTest {
 
-		// when & then
-		mockMvc.perform(post("/api/members/signup")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request)))
-			.andDo(print())
-			.andExpect(status().isOk());
+		@Test
+		@DisplayName("성공")
+		void success() throws Exception {
+			SignupReq request = createSignupRequest("newuser@test.com", "StrongP@ss123", "신규유저");
+
+			mockMvc.perform(post("/api/members/signup").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))).andDo(print()).andExpect(status().isOk());
+		}
+
+		@Test
+		@DisplayName("실패 - 유효하지 않은 이메일 형식")
+		void fail_badEmail() throws Exception {
+			SignupReq request = createSignupRequest("bad-email", "StrongP@ss123", "신규유저");
+
+			mockMvc.perform(post("/api/members/signup").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))).andDo(print()).andExpect(status().isBadRequest());
+		}
+
+		@Test
+		@DisplayName("실패 - 비밀번호 규칙 미준수")
+		void fail_weakPassword() throws Exception {
+			SignupReq request = createSignupRequest("user@test.com", "weakpassword1", "신규유저");
+
+			mockMvc.perform(post("/api/members/signup").contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(request))).andDo(print()).andExpect(status().isBadRequest());
+		}
 	}
 
-	@Test
-	@DisplayName("통합: 회원가입 실패 - 유효하지 않은 이메일 형식")
-	void signup_integration_fail_bad_email() throws Exception {
-		// given
-		SignupReq request = createSignupRequest("bad-email", "StrongP@ss123", "신규유저");
-
-		// when & then
-		mockMvc.perform(post("/api/members/signup")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request)))
-			.andDo(print())
-			.andExpect(status().isBadRequest());
-	}
-
-	@Test
-	@DisplayName("통합: 회원가입 실패 - 비밀번호 규칙 미준수")
-	void signup_integration_fail_weak_password() throws Exception {
-		// given (특문 미포함)
-		SignupReq request = createSignupRequest("user@test.com", "weakpassword1", "신규유저");
-
-		// when & then
-		mockMvc.perform(post("/api/members/signup")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(request)))
-			.andDo(print())
-			.andExpect(status().isBadRequest());
-	}
-
+	// 헬퍼 메서드
 	private SignupReq createSignupRequest(String email, String pw, String name) {
-		return new SignupReq(
-			email,
-			pw,
-			name,
-			"01012345678",
-			LocalDate.of(1990, 1, 1)
-		);
+		return new SignupReq(email, pw, name, "01012345678", LocalDate.of(1990, 1, 1));
 	}
 }

@@ -13,30 +13,51 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class ScheduleSeatCommandService {
+public class ScheduleSeatStateService {
+
+	private final ScheduleSeatLockService scheduleSeatLockService;
+	private final SeatHoldTokenService seatHoldTokenService;
 
 	private final ScheduleSeatRepository scheduleSeatRepository;
 
-	/** === 좌석 HOLD (Redis 없이 DB 기반) === */
+	/** === 상태 변경 AVAILABLE → HOLD === */
 	@Transactional
-	public void holdSeat(Long scheduleId, Long seatId) {
+	public void holdSeat(Long memberId, Long scheduleId, Long seatId) {
 
-		// 1. 좌석 조회
+		// 1. 좌석 락 획득
+		String lockValue = scheduleSeatLockService.tryLock(scheduleId, seatId, memberId);
+		if (lockValue == null) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_LOCK_FAILED);
+		}
+
+		try {
+			// 2. AVAILABLE → HOLD (순수 도메인 상태 전이)
+			changeToHold(scheduleId, seatId);
+
+			// 3. HOLD 소유권 저장 (Redis TTL)
+			seatHoldTokenService.save(scheduleId, seatId, memberId);
+
+		} finally {
+			// 4. HOLD 확정 후 즉시 락 해제
+			scheduleSeatLockService.unlock(scheduleId, seatId, lockValue);
+		}
+	}
+
+	// === 상태 변경 유틸 메서드 (AVAILABLE → HOLD) === //
+	public void changeToHold(Long scheduleId, Long seatId) {
+
 		ScheduleSeat seat = scheduleSeatRepository
 			.findByScheduleIdAndSeatId(scheduleId, seatId)
 			.orElseThrow(() -> new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND));
 
-		// 2. SOLD 좌석 확인
 		if (seat.getStatus() == SeatStatus.SOLD) {
 			throw new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_SOLD);
 		}
 
-		// 3. HOLD 좌석 확인
 		if (seat.getStatus() == SeatStatus.HOLD) {
 			throw new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD);
 		}
 
-		// 4. AVAILABLE → HOLD 변경
 		seat.hold();
 	}
 }

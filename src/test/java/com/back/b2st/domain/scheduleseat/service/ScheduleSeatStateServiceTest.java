@@ -20,10 +20,10 @@ import com.back.b2st.global.error.exception.BusinessException;
 @SpringBootTest
 @Transactional
 @ActiveProfiles("test")
-class ScheduleSeatCommandServiceTest {
+class ScheduleSeatStateServiceTest {
 
 	@Autowired
-	private ScheduleSeatCommandService scheduleSeatCommandService;
+	private ScheduleSeatStateService scheduleSeatStateService;
 
 	@Autowired
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -44,9 +44,9 @@ class ScheduleSeatCommandServiceTest {
 
 	@Test
 	@DisplayName("좌석 HOLD 성공 - AVAILABLE → HOLD")
-	void holdSeat_success() {
+	void changeToHold_success() {
 		// when 좌석 HOLD 서비스 호출
-		scheduleSeatCommandService.holdSeat(scheduleId, seatId);
+		scheduleSeatStateService.changeToHold(scheduleId, seatId);
 
 		// then 해당 좌석 상태가 HOLD 로 변경되었는지 검증
 		ScheduleSeat updated = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
@@ -57,7 +57,7 @@ class ScheduleSeatCommandServiceTest {
 
 	@Test
 	@DisplayName("이미 SOLD 좌석을 HOLD 시도하면 실패해야 한다")
-	void holdSeat_fail_soldSeat() {
+	void changeToHold() {
 		// given 해당 좌석 상태를 SOLD 로 설정
 		ScheduleSeat seat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
 			.orElseThrow();
@@ -66,7 +66,7 @@ class ScheduleSeatCommandServiceTest {
 		// when / then BusinessException 발생해야 함
 		BusinessException ex = assertThrows(
 			BusinessException.class,
-			() -> scheduleSeatCommandService.holdSeat(scheduleId, seatId)
+			() -> scheduleSeatStateService.changeToHold(scheduleId, seatId)
 		);
 
 		assertThat(ex.getErrorCode()).isEqualTo(ScheduleSeatErrorCode.SEAT_ALREADY_SOLD);
@@ -74,14 +74,14 @@ class ScheduleSeatCommandServiceTest {
 
 	@Test
 	@DisplayName("이미 HOLD 된 좌석을 다시 HOLD 시도하면 실패해야 한다")
-	void holdSeat_fail_holdSeat() {
+	void holdSeat_fail_changeToHold() {
 		// given 먼저 HOLD 처리
-		scheduleSeatCommandService.holdSeat(scheduleId, seatId);
+		scheduleSeatStateService.changeToHold(scheduleId, seatId);
 
 		// when / then 같은 좌석 다시 HOLD 시 예외 발생
 		BusinessException ex = assertThrows(
 			BusinessException.class,
-			() -> scheduleSeatCommandService.holdSeat(scheduleId, seatId)
+			() -> scheduleSeatStateService.changeToHold(scheduleId, seatId)
 		);
 
 		assertThat(ex.getErrorCode()).isEqualTo(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD);

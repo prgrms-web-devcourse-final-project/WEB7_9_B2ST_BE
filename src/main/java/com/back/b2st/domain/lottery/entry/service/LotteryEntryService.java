@@ -38,7 +38,8 @@ public class LotteryEntryService {
 	private static final int MONTHS = 3;
 
 	// 선택한 회차의 좌석 배치도 전달
-	public List<SectionLayoutRes> getSeatLayout(Long performanceId) {
+	public List<SectionLayoutRes> getSeatLayout(Long memberId, Long performanceId) {
+		validateMember(memberId);
 		Long venudId = validatePerformance(performanceId);
 		List<SeatInfoRes> seatInfo = seatService.getSeatInfoByVenueId(venudId);
 

@@ -21,10 +21,10 @@ import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRe
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.reservation.service.SeatHoldTokenService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
 import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.global.error.exception.BusinessException;

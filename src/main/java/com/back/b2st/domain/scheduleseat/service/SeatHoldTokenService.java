@@ -1,11 +1,11 @@
-package com.back.b2st.domain.reservation.service;
+package com.back.b2st.domain.scheduleseat.service;
 
 import java.time.Duration;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import com.back.b2st.domain.reservation.error.ReservationErrorCode;
+import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -33,11 +33,11 @@ public class SeatHoldTokenService {
 		String holder = getHolder(scheduleId, seatId);
 
 		if (holder == null) {
-			throw new BusinessException(ReservationErrorCode.SEAT_HOLD_EXPIRED);
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
 		}
 
 		if (!holder.equals(memberId.toString())) {
-			throw new BusinessException(ReservationErrorCode.SEAT_HOLD_FORBIDDEN);
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_FORBIDDEN);
 		}
 	}
 

@@ -19,7 +19,6 @@ import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,10 +38,9 @@ public class LotteryEntryController {
 	@GetMapping("/api/performances/{performanceId}/lottery/section")
 	public BaseResponse<List<SectionLayoutRes>> getSeatLayout(
 		@CurrentUser UserPrincipal userPrincipal,
-		@Parameter(description = "공연 ID", example = "1")
 		@PathVariable("performanceId") Long performanceId
 	) {
-		return BaseResponse.success(lotteryEntryService.getSeatLayout(performanceId));
+		return BaseResponse.success(lotteryEntryService.getSeatLayout(userPrincipal.getId(), performanceId));
 	}
 
 	@Operation(

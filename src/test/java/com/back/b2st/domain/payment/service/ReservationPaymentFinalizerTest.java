@@ -1,7 +1,6 @@
 package com.back.b2st.domain.payment.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -244,7 +243,7 @@ class ReservationPaymentFinalizerTest {
 
 		// 상태 전환
 		if (status == ReservationStatus.CANCELED) {
-			reservation.cancel();
+			reservation.cancel(LocalDateTime.now());
 		} else if (status == ReservationStatus.COMPLETED) {
 			reservation.complete(LocalDateTime.now(clock));
 		}

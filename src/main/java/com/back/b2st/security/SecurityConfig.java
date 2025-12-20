@@ -68,7 +68,8 @@ public class SecurityConfig {
 		configuration.setAllowedOrigins(List.of(
 			"http://localhost:3000",
 			"https://b2st.doncrytt.online",
-			"https://www.doncrytt.online"
+			"https://www.doncrytt.online",
+			"https://doncrytt.vercel.app"
 		));
 
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

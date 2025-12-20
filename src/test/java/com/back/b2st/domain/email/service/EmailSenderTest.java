@@ -5,6 +5,7 @@ import static org.mockito.BDDMockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,116 +38,205 @@ class EmailSenderTest {
 		ReflectionTestUtils.setField(emailSender, "fromName", "Test Service");
 	}
 
-	@Test
-	@DisplayName("이메일 발송 성공")
-	void sendEmailAsync_success() {
-		// given
-		String to = "user@example.com";
-		String code = "123456";
+	@Nested
+	@DisplayName("이메일 인증 코드 발송 (sendEmailAsync)")
+	class SendEmailAsyncTest {
 
-		given(mailSender.createMimeMessage()).willReturn(mimeMessage);
-		given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
+		@Test
+		@DisplayName("성공")
+		void success() {
+			// given
+			String to = "user@example.com";
+			String code = "123456";
 
-		// when
-		emailSender.sendEmailAsync(to, code);
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
 
-		// then
-		verify(mailSender).createMimeMessage();
-		verify(mailSender).send(mimeMessage);
-		verify(templateEngine).process(eq("email/verification"), any());
+			// when
+			emailSender.sendEmailAsync(to, code);
+
+			// then
+			verify(mailSender).createMimeMessage();
+			verify(mailSender).send(mimeMessage);
+			verify(templateEngine).process(eq("email/verification"), any());
+		}
+
+		@Test
+		@DisplayName("실패 - RuntimeException 발생 시 로깅 후 정상 종료")
+		void runtimeException() {
+			// given
+			String to = "user@example.com";
+			String code = "123456";
+
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
+			willThrow(new RuntimeException("SMTP connection failed")).given(mailSender).send(any(MimeMessage.class));
+
+			// when
+			emailSender.sendEmailAsync(to, code);
+
+			// then - 예외 발생해도 메서드 정상 종료
+			verify(mailSender).send(any(MimeMessage.class));
+		}
+
+		@Test
+		@DisplayName("템플릿 렌더링이 올바르게 호출된다")
+		void templateRendering() {
+			// given
+			String to = "user@example.com";
+			String code = "654321";
+
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Code: 654321</html>");
+
+			// when
+			emailSender.sendEmailAsync(to, code);
+
+			// then
+			verify(templateEngine).process(eq("email/verification"), argThat(context -> context != null));
+		}
+
+		@Test
+		@DisplayName("실패 - MessagingException 발생 시 로깅 후 정상 종료")
+		void messagingException() {
+			// given
+			String to = "user@example.com";
+			String code = "123456";
+
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
+			willThrow(new org.springframework.mail.MailSendException("Send failed",
+				new jakarta.mail.MessagingException("SMTP error")))
+				.given(mailSender).send(any(MimeMessage.class));
+
+			// when
+			emailSender.sendEmailAsync(to, code);
+
+			// then
+			verify(mailSender).send(any(MimeMessage.class));
+		}
 	}
 
-	@Test
-	@DisplayName("이메일 발송 실패 - RuntimeException 발생 시 로깅 후 정상 종료")
-	void sendEmailAsync_runtimeException() {
-		// given
-		String to = "user@example.com";
-		String code = "123456";
+	@Nested
+	@DisplayName("복구 이메일 발송 (sendRecoveryEmail)")
+	class SendRecoveryEmailTest {
 
-		given(mailSender.createMimeMessage()).willReturn(mimeMessage);
-		given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
-		willThrow(new RuntimeException("SMTP connection failed")).given(mailSender).send(any(MimeMessage.class));
+		@Test
+		@DisplayName("성공")
+		void success() {
+			// given
+			String to = "user@example.com";
+			String name = "홍길동";
+			String recoveryLink = "https://example.com/recovery?token=abc123";
 
-		// when
-		emailSender.sendEmailAsync(to, code);
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/recovery-email"), any())).willReturn("<html>Recovery</html>");
 
-		// then - 발송 시도는 이루어짐
-		verify(mailSender).createMimeMessage();
-		verify(mailSender).send(any(MimeMessage.class));
+			// when
+			emailSender.sendRecoveryEmail(to, name, recoveryLink);
+
+			// then
+			verify(mailSender).createMimeMessage();
+			verify(mailSender).send(mimeMessage);
+			verify(templateEngine).process(eq("email/recovery-email"), any());
+		}
+
+		@Test
+		@DisplayName("템플릿에 name, recoveryLink, expiryHours가 전달된다")
+		void templateVariables() {
+			// given
+			String to = "user@example.com";
+			String name = "테스트유저";
+			String recoveryLink = "https://example.com/recovery?token=xyz";
+
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/recovery-email"), any())).willReturn("<html>Test</html>");
+
+			// when
+			emailSender.sendRecoveryEmail(to, name, recoveryLink);
+
+			// then - Context에 변수가 설정됨
+			verify(templateEngine).process(eq("email/recovery-email"), argThat(context -> context != null));
+		}
+
+		@Test
+		@DisplayName("실패 - RuntimeException 발생 시 로깅 후 정상 종료")
+		void runtimeException() {
+			// given
+			String to = "user@example.com";
+			String name = "홍길동";
+			String recoveryLink = "https://example.com/recovery?token=abc123";
+
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/recovery-email"), any())).willReturn("<html>Recovery</html>");
+			willThrow(new RuntimeException("SMTP connection failed")).given(mailSender).send(any(MimeMessage.class));
+
+			// when
+			emailSender.sendRecoveryEmail(to, name, recoveryLink);
+
+			// then - 예외 발생해도 메서드 정상 종료
+			verify(mailSender).send(any(MimeMessage.class));
+		}
+
+		@Test
+		@DisplayName("실패 - MailSendException 발생 시 로깅 후 정상 종료")
+		void mailSendException() {
+			// given
+			String to = "user@example.com";
+			String name = "홍길동";
+			String recoveryLink = "https://example.com/recovery?token=abc123";
+
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/recovery-email"), any())).willReturn("<html>Recovery</html>");
+			willThrow(new org.springframework.mail.MailSendException("Mail server unavailable"))
+				.given(mailSender).send(any(MimeMessage.class));
+
+			// when
+			emailSender.sendRecoveryEmail(to, name, recoveryLink);
+
+			// then
+			verify(mailSender).send(any(MimeMessage.class));
+		}
 	}
 
-	@Test
-	@DisplayName("템플릿 렌더링이 올바르게 호출된다")
-	void sendEmailAsync_templateRendering() {
-		// given
-		String to = "user@example.com";
-		String code = "654321";
+	@Nested
+	@DisplayName("공통 메서드 (sendHtmlEmail) 에러 처리")
+	class SendHtmlEmailErrorTest {
 
-		given(mailSender.createMimeMessage()).willReturn(mimeMessage);
-		given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Code: 654321</html>");
+		@Test
+		@DisplayName("이메일 마스킹이 적용된 로깅")
+		void maskedLogging() {
+			// given
+			String to = "testuser@example.com";
+			String code = "123456";
 
-		// when
-		emailSender.sendEmailAsync(to, code);
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
 
-		// then
-		verify(templateEngine).process(eq("email/verification"), argThat(context -> {
-			return context != null;
-		}));
-	}
+			// when
+			emailSender.sendEmailAsync(to, code);
 
-	@Test
-	@DisplayName("이메일 마스킹이 적용된 로깅")
-	void sendEmailAsync_maskedLogging() {
-		// given
-		String to = "testuser@example.com";
-		String code = "123456";
+			// then - 마스킹된 이메일로 로깅됨 (로그 검증은 어렵지만 send는 호출됨)
+			verify(mailSender).send(mimeMessage);
+		}
 
-		given(mailSender.createMimeMessage()).willReturn(mimeMessage);
-		given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
+		@Test
+		@DisplayName("인코딩 오류 시 로깅 후 정상 종료")
+		void encodingException() {
+			// given
+			String to = "user@example.com";
+			String code = "123456";
 
-		// when
-		emailSender.sendEmailAsync(to, code);
+			MimeMessage realMimeMessage = mock(MimeMessage.class);
+			given(mailSender.createMimeMessage()).willReturn(realMimeMessage);
+			given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
 
-		// then
-		verify(mailSender).send(mimeMessage);
-	}
+			// when
+			emailSender.sendEmailAsync(to, code);
 
-	@Test
-	@DisplayName("이메일 발송 실패 - MessagingException 발생 시 로깅 후 정상 종료")
-	void sendEmailAsync_messagingException() throws Exception {
-		// given
-		String to = "user@example.com";
-		String code = "123456";
-
-		given(mailSender.createMimeMessage()).willReturn(mimeMessage);
-		given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
-		willThrow(new org.springframework.mail.MailSendException("Send failed",
-			new jakarta.mail.MessagingException("SMTP error")))
-			.given(mailSender).send(any(MimeMessage.class));
-
-		// when
-		emailSender.sendEmailAsync(to, code);
-
-		// then
-		verify(mailSender).send(any(MimeMessage.class));
-	}
-
-	@Test
-	@DisplayName("이메일 발송 실패 - 인코딩 오류 시 로깅 후 정상 종료")
-	void sendEmailAsync_encodingException() throws Exception {
-		// given
-		String to = "user@example.com";
-		String code = "123456";
-
-		// createMimeMessage는 정상 반환하되, 첫 번째 호출에서 실제 MimeMessage 반환
-		MimeMessage realMimeMessage = mock(MimeMessage.class);
-		given(mailSender.createMimeMessage()).willReturn(realMimeMessage);
-		given(templateEngine.process(eq("email/verification"), any())).willReturn("<html>Test</html>");
-
-		// when
-		emailSender.sendEmailAsync(to, code);
-
-		// then
-		verify(mailSender).createMimeMessage();
+			// then
+			verify(mailSender).createMimeMessage();
+		}
 	}
 }
+

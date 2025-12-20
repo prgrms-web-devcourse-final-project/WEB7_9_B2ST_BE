@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -81,8 +80,8 @@ class MemberServiceTest {
 
 		// when & then
 		assertThatThrownBy(() -> memberService.signup(request)).isInstanceOf(BusinessException.class)
-			.extracting("errorCode")
-			.isEqualTo(MemberErrorCode.DUPLICATE_EMAIL);
+				.extracting("errorCode")
+				.isEqualTo(MemberErrorCode.DUPLICATE_EMAIL);
 	}
 
 	@Test
@@ -118,9 +117,9 @@ class MemberServiceTest {
 
 		// when & then
 		assertThatThrownBy(() -> memberService.changePassword(memberId, request))
-			.isInstanceOf(BusinessException.class)
-			.extracting("errorCode")
-			.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
 	}
 
 	@Nested
@@ -156,9 +155,9 @@ class MemberServiceTest {
 			given(passwordEncoder.matches("wrongPassword", "encodedPw")).willReturn(false);
 
 			assertThatThrownBy(() -> memberService.withdraw(1L, request))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
 		}
 
 		@Test
@@ -171,9 +170,9 @@ class MemberServiceTest {
 			given(memberRepository.findById(1L)).willReturn(Optional.of(member));
 
 			assertThatThrownBy(() -> memberService.withdraw(1L, request))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(MemberErrorCode.ALREADY_WITHDRAWN);
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(MemberErrorCode.ALREADY_WITHDRAWN);
 		}
 
 		@Test
@@ -193,62 +192,19 @@ class MemberServiceTest {
 		}
 	}
 
-	@Nested
-	@DisplayName("탈퇴 철회 테스트")
-	class CancelWithdrawalTest {
-
-		@Test
-		@DisplayName("30일 이내 탈퇴 철회 성공")
-		void cancelWithdrawal_success() {
-			Member member = createMemberWithId(1L, "test@test.com", "encodedPw");
-			member.softDelete();
-			given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-
-			memberService.cancelWithdrawal(1L);
-
-			assertThat(member.isDeleted()).isFalse();
-		}
-
-		@Test
-		@DisplayName("탈퇴 철회 실패 - 탈퇴 상태 아님")
-		void cancelWithdrawal_fail_notWithdrawn() {
-			Member member = createMemberWithId(1L, "test@test.com", "encodedPw");
-			given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-
-			assertThatThrownBy(() -> memberService.cancelWithdrawal(1L))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(MemberErrorCode.NOT_WITHDRAWN);
-		}
-
-		@Test
-		@DisplayName("탈퇴 철회 실패 - 30일 초과")
-		void cancelWithdrawal_fail_expired() {
-			Member member = createMemberWithId(1L, "test@test.com", "encodedPw");
-			member.softDelete();
-			ReflectionTestUtils.setField(member, "deletedAt", LocalDateTime.now().minusDays(35));
-			given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-
-			assertThatThrownBy(() -> memberService.cancelWithdrawal(1L))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(MemberErrorCode.WITHDRAWAL_PERIOD_EXPIRED);
-		}
-	}
-
 	// 밑으로 헬퍼
 	private SignupReq buildSignupReq() {
 		return new SignupReq(
-			"test@email.com",
-			"validPw123!",
-			"tester",
-			"01012345678",
-			LocalDate.of(2000, 1, 1));
+				"test@email.com",
+				"validPw123!",
+				"tester",
+				"01012345678",
+				LocalDate.of(2000, 1, 1));
 	}
 
 	private PasswordChangeReq buildPasswordChangeReq() {
 		return new PasswordChangeReq(
-			"oldPw",
-			"newPw123!");
+				"oldPw",
+				"newPw123!");
 	}
 }

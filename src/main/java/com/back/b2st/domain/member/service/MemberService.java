@@ -2,8 +2,6 @@ package com.back.b2st.domain.member.service;
 
 import static com.back.b2st.global.util.MaskingUtil.*;
 
-import java.time.LocalDateTime;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,18 +34,17 @@ public class MemberService {
 	public Long signup(SignupReq request) {
 		validateEmail(request);
 
-		// 비밀번호 암호화 및 엔티티 생성
 		Member member = Member.builder()
-			.email(request.email())
-			.password(passwordEncoder.encode(request.password()))
-			.name(request.name())
-			.phone(request.phone())
-			.birth(request.birth())
-			.role(Member.Role.MEMBER) // 기본 가입은 MEMBER
-			.provider(Member.Provider.EMAIL)
-			.isEmailVerified(false) // 이메일 미인증
-			.isIdentityVerified(false) // 본인인증 미완료
-			.build();
+				.email(request.email())
+				.password(passwordEncoder.encode(request.password()))
+				.name(request.name())
+				.phone(request.phone())
+				.birth(request.birth())
+				.role(Member.Role.MEMBER)
+				.provider(Member.Provider.EMAIL)
+				.isEmailVerified(false)
+				.isIdentityVerified(false)
+				.build();
 
 		log.info("새로운 회원 가입: ID={}, Email={}", member.getId(), maskEmail(member.getEmail()));
 
@@ -85,19 +82,10 @@ public class MemberService {
 		log.info("회원 탈퇴 처리 완료: MemberID={}, Email={}", memberId, maskEmail(member.getEmail()));
 	}
 
-	public void cancelWithdrawal(Long memberId) {
-		Member member = validateMember(memberId);
-
-		validateWithdrawalCancellation(member);
-
-		member.softDelete();
-		log.info("탈퇴 철회 완료: MemberID={}", memberId);
-	}
-
 	// 밑으로 validate 모음
 	private Member validateMember(Long memberId) {
 		return memberRepository.findById(memberId)
-			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+				.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 	}
 
 	private void validateEmail(SignupReq request) {
@@ -118,7 +106,6 @@ public class MemberService {
 		}
 	}
 
-	// 비번변경 api 검증 상위 메서드. 쓸데없지만 퍼사드 패턴 숙달 차원에서 묶어봄
 	private void validatePasswordChange(PasswordChangeReq request, Member member) {
 		validateCurrentPassword(request.currentPassword(), member);
 		ensurePasswordDiffer(request);
@@ -128,23 +115,5 @@ public class MemberService {
 		if (member.isDeleted()) {
 			throw new BusinessException(MemberErrorCode.ALREADY_WITHDRAWN);
 		}
-	}
-
-	private void validateAlreadyWithdrawn(Member member) {
-		if (!member.isDeleted()) {
-			throw new BusinessException(MemberErrorCode.NOT_WITHDRAWN);
-		}
-	}
-
-	private void validateWithdrawalGracePeriod(Member member) {
-		if (member.getDeletedAt().plusDays(30).isBefore(LocalDateTime.now())) {
-			throw new BusinessException(MemberErrorCode.WITHDRAWAL_PERIOD_EXPIRED);
-		}
-	}
-
-	// 탈퇴 철회 검증 상위 메서드
-	private void validateWithdrawalCancellation(Member member) {
-		validateAlreadyWithdrawn(member);
-		validateWithdrawalGracePeriod(member);
 	}
 }

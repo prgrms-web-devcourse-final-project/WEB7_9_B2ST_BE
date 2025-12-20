@@ -182,6 +182,9 @@ public class AuthService {
 
 		member.cancelWithdrawal();
 
+		recoveryRepository.save(recoveryToken);
+
+		log.info("계정 복구 완료: MemberID={}", member.getId());
 	}
 
 	private void validateTokenSignature(String accessToken) {

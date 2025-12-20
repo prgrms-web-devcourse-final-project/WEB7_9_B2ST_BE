@@ -386,26 +386,4 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.andExpect(jsonPath("$.message").value(MemberErrorCode.PASSWORD_MISMATCH.getMessage()));
 	}
 
-	@Test
-	@DisplayName("통합: 탈퇴 철회 성공")
-	void cancelWithdrawal_success() throws Exception {
-		String email = "cancel@test.com";
-		String password = "Password123!";
-		Member member = createMemberForIntegration(email, password);
-		member.softDelete();
-		memberRepository.save(member);
-
-		String accessToken = getAccessToken(email, password);
-
-		mockMvc.perform(post("/api/mypage/cancel-withdrawal")
-				.header("Authorization", "Bearer " + accessToken))
-			.andDo(print())
-			.andExpect(status().isOk());
-
-		// DB 검증
-		Member restored = memberRepository.findByEmail(email).orElseThrow();
-		if (restored.isDeleted()) {
-			throw new IllegalStateException("탈퇴 철회가 정상 처리되지 않았습니다.");
-		}
-	}
 }

@@ -41,7 +41,7 @@ public class MypageController {
 
 	@PatchMapping("/password")
 	public BaseResponse<Void> changePassword(@CurrentUser UserPrincipal userPrincipal,
-		@Valid @RequestBody PasswordChangeReq request) {
+			@Valid @RequestBody PasswordChangeReq request) {
 		memberService.changePassword(userPrincipal.getId(), request);
 		return BaseResponse.success(null);
 	}
@@ -49,22 +49,15 @@ public class MypageController {
 	@DeleteMapping("/withdraw")
 	@Operation(summary = "회원 탈퇴", description = "비밀번호 확인 후 탈퇴 처리 (30일간 복구 가능)")
 	public BaseResponse<Void> withdraw(@CurrentUser UserPrincipal userPrincipal,
-		@Valid @RequestBody WithdrawReq request) {
+			@Valid @RequestBody WithdrawReq request) {
 		memberService.withdraw(userPrincipal.getId(), request);
-		return BaseResponse.success(null);
-	}
-
-	@PostMapping("/cancel-withdrawal")
-	@Operation(summary = "탈퇴 철회", description = "탈퇴 후 30일 이내 복구 가능")
-	public BaseResponse<Void> cancelWithdrawal(@CurrentUser UserPrincipal userPrincipal) {
-		memberService.cancelWithdrawal(userPrincipal.getId());
 		return BaseResponse.success(null);
 	}
 
 	@PostMapping("/account")
 	public BaseResponse<Void> setRefunAccount(
-		@CurrentUser UserPrincipal userPrincipal,
-		@Valid @RequestBody RefundAccountReq refundAccountReq) {
+			@CurrentUser UserPrincipal userPrincipal,
+			@Valid @RequestBody RefundAccountReq refundAccountReq) {
 		refundAccountService.saveAccount(userPrincipal.getId(), refundAccountReq);
 		return BaseResponse.success(null);
 	}

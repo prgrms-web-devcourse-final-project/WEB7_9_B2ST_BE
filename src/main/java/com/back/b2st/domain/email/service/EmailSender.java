@@ -30,38 +30,11 @@ public class EmailSender {
 
 	@Async("emailExecutor")
 	public void sendEmailAsync(String to, String code) {
-		try {
-			MimeMessage message = mailSender.createMimeMessage();
-			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-			helper.setFrom(fromAddress, fromName);
-			helper.setTo(to);
-			helper.setSubject("[TT] 이메일 인증 코드");
-
-			// 타임리프 템플릿 렌더링. html포맷만 써도 될 지도
-			String htmlContent = renderEmailTemplate(code);
-			helper.setText(htmlContent, true); // true = html
-
-			mailSender.send(message);
-
-			log.info("이메일 발송 성공: to={}", maskEmail(to));
-
-		} catch (MessagingException e) {
-			log.error("이메일 발송 실패: to={}, error={}", maskEmail(to), e.getMessage(), e);
-		} catch (java.io.UnsupportedEncodingException e) {
-			log.error("이메일 인코딩 오류: {}", e.getMessage(), e);
-		} catch (Exception e) {
-			log.error("이메일 발송 중 예상치 못한 오류: to={}, error={}", maskEmail(to), e.getMessage(), e);
-		}
-	}
-
-	// 이메일 템플릿 렌더링
-	private String renderEmailTemplate(String code) {
 		Context context = new Context();
 		context.setVariable("code", code);
 		context.setVariable("expireMinutes", 5);
 
-		return this.templateEngine.process("email/verification", context);
+		sendHtmlEmail(to, "[TT] 이메일 인증 코드", "email/verification", context);
 	}
 
 	@Async("emailExecutor")
@@ -71,9 +44,32 @@ public class EmailSender {
 		context.setVariable("recoveryLink", recoveryLink);
 		context.setVariable("expiryHours", 24);
 
-		String subject = "[TT] 계정 복구 안내";
-		String templateName = "recovery-email";
+		sendHtmlEmail(to, "[TT] 계정 복구 안내", "email/recovery-email", context);
+	}
 
-		sendHtmlEmail(to, subject, templateName, context);
+	// 이메일 발송 헬퍼
+	private void sendHtmlEmail(String to, String subject, String templateName, Context context) {
+		try {
+			MimeMessage message = mailSender.createMimeMessage();
+			MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+			helper.setFrom(fromAddress, fromName);
+			helper.setTo(to);
+			helper.setSubject(subject);
+
+			String htmlContent = templateEngine.process(templateName, context);
+			helper.setText(htmlContent, true);
+
+			mailSender.send(message);
+
+			log.info("이메일 발송 성공: to={}, subject={}", maskEmail(to), subject);
+
+		} catch (MessagingException e) {
+			log.error("이메일 발송 실패: to={}, error={}", maskEmail(to), e.getMessage(), e);
+		} catch (java.io.UnsupportedEncodingException e) {
+			log.error("이메일 인코딩 오류: {}", e.getMessage(), e);
+		} catch (Exception e) {
+			log.error("이메일 발송 중 예상치 못한 오류: to={}, error={}", maskEmail(to), e.getMessage(), e);
+		}
 	}
 }

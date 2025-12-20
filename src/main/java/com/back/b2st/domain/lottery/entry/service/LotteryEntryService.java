@@ -37,7 +37,9 @@ public class LotteryEntryService {
 	private static final int MAX_LOTTERY_ENTRY_COUNT = 4;
 	private static final int MONTHS = 3;
 
-	// 선택한 회차의 좌석 배치도 전달
+	/**
+	 * 선택한 회차의 좌석 배치도 전달
+	 */
 	public List<SectionLayoutRes> getSeatLayout(Long memberId, Long performanceId) {
 		validateMember(memberId);
 		Long venudId = validatePerformance(performanceId);
@@ -46,7 +48,9 @@ public class LotteryEntryService {
 		return SectionLayoutRes.from(seatInfo);
 	}
 
-	// 추첨 응모 등록
+	/**
+	 * 추첨 응모 등록
+	 */
 	public LotteryEntryInfo createLotteryEntry(Long memberId, Long performanceId, RegisterLotteryEntryReq request) {
 		validatePerformance(performanceId);
 		validateMember(memberId);
@@ -71,14 +75,18 @@ public class LotteryEntryService {
 		}
 	}
 
-	// 추첨 진행 전인 응모 내역 조회
+	/**
+	 * 내 응모 내역 조회
+	 */
 	public List<AppliedLotteryInfo> getMyLotteryEntry(Long memberId) {
 		validateMember(memberId);
 		LocalDateTime fromMonthsAgo = LocalDateTime.now().minusMonths(MONTHS);
-		return lotteryEntryRepository.findAppliedLotteryByMememberId(memberId, fromMonthsAgo);
+		return lotteryEntryRepository.findAppliedLotteryByMemberId(memberId, fromMonthsAgo);
 	}
 
-	// 공연장 검증 후 장소 확인
+	/**
+	 * 공연장 검증
+	 */
 	private Long validatePerformance(Long performanceId) {
 		Performance performance = performanceRepository.findById(performanceId)
 			.orElseThrow(() -> new BusinessException(LotteryEntryErrorCode.PERFORMANCE_NOT_FOUND));
@@ -86,14 +94,18 @@ public class LotteryEntryService {
 		return performance.getVenue().getVenueId();
 	}
 
-	// 고객 검증
+	/**
+	 * 고객 검증
+	 */
 	private void validateMember(Long memberId) {
 		if (!memberRepository.existsById(memberId)) {
 			throw new BusinessException(LotteryEntryErrorCode.MEMBER_NOT_FOUND);
 		}
 	}
 
-	// 공연 + 회차 확인
+	/**
+	 * 공연, 회차 검증
+	 */
 	private void validateSchedule(Long scheduleId, Long performanceId) {
 		if (!(performanceScheduleRepository.existsByPerformanceScheduleIdAndPerformance_PerformanceId(
 			scheduleId, performanceId))) {
@@ -101,13 +113,18 @@ public class LotteryEntryService {
 		}
 	}
 
+	/**
+	 * 응모 인원 검증
+	 */
 	private void validateEntryData(RegisterLotteryEntryReq requset) {
-		// 최대 응모인원 수 관련논의 없음
 		if (requset.quantity() > MAX_LOTTERY_ENTRY_COUNT) {
 			throw new BusinessException(LotteryEntryErrorCode.EXCEEDS_MAX_ALLOCATION);
 		}
 	}
 
+	/**
+	 * 기등록 검증
+	 */
 	private void validateEntryNotDuplicated(Long memberId, Long performanceId, Long secheduleId) {
 		if (lotteryEntryRepository.existsByMemberIdAndPerformanceIdAndScheduleId(memberId, performanceId,
 			secheduleId)) {

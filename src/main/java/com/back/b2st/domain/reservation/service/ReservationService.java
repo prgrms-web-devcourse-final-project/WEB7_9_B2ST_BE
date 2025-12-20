@@ -10,6 +10,7 @@ import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
@@ -50,39 +51,13 @@ public class ReservationService {
 		return getReservationDetail(saved.getId(), memberId);
 	}
 
-	/** === 결제 대기 (무통장) === */
-	@Transactional
-	public void markPending(Long reservationId, Long memberId) {
-
-		Reservation reservation = getMyReservation(reservationId, memberId);
-
-		if (!reservation.canPending()) {
-			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
-		}
-
-		reservation.pending();
-	}
-
-	/** === 결제 완료 === */
-	@Transactional
-	public void markPaid(Long reservationId) {
-
-		Reservation reservation = getReservation(reservationId);
-
-		if (!reservation.canPay()) {
-			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
-		}
-
-		reservation.paid();
-	}
-
 	/** === 예매 취소 (일단 결제 완료 시 취소 불가) === */
 	@Transactional
 	public void cancelReservation(Long reservationId, Long memberId) {
 
 		Reservation reservation = getMyReservation(reservationId, memberId);
 
-		if (!reservation.canCancel()) {
+		if (!reservation.getStatus().canCancel()) {
 			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
 		}
 
@@ -101,7 +76,11 @@ public class ReservationService {
 
 		Reservation reservation = getReservation(reservationId);
 
-		if (!reservation.canComplete()) {
+		if (reservation.getStatus() == ReservationStatus.COMPLETED) {
+			return;
+		}
+
+		if (!reservation.getStatus().canComplete()) {
 			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
 		}
 
@@ -120,7 +99,7 @@ public class ReservationService {
 
 		Reservation reservation = getReservation(reservationId);
 
-		if (!reservation.canExpire()) {
+		if (!reservation.getStatus().canExpire()) {
 			return;
 		}
 

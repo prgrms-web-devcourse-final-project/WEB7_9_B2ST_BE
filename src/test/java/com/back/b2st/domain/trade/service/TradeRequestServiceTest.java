@@ -661,8 +661,8 @@ class TradeRequestServiceTest {
 	}
 
 	@Test
-	@DisplayName("양도 신청 수락 성공")
-	void acceptTransferTradeRequest_success() {
+	@DisplayName("양도(TRANSFER) 신청 수락 실패 - TRANSFER는 즉시 결제 방식")
+	void acceptTransferTradeRequest_fail() {
 		// given
 		Long tradeRequestId = 1L;
 		Long memberId = 100L;
@@ -686,29 +686,15 @@ class TradeRequestServiceTest {
 			.requesterTicketId(10L)
 			.build();
 
-		Ticket ownerTicket = Ticket.builder()
-			.reservationId(1L)
-			.memberId(memberId)
-			.seatId(1L)
-			.build();
-
 		given(entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE)).willReturn(tradeRequest);
 		given(entityManager.find(Trade.class, trade.getId(), LockModeType.PESSIMISTIC_WRITE)).willReturn(trade);
 		given(tradeRequestRepository.findByTradeAndStatus(trade, TradeRequestStatus.ACCEPTED))
 			.willReturn(Collections.emptyList());
-		given(ticketService.getTicketById(1L)).willReturn(ownerTicket);
-		given(ticketService.transferTicket(anyLong(), anyLong(), anyLong())).willReturn(ownerTicket);
-		given(ticketService.createTicket(anyLong(), anyLong(), anyLong())).willReturn(ownerTicket);
 
-		// when
-		tradeRequestService.acceptTradeRequest(tradeRequestId, memberId);
-
-		// then
-		assertThat(tradeRequest.getStatus()).isEqualTo(TradeRequestStatus.ACCEPTED);
-		assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
-		verify(ticketService, times(1)).getTicketById(anyLong());
-		verify(ticketService, times(1)).transferTicket(anyLong(), anyLong(), anyLong());
-		verify(ticketService, times(1)).createTicket(anyLong(), anyLong(), anyLong());
+		// when & then
+		assertThatThrownBy(() -> tradeRequestService.acceptTradeRequest(tradeRequestId, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test

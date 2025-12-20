@@ -47,6 +47,7 @@ public class TradeRequestService {
 
 		validateTradeIsActive(trade);
 		validateNotOwnTrade(trade, requesterId);
+		validateOnlyExchangeAllowed(trade); // TRANSFER는 신청 불가, 바로 결제
 		validateNoDuplicateRequest(trade, requesterId);
 
 		TradeRequest tradeRequest = TradeRequestMapper.toEntity(request, trade, requesterId);
@@ -85,39 +86,17 @@ public class TradeRequestService {
 		validateTradeRequestIsPending(tradeRequest);
 		validateNoAcceptedRequests(trade);
 
+		// EXCHANGE만 처리 (TRANSFER는 바로 결제)
+		if (trade.getType() != TradeType.EXCHANGE) {
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST,
+				"양도(TRANSFER)는 신청/수락이 아닌 즉시 결제 방식입니다.");
+		}
+
 		tradeRequest.accept();
 		trade.complete();
 
-		// 양도: 소유자 → 신청자로 티켓 이전 / 교환: 양쪽 티켓을 서로 교환
-		transferTicketOwnership(trade, tradeRequest);
-	}
-
-	private void transferTicketOwnership(Trade trade, TradeRequest tradeRequest) {
-		if (trade.getType() == TradeType.TRANSFER) {
-			handleTransfer(trade, tradeRequest);
-		} else if (trade.getType() == TradeType.EXCHANGE) {
-			handleExchange(trade, tradeRequest);
-		}
-	}
-
-	private void handleTransfer(Trade trade, TradeRequest tradeRequest) {
-		// 1. 기존 티켓 조회 및 검증
-		Ticket oldTicket = ticketService.getTicketById(trade.getTicketId());
-		validateTicketForTrade(oldTicket);
-
-		// 2. 기존 티켓을 TRANSFERRED 상태로 변경
-		ticketService.transferTicket(
-			oldTicket.getReservationId(),
-			oldTicket.getMemberId(),
-			oldTicket.getSeatId()
-		);
-
-		// 3. 신청자에게 새 티켓 생성 (원본 예약 정보 유지)
-		ticketService.createTicket(
-			oldTicket.getReservationId(),
-			tradeRequest.getRequesterId(),
-			oldTicket.getSeatId()
-		);
+		// 교환: 양쪽 티켓을 서로 교환
+		handleExchange(trade, tradeRequest);
 	}
 
 	private void handleExchange(Trade trade, TradeRequest tradeRequest) {
@@ -244,6 +223,13 @@ public class TradeRequestService {
 
 		if (!acceptedRequests.isEmpty()) {
 			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "이미 수락된 신청이 있습니다.");
+		}
+	}
+
+	private void validateOnlyExchangeAllowed(Trade trade) {
+		if (trade.getType() == TradeType.TRANSFER) {
+			throw new BusinessException(TradeErrorCode.INVALID_REQUEST,
+				"양도(TRANSFER)는 신청 없이 바로 결제해주세요.");
 		}
 	}
 }

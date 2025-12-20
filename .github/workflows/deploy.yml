@@ -111,18 +111,18 @@ jobs:
             --parameters '{
               "commands": [
                 "#!/bin/bash",
-                # 1. 홈 디렉토리 및 환경 변수 강제 설정
+                
                 "export HOME=/root",
                 "export PATH=$PATH:/usr/local/bin",
           
-                # 2. Git 보안 예외 처리
+                
                 "git config --global --add safe.directory /dockerProjects/tt-src/WEB7_9_B2ST_BE",
-                # 3. 프로젝트 디렉토리로 이동 및 이동 및 동기화
+                
                 "cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/ || exit 1",
                 "git fetch --all",
                 "git reset --hard origin/develop",
           
-                # 4. 배포 진행
+                
                 "cd docker/",
                 "export DOPPLER_TOKEN=\"${{ secrets.DOPPLER_TOKEN }}\"",
                 "echo \"${{ secrets.PERSONAL_ACCESS_TOKEN }}\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin",

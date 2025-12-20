@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.back.b2st.domain.auth.dto.request.ConfirmRecoveryReq;
 import com.back.b2st.domain.auth.dto.request.LoginReq;
+import com.back.b2st.domain.auth.dto.request.RecoveryEmailReq;
 import com.back.b2st.domain.auth.dto.request.TokenReissueReq;
 import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.domain.auth.service.AuthService;
@@ -21,6 +23,7 @@ import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.jwt.dto.response.TokenInfo;
 import com.back.b2st.security.UserPrincipal;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -93,6 +96,20 @@ public class AuthController {
 		return BaseResponse.success(null);
 	}
 
+	@PostMapping("/withdrawal-recovery")
+	@Operation(summary = "탈퇴 회원 복구 이메일 발송", description = "입력한 이메일로 계정 복구 링크 발송")
+	public BaseResponse<Void> sendRecoveryEmail(@Valid @RequestBody RecoveryEmailReq request) {
+		authService.sendRecoveryEmail(request);
+		return BaseResponse.success(null);
+	}
+
+	@PostMapping("/confirm-recovery")
+	@Operation(summary = "계정 복구 확인", description = "발송된 링크 접속 시 해당 api로 검증")
+	public BaseResponse<Void> confirmRecovery(@Valid @RequestBody ConfirmRecoveryReq request) {
+		authService.confirmRecovery(request);
+		return BaseResponse.success(null);
+	}
+
 	// Util로 뺄까 고민중
 	private String resolveToken(HttpServletRequest request) {
 		String bearerToken = request.getHeader("Authorization");
@@ -102,3 +119,4 @@ public class AuthController {
 		return null;
 	}
 }
+

@@ -94,6 +94,28 @@ public class Member extends BaseEntity {
 		this.isEmailVerified = true;
 	}
 
+	public void softDelete() {
+		this.deletedAt = LocalDateTime.now();
+	}
+
+	public boolean isDeleted() {
+		return this.deletedAt != null;
+	}
+
+	public void cancelWithdrawal() {
+		this.deletedAt = null;
+	}
+
+	// 개인정보 익명화. 유사 하드딜리트
+	public void anonymize() {
+		this.email = "withdrawn_" + this.id + "@deleted.local";
+		this.password = null;
+		this.name = "탈퇴회원";
+		this.phone = null;
+		this.birth = null;
+		this.providerId = null;
+	}
+
 	public enum Role {
 		MEMBER, ADMIN
 	}

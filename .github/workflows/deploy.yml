@@ -111,6 +111,7 @@ jobs:
             --parameters '{
               "commands": [
                 "#!/bin/bash",
+                "git config --global --add safe.directory /dockerProjects/tt-src/WEB7_9_B2ST_BE",
                 "cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/ || exit 1",
                 "git fetch --all",
                 "git reset --hard origin/develop",

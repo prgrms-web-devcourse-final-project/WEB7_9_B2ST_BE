@@ -15,7 +15,7 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 
 	@Query("""
 			SELECT new com.back.b2st.domain.lottery.entry.dto.response.AppliedLotteryInfo(
-					le.id, p.title, ps.startAt, ps.roundNo, le.grade, le.quantity, le.status
+					le.uuid, p.title, ps.startAt, ps.roundNo, le.grade, le.quantity, le.status
 			)
 			FROM LotteryEntry le
 			JOIN Performance p ON le.performanceId = p.performanceId

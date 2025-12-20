@@ -45,13 +45,10 @@ public class ScheduleSeatStateService {
 
 	// === 상태 변경 AVAILABLE → HOLD === //
 	public void changeToHold(Long scheduleId, Long seatId) {
-
 		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
-
 		if (seat.getStatus() == SeatStatus.SOLD) {
 			throw new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_SOLD);
 		}
-
 		if (seat.getStatus() == SeatStatus.HOLD) {
 			throw new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD);
 		}

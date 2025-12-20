@@ -53,11 +53,9 @@ public class ReservationController implements ReservationApi {
 	/** === 예매 확정(결제 완료) === */
 	@PostMapping("/{reservationId}/complete")
 	public BaseResponse<Void> completeReservation(
-		@PathVariable Long reservationId,
-		@CurrentUser UserPrincipal user
+		@PathVariable Long reservationId
 	) {
-		Long memberId = user.getId();
-		reservationService.completeReservation(reservationId, memberId);
+		reservationService.completeReservation(reservationId);
 		return BaseResponse.success();
 	}
 

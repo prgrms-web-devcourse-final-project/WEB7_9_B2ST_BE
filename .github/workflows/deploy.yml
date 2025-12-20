@@ -112,6 +112,9 @@ jobs:
           instance-ids: ${{ env.INSTANCE_ID }}
           comment: Deploy Spring Boot with Prod Profile
           command: |
+            #!/bin/bash
+            set -e
+            echo "--- 배포 시작: $(date) ---"
             # 1. 프로젝트 폴더로 이동하여 깃 동기화
                      cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/
                      git fetch --all

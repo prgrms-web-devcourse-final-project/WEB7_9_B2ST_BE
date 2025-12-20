@@ -299,6 +299,28 @@ public class DataInitializer implements CommandLineRunner {
 			}
 		}
 
+		Seat paidSeat = seats.get(5); // 아직 사용 안 한 좌석 하나 선택
+
+		// 회차별 좌석 조회
+		ScheduleSeat paidScheduleSeat = scheduleSeatRepository
+			.findByScheduleIdAndSeatId(
+				performanceSchedule.getPerformanceScheduleId(),
+				paidSeat.getId()
+			)
+			.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
+
+		// 좌석 상태 HOLD 처리 (결제 완료했지만 확정 전)
+		paidScheduleSeat.hold();
+
+		// 예매 생성
+		Reservation paidReservation = Reservation.builder()
+			.scheduleId(performanceSchedule.getPerformanceScheduleId())
+			.memberId(user1.getId())
+			.seatId(paidSeat.getId())
+			.build();
+
+		Reservation savedPaidReservation = reservationRepository.save(paidReservation);
+
 		// codeisneverodd@gmail.com에 2개의 티켓 생성
 		Member user3 = memberRepository.findByEmail("codeisneverodd@gmail.com")
 			.orElseThrow(() -> new IllegalStateException("user3 not found"));

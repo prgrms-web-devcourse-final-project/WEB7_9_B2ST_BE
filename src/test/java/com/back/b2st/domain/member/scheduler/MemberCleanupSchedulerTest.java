@@ -70,6 +70,28 @@ class MemberCleanupSchedulerTest {
 
 			assertThat(member.getEmail()).isEqualTo("withdrawn_1@deleted.local");
 		}
+
+		@Test
+		@DisplayName("익명화 중 예외 발생 시 다음 회원 처리 계속")
+		void processExpiredWithdrawals_exceptionContinues() {
+			Member normalMember = createExpiredMember(1L);
+			Member faultyMember = mock(Member.class);
+			Member anotherMember = createExpiredMember(3L);
+
+			// faultyMember는 예외 발생하도록 설정
+			given(faultyMember.getEmail()).willReturn("faulty@test.com");
+			doThrow(new RuntimeException("익명화 실패")).when(faultyMember).anonymize();
+
+			given(memberRepository.findAllByDeletedAtBefore(any(LocalDateTime.class)))
+				.willReturn(List.of(normalMember, faultyMember, anotherMember));
+
+			// 예외 발생해도 전체 처리는 계속됨
+			scheduler.processExpiredWithdrawals();
+
+			// 정상 회원들은 익명화됨
+			assertThat(normalMember.getEmail()).startsWith("withdrawn_");
+			assertThat(anotherMember.getEmail()).startsWith("withdrawn_");
+		}
 	}
 
 	// 밑으로 헬퍼 메서드

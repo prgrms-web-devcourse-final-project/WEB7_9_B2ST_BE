@@ -47,89 +47,84 @@ class MemberServiceTest {
 	@Mock
 	private RefundAccountRepository refundAccountRepository;
 
-	@Test
-	@DisplayName("회원가입 성공 테스트")
-	void signup_success() {
+	@Nested
+	@DisplayName("회원가입")
+	class SignupTest {
 
-		SignupReq request = buildSignupReq();
+		@Test
+		@DisplayName("성공")
+		void success() {
+			SignupReq request = buildSignupReq();
 
-		// Mocking
-		given(memberRepository.existsByEmail(request.email())).willReturn(false);
-		given(passwordEncoder.encode(request.password())).willReturn("encodedPassword");
+			given(memberRepository.existsByEmail(request.email())).willReturn(false);
+			given(passwordEncoder.encode(request.password())).willReturn("encodedPassword");
 
-		// Mocking: save 호출 시 ID가 1인 Member 반환하도록
-		Member savedMember = Member.builder().email(request.email()).role(Member.Role.MEMBER).build();
-		ReflectionTestUtils.setField(savedMember, "id", 1L);
-		given(memberRepository.save(any(Member.class))).willReturn(savedMember);
+			Member savedMember = Member.builder().email(request.email()).role(Member.Role.MEMBER).build();
+			ReflectionTestUtils.setField(savedMember, "id", 1L);
+			given(memberRepository.save(any(Member.class))).willReturn(savedMember);
 
-		// when
-		Long memberId = memberService.signup(request);
+			Long memberId = memberService.signup(request);
 
-		// then
-		assertThat(memberId).isEqualTo(1L);
-	}
+			assertThat(memberId).isEqualTo(1L);
+		}
 
-	@Test
-	@DisplayName("회원가입 실패 - 이메일 중복")
-	void signup_fail_duplicate_email() {
-		// given
-		SignupReq request = buildSignupReq();
+		@Test
+		@DisplayName("실패 - 이메일 중복")
+		void fail_duplicateEmail() {
+			SignupReq request = buildSignupReq();
+			given(memberRepository.existsByEmail(request.email())).willReturn(true);
 
-		// Mocking
-		given(memberRepository.existsByEmail(request.email())).willReturn(true);
-
-		// when & then
-		assertThatThrownBy(() -> memberService.signup(request)).isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(MemberErrorCode.DUPLICATE_EMAIL);
-	}
-
-	@Test
-	@DisplayName("비밀번호 변경 성공")
-	void changePassword_success() {
-		// given
-		Long memberId = 1L;
-		Member member = Member.builder().password("encodedOldPw").build();
-
-		PasswordChangeReq request = buildPasswordChangeReq();
-
-		given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
-		given(passwordEncoder.matches("oldPw", "encodedOldPw")).willReturn(true); // 비번 일치
-		given(passwordEncoder.encode("newPw123!")).willReturn("encodedNewPw");
-
-		// when
-		memberService.changePassword(memberId, request);
-
-		// then
-		assertThat(member.getPassword()).isEqualTo("encodedNewPw");
-	}
-
-	@Test
-	@DisplayName("비밀번호 변경 실패 - 현재 비밀번호 불일치")
-	void changePassword_fail_mismatch() {
-		// given
-		Long memberId = 1L;
-		Member member = Member.builder().password("encodedOldPw").build();
-		PasswordChangeReq request = buildPasswordChangeReq();
-
-		given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
-		given(passwordEncoder.matches("oldPw", "encodedOldPw")).willReturn(false); // 비번 불일치
-
-		// when & then
-		assertThatThrownBy(() -> memberService.changePassword(memberId, request))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
+			assertThatThrownBy(() -> memberService.signup(request))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(MemberErrorCode.DUPLICATE_EMAIL);
+		}
 	}
 
 	@Nested
-	@DisplayName("회원 탈퇴 테스트")
+	@DisplayName("비밀번호 변경")
+	class ChangePasswordTest {
+
+		@Test
+		@DisplayName("성공")
+		void success() {
+			Long memberId = 1L;
+			Member member = Member.builder().password("encodedOldPw").build();
+			PasswordChangeReq request = buildPasswordChangeReq();
+
+			given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+			given(passwordEncoder.matches("oldPw", "encodedOldPw")).willReturn(true);
+			given(passwordEncoder.encode("newPw123!")).willReturn("encodedNewPw");
+
+			memberService.changePassword(memberId, request);
+
+			assertThat(member.getPassword()).isEqualTo("encodedNewPw");
+		}
+
+		@Test
+		@DisplayName("실패 - 현재 비밀번호 불일치")
+		void fail_mismatch() {
+			Long memberId = 1L;
+			Member member = Member.builder().password("encodedOldPw").build();
+			PasswordChangeReq request = buildPasswordChangeReq();
+
+			given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
+			given(passwordEncoder.matches("oldPw", "encodedOldPw")).willReturn(false);
+
+			assertThatThrownBy(() -> memberService.changePassword(memberId, request))
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
+		}
+	}
+
+	@Nested
+	@DisplayName("회원 탈퇴")
 	class WithdrawTest {
 
 		@Test
-		@DisplayName("정상 탈퇴 성공")
-		void withdraw_success() {
-			// given
+		@DisplayName("성공")
+		void success() {
 			Member member = createMemberWithId(1L, "test@test.com", "encodedPw");
 			WithdrawReq request = buildWithdrawReq("rawPassword");
 
@@ -137,17 +132,15 @@ class MemberServiceTest {
 			given(passwordEncoder.matches("rawPassword", "encodedPw")).willReturn(true);
 			given(refundAccountRepository.findByMember(member)).willReturn(Optional.empty());
 
-			// when
 			memberService.withdraw(1L, request);
 
-			// then
 			assertThat(member.isDeleted()).isTrue();
 			then(refreshTokenRepository).should().deleteById("test@test.com");
 		}
 
 		@Test
-		@DisplayName("탈퇴 실패 - 비밀번호 불일치")
-		void withdraw_fail_passwordMismatch() {
+		@DisplayName("실패 - 비밀번호 불일치")
+		void fail_passwordMismatch() {
 			Member member = createMemberWithId(1L, "test@test.com", "encodedPw");
 			WithdrawReq request = buildWithdrawReq("wrongPassword");
 
@@ -161,8 +154,8 @@ class MemberServiceTest {
 		}
 
 		@Test
-		@DisplayName("탈퇴 실패 - 이미 탈퇴한 회원")
-		void withdraw_fail_alreadyWithdrawn() {
+		@DisplayName("실패 - 이미 탈퇴한 회원")
+		void fail_alreadyWithdrawn() {
 			Member member = createMemberWithId(1L, "test@test.com", "encodedPw");
 			member.softDelete();
 			WithdrawReq request = buildWithdrawReq("rawPassword");
@@ -177,7 +170,7 @@ class MemberServiceTest {
 
 		@Test
 		@DisplayName("탈퇴 시 환불 계좌도 함께 삭제")
-		void withdraw_deletesRefundAccount() {
+		void deletesRefundAccount() {
 			Member member = createMemberWithId(1L, "test@test.com", "encodedPw");
 			WithdrawReq request = buildWithdrawReq("rawPassword");
 			RefundAccount account = mock(RefundAccount.class);
@@ -192,7 +185,7 @@ class MemberServiceTest {
 		}
 	}
 
-	// 밑으로 헬퍼
+	// 헬퍼 메서드
 	private SignupReq buildSignupReq() {
 		return new SignupReq(
 				"test@email.com",
@@ -203,8 +196,6 @@ class MemberServiceTest {
 	}
 
 	private PasswordChangeReq buildPasswordChangeReq() {
-		return new PasswordChangeReq(
-				"oldPw",
-				"newPw123!");
+		return new PasswordChangeReq("oldPw", "newPw123!");
 	}
 }

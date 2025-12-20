@@ -125,12 +125,14 @@ jobs:
                 
                 "cd docker/",
                 "export DOPPLER_TOKEN=\"${{ secrets.DOPPLER_TOKEN }}\"",
-                "echo \"${{ secrets.PERSONAL_ACCESS_TOKEN }}\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin",
+                "echo \"${{ secrets.PERSONAL_ACCESS_TOKEN }}\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
           
                 "doppler run -- docker compose pull",
                 "doppler run -- docker compose up -d --force-recreate",
           
                 "docker image prune -f"
+          
+                "docker logout ghcr.io 2>/dev/null"
               ]
             }' \
             --region ${{ secrets.AWS_REGION }}

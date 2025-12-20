@@ -7,6 +7,11 @@ import java.util.stream.Collectors;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
 
+/**
+ * 좌석 배치도 전달
+ * @param sectionName    구역명
+ * @param grades    등급에 해당하는 열 정보
+ */
 public record SectionLayoutRes(
 	String sectionName,
 	List<GradeInfo> grades

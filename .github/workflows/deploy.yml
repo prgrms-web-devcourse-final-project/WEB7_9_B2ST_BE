@@ -130,7 +130,7 @@ jobs:
                 "doppler run -- docker compose pull",
                 "doppler run -- docker compose up -d --force-recreate",
           
-                "docker image prune -f"
+                "docker image prune -f",
           
                 "docker logout ghcr.io 2>/dev/null"
               ]

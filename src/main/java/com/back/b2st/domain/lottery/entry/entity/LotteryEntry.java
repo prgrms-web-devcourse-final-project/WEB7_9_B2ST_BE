@@ -1,5 +1,9 @@
 package com.back.b2st.domain.lottery.entry.entity;
 
+import java.util.UUID;
+
+import org.hibernate.annotations.DynamicUpdate;
+
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
@@ -11,6 +15,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -29,26 +34,34 @@ import lombok.NoArgsConstructor;
 		@Index(name = "idx_lottery_entries_performance", columnList = "performance_id"),
 		@Index(name = "idx_lottery_entries_schedule", columnList = "schedule_id"),
 		@Index(name = "idx_lottery_entries_member_performance_schedule", columnList = "member_id, performance_id, schedule_id"),
-		@Index(name = "idx_lottery_entries_status", columnList = "status")
+		@Index(name = "idx_lottery_entries_status", columnList = "status"),
+		@Index(name = "idx_lottery_entries_uuid", columnList = "uuid")
 	},
 	uniqueConstraints = {
 		@UniqueConstraint(
 			name = "uk_member_performance_schedule",
 			columnNames = {"member_id", "performance_id", "schedule_id"}
+		),
+		@UniqueConstraint(
+			name = "uk_lottery_entry_uuid",
+			columnNames = {"uuid"}
 		)
 	}
-
 )
 @SequenceGenerator(
 	name = "lottery_entry_id_gen",
 	sequenceName = "lottery_entry_seq",
 	allocationSize = 50
 )
+@DynamicUpdate
 public class LotteryEntry extends BaseEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lottery_entry_id_gen")
 	@Column(name = "lottery_entry_id")
 	private Long id;
+
+	@Column(name = "uuid", nullable = false, updatable = false, unique = true, columnDefinition = "uuid")
+	private UUID uuid;
 
 	@Column(name = "member_id", nullable = false)
 	private Long memberId;
@@ -69,6 +82,13 @@ public class LotteryEntry extends BaseEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 20)
 	private LotteryStatus status;
+
+	@PrePersist
+	public void generateUuid() {
+		if (this.uuid == null) {
+			this.uuid = UUID.randomUUID();
+		}
+	}
 
 	@Builder
 	public LotteryEntry(

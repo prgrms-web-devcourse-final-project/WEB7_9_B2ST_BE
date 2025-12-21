@@ -5,8 +5,10 @@ import java.time.Period;
 import java.util.List;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.lottery.entry.dto.request.RegisterLotteryEntryReq;
@@ -31,14 +33,17 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LotteryEntryService {
 
+	// 응모 내역 조회 기간
+	private static final Period LOOKUP_PERIOD = Period.ofMonths(3);
+	// 최대 응모 인원 수
+	private static final int MAX_LOTTERY_ENTRY_COUNT = 4;
+	private static final int PAGE_SIZE = 10;
+
 	private final LotteryEntryRepository lotteryEntryRepository;
 	private final MemberRepository memberRepository;
 	private final PerformanceRepository performanceRepository;
 	private final SeatService seatService;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
-
-	private static final Period LOOKUP_PERIOD = Period.ofMonths(3);
-	private static final int MAX_LOTTERY_ENTRY_COUNT = 4;
 
 	/**
 	 * 선택한 회차의 좌석 배치도 전달
@@ -81,9 +86,12 @@ public class LotteryEntryService {
 	/**
 	 * 내 응모 내역 조회
 	 */
-	public Slice<AppliedLotteryInfo> getMyLotteryEntry(Long memberId, Pageable pageable) {
+	public Slice<AppliedLotteryInfo> getMyLotteryEntry(Long memberId, int page) {
 		validateMember(memberId);
 		LocalDateTime fromDate = LocalDateTime.now().minus(LOOKUP_PERIOD);
+
+		Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by(Sort.Direction.DESC, "createdAt"));
+
 		return lotteryEntryRepository.findAppliedLotteryByMemberId(memberId, fromDate, pageable);
 	}
 

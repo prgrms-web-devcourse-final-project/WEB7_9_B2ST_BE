@@ -27,7 +27,8 @@ import lombok.NoArgsConstructor;
 	name = "schedule_seat",
 	indexes = {
 		@Index(name = "idx_schedule_seat_schedule_seat", columnList = "schedule_id, seat_id"),
-		@Index(name = "idx_schedule_seat_schedule_status", columnList = "schedule_id, status")
+		@Index(name = "idx_schedule_seat_schedule_status", columnList = "schedule_id, status"),
+		@Index(name = "idx_schedule_seat_status_expired", columnList = "status, hold_expired_at")
 	},
 	uniqueConstraints = {
 		@UniqueConstraint(name = "uk_schedule_seat_schedule_seat", columnNames = {"schedule_id", "seat_id"})

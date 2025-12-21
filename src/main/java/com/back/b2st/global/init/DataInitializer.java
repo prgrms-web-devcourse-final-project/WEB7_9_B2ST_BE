@@ -1,8 +1,8 @@
 package com.back.b2st.global.init;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -176,26 +176,22 @@ public class DataInitializer implements CommandLineRunner {
 			.status(PerformanceStatus.ON_SALE)
 			.build());
 
-		// 공연 회차
-		performanceSchedule = performanceScheduleRepository.save(PerformanceSchedule.builder()
-			.performance(performance)
-			.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
-			.roundNo(1)
-			.bookingType(BookingType.LOTTERY)
-			.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
-			.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
-			.build());
-
-		performanceSchedule2 = performanceScheduleRepository.save(PerformanceSchedule.builder()
-			.performance(performance)
-			.startAt(LocalDateTime.of(2024, 12, 27, 19, 0))
-			.roundNo(2)
-			.bookingType(BookingType.LOTTERY)
-			.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
-			.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
-			.build());
-
 		Long venueId = venue.getVenueId();
+
+		// 회차 23개 추가 생성
+		List<PerformanceSchedule> schedules = IntStream.rangeClosed(0, 23)
+			.mapToObj(i -> PerformanceSchedule.builder()
+				.performance(performance)
+				.startAt(LocalDateTime.of(2025, 1, 1, 19, 0).plusDays(i))
+				.roundNo(i + 1)
+				.bookingType(BookingType.LOTTERY)
+				.bookingOpenAt(LocalDateTime.of(2024, 12, 20, 12, 0))
+				.bookingCloseAt(LocalDateTime.of(2024, 12, 25, 23, 59))
+				.build()
+			).toList();
+		performanceScheduleRepository.saveAll(schedules);
+		performanceSchedule = schedules.getFirst();
+		performanceSchedule2 = schedules.get(1);
 
 		// 구역 생성
 		sectionA = sectionRepository.save(Section.builder().venueId(venueId).sectionName("A").build());
@@ -203,39 +199,79 @@ public class DataInitializer implements CommandLineRunner {
 		sectionC = sectionRepository.save(Section.builder().venueId(venueId).sectionName("C").build());
 		log.info("[DataInit/Test] Section initialized. count=3 (venueId=1[A,B,C])");
 
-		// 좌석 생성
-		List<Seat> seats = new ArrayList<>();
+		// 구역 정보 정의 (구역, 행 수, 등급, 가격, 회차)
+		record SectionConfig(Section section) {
+		}
 
-		for (int row = 1; row <= 2; row++) {
-			for (int number = 1; number <= 5; number++) {
-				// 좌석
-				Seat seat = seatRepository.save(
-					Seat.builder()
+		// 구역 설정 리스트
+		List<Section> sections = List.of(sectionA, sectionB, sectionC);
+
+		// 모든 구역의 좌석 생성
+		List<Seat> seats = sections.stream()
+			.flatMap(section -> IntStream.rangeClosed(1, 3)
+				.boxed()
+				.flatMap(row -> IntStream.rangeClosed(1, 5)
+					.mapToObj(number -> Seat.builder()
 						.venueId(venueId)
-						.sectionId(sectionA.getId())
-						.sectionName(sectionA.getSectionName())
+						.sectionId(section.getId())
+						.sectionName(section.getSectionName())
 						.rowLabel(String.valueOf(row))
 						.seatNumber(number)
-						.build());
-				seats.add(seat);
+						.build())))
+			.toList();
+		List<Seat> savedSeats = seatRepository.saveAll(seats);
 
-				// 좌석 등급
-				seatGradeRepository.save(SeatGrade.builder()
+		// 좌석 등급 생성 (구역별로 다른 등급 적용)
+		List<SeatGrade> allSeatGrades = IntStream.range(0, savedSeats.size())
+			.mapToObj(idx -> {
+				int seatInSection = idx % 15;  // 구역 내 좌석 번호 (0~14)
+				int gradeGroup = seatInSection / 5;
+
+				return SeatGrade.builder()
 					.performanceId(performance.getPerformanceId())
-					.seatId(seat.getId())
-					.grade(SeatGradeType.STANDARD)
-					.price(10000)
-					.build());
+					.seatId(savedSeats.get(idx).getId())
+					.grade(switch (gradeGroup) {
+						case 0 -> SeatGradeType.VIP;
+						case 1 -> SeatGradeType.ROYAL;
+						default -> SeatGradeType.STANDARD;
+					})
+					.price(switch (gradeGroup) {
+						case 0 -> 30000;
+						case 1 -> 20000;
+						default -> 10000;
+					})
+					.build();
+			}).toList();
 
-				// 회차별 좌석
-				scheduleSeatRepository.save(
-					ScheduleSeat.builder()
-						.scheduleId(performanceSchedule.getPerformanceScheduleId())
-						.seatId(seat.getId())
-						.build()
-				);
-			}
-		}
+		seatGradeRepository.saveAll(allSeatGrades);
+
+		// 회차별 좌석 생성
+		List<ScheduleSeat> allScheduleSeats = IntStream.range(0, savedSeats.size())
+			.mapToObj(idx -> {
+				return ScheduleSeat.builder()
+					.scheduleId(performanceSchedule.getPerformanceScheduleId())
+					.seatId(savedSeats.get(idx).getId())
+					.build();
+			})
+			.toList();
+		scheduleSeatRepository.saveAll(allScheduleSeats);
+
+		/**
+		 * A구역 (0~14):
+		 *   - 좌석 0~4:   VIP (30,000원)
+		 *   - 좌석 5~9:   ROYAL (20,000원)
+		 *   - 좌석 10~14: STANDARD (10,000원)
+		 *
+		 * B구역 (15~29):
+		 *   - 좌석 15~19: VIP (30,000원)
+		 *   - 좌석 20~24: ROYAL (20,000원)
+		 *   - 좌석 25~29: STANDARD (10,000원)
+		 *
+		 * C구역 (30~44):
+		 *   - 좌석 30~34: VIP (30,000원)
+		 *   - 좌석 35~39: ROYAL (20,000원)
+		 *   - 좌석 40~44: STANDARD (10,000원)
+		 */
 
 		Member user1 = memberRepository.findByEmail("user1@tt.com")
 			.orElseThrow(() -> new IllegalStateException("user1 not found"));
@@ -382,66 +418,5 @@ public class DataInitializer implements CommandLineRunner {
 				Thread.currentThread().interrupt();
 			}
 		}
-
-		for (int row = 1; row <= 3; row++) {
-			for (int number = 1; number <= 5; number++) {
-				// 좌석
-				Seat seat = seatRepository.save(
-					Seat.builder()
-						.venueId(venueId)
-						.sectionId(sectionB.getId())
-						.sectionName(sectionB.getSectionName())
-						.rowLabel(String.valueOf(row))
-						.seatNumber(number)
-						.build());
-				seats.add(seat);
-
-				// 좌석 등급 VIP
-				seatGradeRepository.save(SeatGrade.builder()
-					.performanceId(performance.getPerformanceId())
-					.seatId(seat.getId())
-					.grade(SeatGradeType.VIP)
-					.price(30000)
-					.build());
-
-				// 2회차 좌석
-				scheduleSeatRepository.save(
-					ScheduleSeat.builder()
-						.scheduleId(performanceSchedule2.getPerformanceScheduleId())
-						.seatId(seat.getId())
-						.build()
-				);
-			}
-		}
-
-		for (int row = 1; row <= 3; row++) {
-			for (int number = 1; number <= 5; number++) {
-				Seat seat = seatRepository.save(
-					Seat.builder()
-						.venueId(venueId)
-						.sectionId(sectionC.getId())
-						.sectionName(sectionC.getSectionName())
-						.rowLabel(String.valueOf(row))
-						.seatNumber(number)
-						.build());
-				seats.add(seat);
-
-				seatGradeRepository.save(SeatGrade.builder()
-					.performanceId(performance.getPerformanceId())
-					.seatId(seat.getId())
-					.grade(SeatGradeType.ROYAL)
-					.price(20000)
-					.build());
-
-				scheduleSeatRepository.save(
-					ScheduleSeat.builder()
-						.scheduleId(performanceSchedule.getPerformanceScheduleId())
-						.seatId(seat.getId())
-						.build()
-				);
-			}
-		}
-		seatRepository.saveAll(seats);
-		log.info("[DataInit/Test] Seat initialized. count=25 (section=A11 ~ A115, A21 ~ A215, ... , A51 ~ A55");
 	}
 }

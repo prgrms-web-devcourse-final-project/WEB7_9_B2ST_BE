@@ -1,9 +1,14 @@
 package com.back.b2st.domain.lottery.entry.service;
 
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.List;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.lottery.entry.dto.request.RegisterLotteryEntryReq;
@@ -28,16 +33,21 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LotteryEntryService {
 
+	// 응모 내역 조회 기간
+	private static final Period LOOKUP_PERIOD = Period.ofMonths(3);
+	// 최대 응모 인원 수
+	private static final int MAX_LOTTERY_ENTRY_COUNT = 4;
+	private static final int PAGE_SIZE = 10;
+
 	private final LotteryEntryRepository lotteryEntryRepository;
 	private final MemberRepository memberRepository;
 	private final PerformanceRepository performanceRepository;
 	private final SeatService seatService;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 
-	private static final int MAX_LOTTERY_ENTRY_COUNT = 4;
-	private static final int MONTHS = 3;
-
-	// 선택한 회차의 좌석 배치도 전달
+	/**
+	 * 선택한 회차의 좌석 배치도 전달
+	 */
 	public List<SectionLayoutRes> getSeatLayout(Long memberId, Long performanceId) {
 		validateMember(memberId);
 		Long venudId = validatePerformance(performanceId);
@@ -46,7 +56,9 @@ public class LotteryEntryService {
 		return SectionLayoutRes.from(seatInfo);
 	}
 
-	// 추첨 응모 등록
+	/**
+	 * 추첨 응모 등록
+	 */
 	public LotteryEntryInfo createLotteryEntry(Long memberId, Long performanceId, RegisterLotteryEntryReq request) {
 		validatePerformance(performanceId);
 		validateMember(memberId);
@@ -71,14 +83,21 @@ public class LotteryEntryService {
 		}
 	}
 
-	// 추첨 진행 전인 응모 내역 조회
-	public List<AppliedLotteryInfo> getMyLotteryEntry(Long memberId) {
+	/**
+	 * 내 응모 내역 조회
+	 */
+	public Slice<AppliedLotteryInfo> getMyLotteryEntry(Long memberId, int page) {
 		validateMember(memberId);
-		LocalDateTime fromMonthsAgo = LocalDateTime.now().minusMonths(MONTHS);
-		return lotteryEntryRepository.findAppliedLotteryByMememberId(memberId, fromMonthsAgo);
+		LocalDateTime fromDate = LocalDateTime.now().minus(LOOKUP_PERIOD);
+
+		Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+		return lotteryEntryRepository.findAppliedLotteryByMemberId(memberId, fromDate, pageable);
 	}
 
-	// 공연장 검증 후 장소 확인
+	/**
+	 * 공연장 검증
+	 */
 	private Long validatePerformance(Long performanceId) {
 		Performance performance = performanceRepository.findById(performanceId)
 			.orElseThrow(() -> new BusinessException(LotteryEntryErrorCode.PERFORMANCE_NOT_FOUND));
@@ -86,14 +105,18 @@ public class LotteryEntryService {
 		return performance.getVenue().getVenueId();
 	}
 
-	// 고객 검증
+	/**
+	 * 고객 검증
+	 */
 	private void validateMember(Long memberId) {
 		if (!memberRepository.existsById(memberId)) {
 			throw new BusinessException(LotteryEntryErrorCode.MEMBER_NOT_FOUND);
 		}
 	}
 
-	// 공연 + 회차 확인
+	/**
+	 * 공연, 회차 검증
+	 */
 	private void validateSchedule(Long scheduleId, Long performanceId) {
 		if (!(performanceScheduleRepository.existsByPerformanceScheduleIdAndPerformance_PerformanceId(
 			scheduleId, performanceId))) {
@@ -101,13 +124,18 @@ public class LotteryEntryService {
 		}
 	}
 
+	/**
+	 * 응모 인원 검증
+	 */
 	private void validateEntryData(RegisterLotteryEntryReq requset) {
-		// 최대 응모인원 수 관련논의 없음
 		if (requset.quantity() > MAX_LOTTERY_ENTRY_COUNT) {
 			throw new BusinessException(LotteryEntryErrorCode.EXCEEDS_MAX_ALLOCATION);
 		}
 	}
 
+	/**
+	 * 기등록 검증
+	 */
 	private void validateEntryNotDuplicated(Long memberId, Long performanceId, Long secheduleId) {
 		if (lotteryEntryRepository.existsByMemberIdAndPerformanceIdAndScheduleId(memberId, performanceId,
 			secheduleId)) {

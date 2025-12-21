@@ -2,23 +2,27 @@ package com.back.b2st.domain.lottery.entry.controller;
 
 import java.util.List;
 
+import org.springframework.data.domain.Slice;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.lottery.entry.dto.request.RegisterLotteryEntryReq;
 import com.back.b2st.domain.lottery.entry.dto.response.AppliedLotteryInfo;
 import com.back.b2st.domain.lottery.entry.dto.response.LotteryEntryInfo;
 import com.back.b2st.domain.lottery.entry.dto.response.SectionLayoutRes;
+import com.back.b2st.domain.lottery.entry.dto.response.SliceRes;
 import com.back.b2st.domain.lottery.entry.service.LotteryEntryService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +44,8 @@ public class LotteryEntryController {
 		@CurrentUser UserPrincipal userPrincipal,
 		@PathVariable("performanceId") Long performanceId
 	) {
-		return BaseResponse.success(lotteryEntryService.getSeatLayout(userPrincipal.getId(), performanceId));
+		return BaseResponse.success(
+			lotteryEntryService.getSeatLayout(userPrincipal.getId(), performanceId));
 	}
 
 	@Operation(
@@ -62,9 +67,15 @@ public class LotteryEntryController {
 		description = "내가 응모한 공연 내역을 조회 - 내 것만 조회가능"
 	)
 	@GetMapping("/api/mypage/lottery/entries")
-	public BaseResponse<List<AppliedLotteryInfo>> getMyLotteryEntry(
-		@CurrentUser UserPrincipal userPrincipal
+	public BaseResponse<SliceRes<AppliedLotteryInfo>> getMyLotteryEntry(
+		@CurrentUser UserPrincipal userPrincipal,
+		@Parameter(hidden = true)
+		@RequestParam(defaultValue = "0") int page
 	) {
-		return BaseResponse.success(lotteryEntryService.getMyLotteryEntry(userPrincipal.getId()));
+		Slice<AppliedLotteryInfo> slice = lotteryEntryService.getMyLotteryEntry(userPrincipal.getId(), page);
+
+		return BaseResponse.success(
+			SliceRes.from(slice)
+		);
 	}
 }

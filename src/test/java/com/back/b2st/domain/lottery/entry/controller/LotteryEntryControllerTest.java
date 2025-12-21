@@ -137,15 +137,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			.seatNumber(7)
 			.build());
 
-		performanceSchedule = performanceScheduleRepository.save(
-			PerformanceSchedule.builder()
-				.performance(performance)
-				.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
-				.roundNo(1)
-				.bookingType(BookingType.LOTTERY)
-				.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
-				.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
-				.build());
+		performanceSchedule = createSchedule(1);
 
 		seatGrade = seatGradeRepository.save(
 			SeatGrade.builder()
@@ -189,6 +181,18 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 
 		em.flush();
 		em.clear();
+	}
+
+	private PerformanceSchedule createSchedule(int round) {
+		return performanceScheduleRepository.save(
+			PerformanceSchedule.builder()
+				.performance(performance)
+				.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
+				.roundNo(round)
+				.bookingType(BookingType.LOTTERY)
+				.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
+				.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
+				.build());
 	}
 
 	private String getAccessToken(String email, String password) throws Exception {
@@ -489,39 +493,26 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@DisplayName("내응모조회 - 성공")
-	void getMyLotteryEntries_success() throws Exception {
+	@DisplayName("내응모조회 - 성공, 기본(page=0)")
+	void getMyLotteryEntries_success_page0() throws Exception {
 		// given
-		String url = getMyUrl;
 		Long param = performance.getPerformanceId();
 
-		Long memberId = member.getId();
-		Long scheduleId = performanceSchedule.getPerformanceScheduleId();
-		SeatGradeType grade = seatGrade.getGrade();
+		// 테스트 데이터 15
+		for (int i = 1; i < 16; i++) {
+			Long scheduleId = createSchedule(i).getPerformanceScheduleId();
 
-		// 테스트 데이터 3
-		for (int quantity = 1; quantity < 3; quantity++) {
-			scheduleId = performanceScheduleRepository.save(
-				PerformanceSchedule.builder()
-					.performance(performance)
-					.startAt(LocalDateTime.of(2024, 12, 20, 19, 0))
-					.roundNo(quantity)
-					.bookingType(BookingType.LOTTERY)
-					.bookingOpenAt(LocalDateTime.of(2024, 12, 10, 12, 0))
-					.bookingCloseAt(LocalDateTime.of(2024, 12, 15, 23, 59))
-					.build()).getPerformanceScheduleId();
-
-			grade = switch (quantity) {
-				case 1 -> SeatGradeType.STANDARD;
+			SeatGradeType grade = switch (i) {
+				case 1 -> SeatGradeType.ROYAL;
 				case 2 -> SeatGradeType.VIP;
 				case 3 -> SeatGradeType.A;
-				default -> SeatGradeType.RESTRICTED_VIEW;
+				default -> SeatGradeType.STANDARD;
 			};
 
 			String requestBody = "{"
 				+ "\"scheduleId\": " + scheduleId + ","
 				+ "\"grade\": \"" + grade.toString() + "\","
-				+ "\"quantity\": " + quantity
+				+ "\"quantity\": " + 2
 				+ "}";
 
 			mvc.perform(
@@ -530,19 +521,71 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestBody)
 				)
-				// .andDo(print())
-				.andExpect(status().isOk())
-			;
+				.andExpect(status().isOk());
 		}
 
-		// when
+		// when & then
 		mvc.perform(
 				get(getMyUrl)
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
+				// .param("page", "0")
 			)
 			.andDo(print())
-			.andExpect(status().isOk());
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content.length()").value(10))
+			.andExpect(jsonPath("$.data.hasNext").value(true))
+			.andExpect(jsonPath("$.data.content[0].roundNo").value(15))
+			.andExpect(jsonPath("$.data.content[9].roundNo").value(6))
+		;
+	}
+
+	@Test
+	@DisplayName("내응모조회 - 성공, 기본(page=1)")
+	void getMyLotteryEntries_success_page1() throws Exception {
+		// given
+		Long param = performance.getPerformanceId();
+
+		// 테스트 데이터 15
+		for (int i = 1; i < 16; i++) {
+			Long scheduleId = createSchedule(i).getPerformanceScheduleId();
+
+			SeatGradeType grade = switch (i) {
+				case 1 -> SeatGradeType.ROYAL;
+				case 2 -> SeatGradeType.VIP;
+				case 3 -> SeatGradeType.A;
+				default -> SeatGradeType.STANDARD;
+			};
+
+			String requestBody = "{"
+				+ "\"scheduleId\": " + scheduleId + ","
+				+ "\"grade\": \"" + grade.toString() + "\","
+				+ "\"quantity\": " + 2
+				+ "}";
+
+			mvc.perform(
+					post(createUrl, param)
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestBody)
+				)
+				.andExpect(status().isOk());
+		}
+
+		// when & then
+		mvc.perform(
+				get(getMyUrl)
+					.header("Authorization", "Bearer " + accessToken)
+					.contentType(MediaType.APPLICATION_JSON)
+					.param("page", "1")
+			)
+			.andDo(print())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content.length()").value(5))
+			.andExpect(jsonPath("$.data.hasNext").value(false))
+			.andExpect(jsonPath("$.data.content[0].roundNo").value(5))
+			.andExpect(jsonPath("$.data.content[4].roundNo").value(1))
+		;
 	}
 
 }

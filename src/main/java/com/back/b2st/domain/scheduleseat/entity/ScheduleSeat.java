@@ -1,5 +1,7 @@
 package com.back.b2st.domain.scheduleseat.entity;
 
+import java.time.LocalDateTime;
+
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -53,31 +55,38 @@ public class ScheduleSeat extends BaseEntity {
 	@Column(name = "status", nullable = false, length = 20)
 	private SeatStatus status;
 
+	@Column(name = "hold_expired_at")
+	private LocalDateTime holdExpiredAt; // HOLD 만료 시각
+
 	@Builder
 	public ScheduleSeat(Long scheduleId, Long seatId) {
 		this.scheduleId = scheduleId;
 		this.seatId = seatId;
 		this.status = SeatStatus.AVAILABLE;
+		this.holdExpiredAt = null;
 	}
 
-	/* === 상태 전환 메서드 === */
+	/** === 상태 전환 메서드 === */
 
-	/** HOLD 상태로 변경 */
-	public void hold() {
+	/* HOLD 상태로 변경 */
+	public void hold(LocalDateTime expiredAt) {
 		this.status = SeatStatus.HOLD;
+		this.holdExpiredAt = expiredAt;
 	}
 
-	/** SOLD(예매 확정) 상태로 변경 */
+	/* SOLD(예매 확정) 상태로 변경 */
 	public void sold() {
 		this.status = SeatStatus.SOLD;
+		this.holdExpiredAt = null;
 	}
 
-	/** AVAILABLE 상태로 복구 (취소) */
+	/* AVAILABLE 상태로 복구 (취소) */
 	public void release() {
 		this.status = SeatStatus.AVAILABLE;
+		this.holdExpiredAt = null;
 	}
 
-	/** HOLD 상태인지 확인 */
+	/* HOLD 상태인지 확인 */
 	public boolean isHold() {
 		return this.status == SeatStatus.HOLD;
 	}

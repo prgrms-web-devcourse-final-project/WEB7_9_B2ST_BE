@@ -45,7 +45,15 @@ public class ScheduleSeatStateService {
 		}
 	}
 
+	/** === 만료된 HOLD 좌석을 AVAILABLE로 일괄 복구 === */
+	@Transactional
+	public int releaseExpiredHolds() {
+		LocalDateTime now = LocalDateTime.now();
+		return scheduleSeatRepository.releaseExpiredHolds(SeatStatus.HOLD, SeatStatus.AVAILABLE, now);
+	}
+
 	// === 상태 변경 AVAILABLE → HOLD === //
+	@Transactional
 	public void changeToHold(Long scheduleId, Long seatId) {
 		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
 
@@ -58,16 +66,18 @@ public class ScheduleSeatStateService {
 
 		LocalDateTime expiredAt = LocalDateTime.now().plus(SeatHoldTokenService.HOLD_TTL);
 
-		seat.hold(LocalDateTime.now().plusMinutes(5));
+		seat.hold(expiredAt);
 	}
 
 	// === 상태 변경 HOLD → AVAILABLE === //
 	@Transactional
 	public void changeToAvailable(Long scheduleId, Long seatId) {
 		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
+
 		if (seat.getStatus() != SeatStatus.HOLD) {
 			return;
 		}
+
 		seat.release();
 	}
 
@@ -75,17 +85,18 @@ public class ScheduleSeatStateService {
 	@Transactional
 	public void changeToSold(Long scheduleId, Long seatId) {
 		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
+
 		if (seat.getStatus() != SeatStatus.HOLD) {
 			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
 		}
+
 		seat.sold();
 	}
 
 	// === 좌석 조회 공통 로직 === //
 	private ScheduleSeat getScheduleSeat(Long scheduleId, Long seatId) {
-		ScheduleSeat seat = scheduleSeatRepository
+		return scheduleSeatRepository
 			.findByScheduleIdAndSeatId(scheduleId, seatId)
 			.orElseThrow(() -> new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND));
-		return seat;
 	}
 }

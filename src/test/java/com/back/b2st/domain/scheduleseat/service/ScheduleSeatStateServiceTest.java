@@ -5,11 +5,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -49,17 +51,17 @@ class ScheduleSeatStateServiceTest {
 		// when & then
 		assertThrows(BusinessException.class, () -> scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID));
 
-		verify(scheduleSeatRepository, never()).findByScheduleIdAndSeatId(anyLong(), anyLong());
-		verify(seatHoldTokenService, never()).save(anyLong(), anyLong(), anyLong());
-		verify(scheduleSeatLockService, never()).unlock(anyLong(), anyLong(), org.mockito.ArgumentMatchers.anyString());
+		verifyNoInteractions(scheduleSeatRepository);
+		verifyNoInteractions(seatHoldTokenService);
+		verify(scheduleSeatLockService, never()).unlock(anyLong(), anyLong(), anyString());
 	}
 
 	@Test
-	@DisplayName("holdSeat(): 락 획득 성공 시 changeToHold → 토큰 저장 → unlock 순서로 수행한다")
+	@DisplayName("holdSeat(): 락 획득 성공 시 changeToHold(hold(expiredAt)) → 토큰 저장 → unlock 순서로 수행한다")
 	void holdSeat_success_flowOrder() {
 		// given
 		String lockValue = "lock-value";
-		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		ScheduleSeat seat = mock(ScheduleSeat.class);
 
 		when(scheduleSeatLockService.tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID)).thenReturn(lockValue);
 		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
@@ -70,7 +72,8 @@ class ScheduleSeatStateServiceTest {
 
 		// then (order)
 		InOrder inOrder = inOrder(seat, seatHoldTokenService, scheduleSeatLockService);
-		inOrder.verify(seat).hold();
+
+		inOrder.verify(seat).hold(any(LocalDateTime.class));
 		inOrder.verify(seatHoldTokenService).save(SCHEDULE_ID, SEAT_ID, MEMBER_ID);
 		inOrder.verify(scheduleSeatLockService).unlock(SCHEDULE_ID, SEAT_ID, lockValue);
 	}
@@ -80,18 +83,40 @@ class ScheduleSeatStateServiceTest {
 	void holdSeat_changeToHoldThrows_unlockAlways() {
 		// given
 		String lockValue = "lock-value";
-		ScheduleSeatStateService spyService = spy(
-			new ScheduleSeatStateService(scheduleSeatLockService, seatHoldTokenService, scheduleSeatRepository));
+
+		ScheduleSeatStateService spyService =
+			spy(new ScheduleSeatStateService(scheduleSeatLockService, seatHoldTokenService, scheduleSeatRepository));
 
 		when(scheduleSeatLockService.tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID)).thenReturn(lockValue);
-		doThrow(new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD)).when(spyService)
-			.changeToHold(SCHEDULE_ID, SEAT_ID);
+
+		doThrow(new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD))
+			.when(spyService).changeToHold(SCHEDULE_ID, SEAT_ID);
 
 		// when & then
 		assertThrows(BusinessException.class, () -> spyService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID));
 
 		verify(seatHoldTokenService, never()).save(anyLong(), anyLong(), anyLong());
 		verify(scheduleSeatLockService).unlock(SCHEDULE_ID, SEAT_ID, lockValue);
+	}
+
+	@Test
+	@DisplayName("releaseExpiredHolds(): 레포지토리 bulk update를 호출하고, 업데이트 건수를 반환한다")
+	void releaseExpiredHolds_callsRepositoryAndReturnCount() {
+		// given
+		when(scheduleSeatRepository.releaseExpiredHolds(eq(SeatStatus.HOLD), eq(SeatStatus.AVAILABLE),
+			any(LocalDateTime.class)))
+			.thenReturn(3);
+
+		// when
+		int updated = scheduleSeatStateService.releaseExpiredHolds();
+
+		// then
+		assertThat(updated).isEqualTo(3);
+
+		ArgumentCaptor<LocalDateTime> nowCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+		verify(scheduleSeatRepository).releaseExpiredHolds(eq(SeatStatus.HOLD), eq(SeatStatus.AVAILABLE),
+			nowCaptor.capture());
+		assertThat(nowCaptor.getValue()).isNotNull();
 	}
 
 	@Test
@@ -108,33 +133,33 @@ class ScheduleSeatStateServiceTest {
 	@DisplayName("changeToHold(): SOLD면 SEAT_ALREADY_SOLD 예외")
 	void changeToHold_sold_throw() {
 		// given
-		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		ScheduleSeat seat = mock(ScheduleSeat.class);
 		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
 		when(seat.getStatus()).thenReturn(SeatStatus.SOLD);
 
 		// when & then
 		assertThrows(BusinessException.class, () -> scheduleSeatStateService.changeToHold(SCHEDULE_ID, SEAT_ID));
-		verify(seat, never()).hold();
+		verify(seat, never()).hold(any(LocalDateTime.class));
 	}
 
 	@Test
 	@DisplayName("changeToHold(): 이미 HOLD면 SEAT_ALREADY_HOLD 예외")
 	void changeToHold_alreadyHold_throw() {
 		// given
-		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		ScheduleSeat seat = mock(ScheduleSeat.class);
 		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
 		when(seat.getStatus()).thenReturn(SeatStatus.HOLD);
 
 		// when & then
 		assertThrows(BusinessException.class, () -> scheduleSeatStateService.changeToHold(SCHEDULE_ID, SEAT_ID));
-		verify(seat, never()).hold();
+		verify(seat, never()).hold(any(LocalDateTime.class));
 	}
 
 	@Test
-	@DisplayName("changeToHold(): AVAILABLE이면 hold() 호출")
+	@DisplayName("changeToHold(): AVAILABLE이면 hold(expiredAt) 호출")
 	void changeToHold_available_holdCalled() {
 		// given
-		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		ScheduleSeat seat = mock(ScheduleSeat.class);
 		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
 		when(seat.getStatus()).thenReturn(SeatStatus.AVAILABLE);
 
@@ -142,14 +167,14 @@ class ScheduleSeatStateServiceTest {
 		assertThatNoException().isThrownBy(() -> scheduleSeatStateService.changeToHold(SCHEDULE_ID, SEAT_ID));
 
 		// then
-		verify(seat).hold();
+		verify(seat).hold(any(LocalDateTime.class));
 	}
 
 	@Test
 	@DisplayName("changeToAvailable(): HOLD가 아니면 아무 것도 하지 않는다(예외 없음)")
 	void changeToAvailable_notHold_noop() {
 		// given
-		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		ScheduleSeat seat = mock(ScheduleSeat.class);
 		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
 		when(seat.getStatus()).thenReturn(SeatStatus.AVAILABLE);
 
@@ -164,7 +189,7 @@ class ScheduleSeatStateServiceTest {
 	@DisplayName("changeToAvailable(): HOLD면 release() 호출")
 	void changeToAvailable_hold_releaseCalled() {
 		// given
-		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		ScheduleSeat seat = mock(ScheduleSeat.class);
 		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
 		when(seat.getStatus()).thenReturn(SeatStatus.HOLD);
 
@@ -179,7 +204,7 @@ class ScheduleSeatStateServiceTest {
 	@DisplayName("changeToSold(): HOLD가 아니면 SEAT_NOT_HOLD 예외")
 	void changeToSold_notHold_throw() {
 		// given
-		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		ScheduleSeat seat = mock(ScheduleSeat.class);
 		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
 		when(seat.getStatus()).thenReturn(SeatStatus.AVAILABLE);
 
@@ -192,7 +217,7 @@ class ScheduleSeatStateServiceTest {
 	@DisplayName("changeToSold(): HOLD면 sold() 호출")
 	void changeToSold_hold_soldCalled() {
 		// given
-		ScheduleSeat seat = org.mockito.Mockito.mock(ScheduleSeat.class);
+		ScheduleSeat seat = mock(ScheduleSeat.class);
 		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID)).thenReturn(Optional.of(seat));
 		when(seat.getStatus()).thenReturn(SeatStatus.HOLD);
 

@@ -1,5 +1,7 @@
 package com.back.b2st.domain.scheduleseat.service;
 
+import java.time.LocalDateTime;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,7 +54,7 @@ public class ScheduleSeatStateService {
 		if (seat.getStatus() == SeatStatus.HOLD) {
 			throw new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD);
 		}
-		seat.hold();
+		seat.hold(LocalDateTime.now().plusMinutes(5));
 	}
 
 	// === 상태 변경 HOLD → AVAILABLE === //

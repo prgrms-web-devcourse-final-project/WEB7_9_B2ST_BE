@@ -84,7 +84,7 @@ class PaymentConfirmControllerTest {
 			.scheduleId(scheduleId)
 			.seatId(seatId)
 			.build();
-		scheduleSeat.hold();
+		scheduleSeat.hold(LocalDateTime.now().plusMinutes(5));
 		scheduleSeatRepository.save(scheduleSeat);
 
 		Payment payment = Payment.builder()

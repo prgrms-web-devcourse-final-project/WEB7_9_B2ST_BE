@@ -74,6 +74,10 @@ public class ScheduleSeatStateService {
 	public void changeToAvailable(Long scheduleId, Long seatId) {
 		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
 
+		if (seat.getStatus() == SeatStatus.AVAILABLE) {
+			return;
+		}
+
 		if (seat.getStatus() != SeatStatus.HOLD) {
 			return;
 		}
@@ -85,6 +89,10 @@ public class ScheduleSeatStateService {
 	@Transactional
 	public void changeToSold(Long scheduleId, Long seatId) {
 		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
+
+		if (seat.getStatus() == SeatStatus.SOLD) {
+			return;
+		}
 
 		if (seat.getStatus() != SeatStatus.HOLD) {
 			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);

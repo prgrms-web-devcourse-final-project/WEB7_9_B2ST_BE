@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,7 +23,6 @@ import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
@@ -103,6 +103,19 @@ class ReservationServiceTest {
 	}
 
 	@Test
+	@DisplayName("cancelReservation(): reservationId가 없으면 RESERVATION_NOT_FOUND 예외")
+	void cancelReservation_notFound_throw() {
+		// given
+		when(reservationRepository.findById(RESERVATION_ID)).thenReturn(Optional.empty());
+
+		// when & then
+		assertThrows(BusinessException.class, () -> reservationService.cancelReservation(RESERVATION_ID, MEMBER_ID));
+
+		verify(scheduleSeatStateService, never()).changeToAvailable(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).remove(anyLong(), anyLong());
+	}
+
+	@Test
 	@DisplayName("cancelReservation(): 내 예매가 아니면 RESERVATION_FORBIDDEN 예외")
 	void cancelReservation_forbidden_throw() {
 		// given
@@ -113,7 +126,8 @@ class ReservationServiceTest {
 		// when & then
 		assertThrows(BusinessException.class, () -> reservationService.cancelReservation(RESERVATION_ID, MEMBER_ID));
 
-		verify(scheduleSeatStateService, never()).changeToAvailable(any(), any());
+		verify(scheduleSeatStateService, never()).changeToAvailable(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).remove(anyLong(), anyLong());
 	}
 
 	@Test
@@ -132,11 +146,12 @@ class ReservationServiceTest {
 		assertThrows(BusinessException.class, () -> reservationService.cancelReservation(RESERVATION_ID, MEMBER_ID));
 
 		verify(reservation, never()).cancel(any());
-		verify(scheduleSeatStateService, never()).changeToAvailable(any(), any());
+		verify(scheduleSeatStateService, never()).changeToAvailable(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).remove(anyLong(), anyLong());
 	}
 
 	@Test
-	@DisplayName("cancelReservation(): 정상 취소되면 reservation.cancel() 호출 후 좌석을 HOLD→AVAILABLE로 변경한다")
+	@DisplayName("cancelReservation(): 정상 취소되면 cancel() → 좌석 AVAILABLE 복구 → 토큰 제거 순서로 수행한다")
 	void cancelReservation_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
@@ -155,10 +170,26 @@ class ReservationServiceTest {
 
 		// then
 		ArgumentCaptor<java.time.LocalDateTime> timeCaptor = ArgumentCaptor.forClass(java.time.LocalDateTime.class);
-		verify(reservation).cancel(timeCaptor.capture());
-		verify(scheduleSeatStateService).changeToAvailable(SCHEDULE_ID, SEAT_ID);
+
+		InOrder inOrder = inOrder(reservation, scheduleSeatStateService, seatHoldTokenService);
+		inOrder.verify(reservation).cancel(timeCaptor.capture());
+		inOrder.verify(scheduleSeatStateService).changeToAvailable(SCHEDULE_ID, SEAT_ID);
+		inOrder.verify(seatHoldTokenService).remove(SCHEDULE_ID, SEAT_ID);
 
 		assertThat(timeCaptor.getValue()).isNotNull();
+	}
+
+	@Test
+	@DisplayName("completeReservation(): reservationId가 없으면 RESERVATION_NOT_FOUND 예외")
+	void completeReservation_notFound_throw() {
+		// given
+		when(reservationRepository.findById(RESERVATION_ID)).thenReturn(Optional.empty());
+
+		// when & then
+		assertThrows(BusinessException.class, () -> reservationService.completeReservation(RESERVATION_ID));
+
+		verify(scheduleSeatStateService, never()).changeToSold(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).remove(anyLong(), anyLong());
 	}
 
 	@Test
@@ -175,7 +206,8 @@ class ReservationServiceTest {
 
 		// then
 		verify(reservation, never()).complete(any());
-		verify(scheduleSeatStateService, never()).changeToSold(any(), any());
+		verify(scheduleSeatStateService, never()).changeToSold(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).remove(anyLong(), anyLong());
 	}
 
 	@Test
@@ -193,11 +225,12 @@ class ReservationServiceTest {
 		assertThrows(BusinessException.class, () -> reservationService.completeReservation(RESERVATION_ID));
 
 		verify(reservation, never()).complete(any());
-		verify(scheduleSeatStateService, never()).changeToSold(any(), any());
+		verify(scheduleSeatStateService, never()).changeToSold(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).remove(anyLong(), anyLong());
 	}
 
 	@Test
-	@DisplayName("completeReservation(): 정상 완료되면 reservation.complete() 호출 후 좌석을 HOLD→SOLD로 변경한다")
+	@DisplayName("completeReservation(): 정상 완료되면 complete() → 좌석 SOLD 변경 → 토큰 제거 순서로 수행한다")
 	void completeReservation_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
@@ -215,10 +248,26 @@ class ReservationServiceTest {
 
 		// then
 		ArgumentCaptor<java.time.LocalDateTime> timeCaptor = ArgumentCaptor.forClass(java.time.LocalDateTime.class);
-		verify(reservation).complete(timeCaptor.capture());
-		verify(scheduleSeatStateService).changeToSold(SCHEDULE_ID, SEAT_ID);
+
+		InOrder inOrder = inOrder(reservation, scheduleSeatStateService, seatHoldTokenService);
+		inOrder.verify(reservation).complete(timeCaptor.capture());
+		inOrder.verify(scheduleSeatStateService).changeToSold(SCHEDULE_ID, SEAT_ID);
+		inOrder.verify(seatHoldTokenService).remove(SCHEDULE_ID, SEAT_ID);
 
 		assertThat(timeCaptor.getValue()).isNotNull();
+	}
+
+	@Test
+	@DisplayName("expireReservation(): reservationId가 없으면 RESERVATION_NOT_FOUND 예외")
+	void expireReservation_notFound_throw() {
+		// given
+		when(reservationRepository.findById(RESERVATION_ID)).thenReturn(Optional.empty());
+
+		// when & then
+		assertThrows(BusinessException.class, () -> reservationService.expireReservation(RESERVATION_ID));
+
+		verify(scheduleSeatStateService, never()).changeToAvailable(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).remove(anyLong(), anyLong());
 	}
 
 	@Test
@@ -237,38 +286,13 @@ class ReservationServiceTest {
 
 		// then
 		verify(reservation, never()).expire();
-		verify(scheduleSeatRepository, never()).findByScheduleIdAndSeatId(any(), any());
+		verify(scheduleSeatStateService, never()).changeToAvailable(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).remove(anyLong(), anyLong());
 	}
 
 	@Test
-	@DisplayName("expireReservation(): 만료 처리 후 ScheduleSeat가 있으면 release() 호출")
-	void expireReservation_success_releaseSeat() {
-		// given
-		Reservation reservation = mock(Reservation.class);
-		ReservationStatus status = mock(ReservationStatus.class);
-		ScheduleSeat scheduleSeat = mock(ScheduleSeat.class);
-
-		when(reservationRepository.findById(RESERVATION_ID)).thenReturn(Optional.of(reservation));
-		when(reservation.getStatus()).thenReturn(status);
-		when(status.canExpire()).thenReturn(true);
-
-		when(reservation.getScheduleId()).thenReturn(SCHEDULE_ID);
-		when(reservation.getSeatId()).thenReturn(SEAT_ID);
-
-		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID))
-			.thenReturn(Optional.of(scheduleSeat));
-
-		// when
-		assertThatNoException().isThrownBy(() -> reservationService.expireReservation(RESERVATION_ID));
-
-		// then
-		verify(reservation).expire();
-		verify(scheduleSeat).release();
-	}
-
-	@Test
-	@DisplayName("expireReservation(): 만료 처리 후 ScheduleSeat가 없으면 release()를 호출하지 않는다")
-	void expireReservation_success_noSeat_noop() {
+	@DisplayName("expireReservation(): 만료 처리 후 좌석 AVAILABLE 복구 및 토큰 제거를 수행한다")
+	void expireReservation_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
 		ReservationStatus status = mock(ReservationStatus.class);
@@ -280,15 +304,14 @@ class ReservationServiceTest {
 		when(reservation.getScheduleId()).thenReturn(SCHEDULE_ID);
 		when(reservation.getSeatId()).thenReturn(SEAT_ID);
 
-		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID))
-			.thenReturn(Optional.empty());
-
 		// when
 		assertThatNoException().isThrownBy(() -> reservationService.expireReservation(RESERVATION_ID));
 
 		// then
-		verify(reservation).expire();
-		verify(scheduleSeatRepository).findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID);
+		InOrder inOrder = inOrder(reservation, scheduleSeatStateService, seatHoldTokenService);
+		inOrder.verify(reservation).expire();
+		inOrder.verify(scheduleSeatStateService).changeToAvailable(SCHEDULE_ID, SEAT_ID);
+		inOrder.verify(seatHoldTokenService).remove(SCHEDULE_ID, SEAT_ID);
 	}
 
 	@Test
@@ -305,7 +328,7 @@ class ReservationServiceTest {
 	}
 
 	@Test
-	@DisplayName("getReservation(): 내 예매면 ReservationRes 반환")
+	@DisplayName("getReservation(): 내 예매면 ReservationRes 반환(Null 아님)")
 	void getReservation_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
@@ -313,7 +336,11 @@ class ReservationServiceTest {
 		when(reservationRepository.findById(RESERVATION_ID)).thenReturn(Optional.of(reservation));
 		when(reservation.getMemberId()).thenReturn(MEMBER_ID);
 
-		when(reservation.getStatus()).thenReturn(ReservationStatus.COMPLETED); // 또는 실제 존재하는 아무 상태
+		// from() 내부에서 사용할 수 있는 값들 최소 스텁 (안전장치)
+		when(reservation.getId()).thenReturn(RESERVATION_ID);
+		when(reservation.getScheduleId()).thenReturn(SCHEDULE_ID);
+		when(reservation.getSeatId()).thenReturn(SEAT_ID);
+		when(reservation.getStatus()).thenReturn(ReservationStatus.COMPLETED);
 
 		// when
 		ReservationRes result = reservationService.getReservation(RESERVATION_ID, MEMBER_ID);
@@ -323,14 +350,22 @@ class ReservationServiceTest {
 	}
 
 	@Test
-	@DisplayName("getMyReservations(): repository 결과를 ReservationRes 리스트로 변환해 반환")
+	@DisplayName("getMyReservations(): repository 결과를 ReservationRes 리스트로 변환해 반환(크기 검증)")
 	void getMyReservations_success() {
 		// given
 		Reservation r1 = mock(Reservation.class);
 		Reservation r2 = mock(Reservation.class);
 
+		// fromList()/from() 내부에서 쓸 법한 값들 최소 스텁
+		when(r1.getId()).thenReturn(1L);
+		when(r1.getScheduleId()).thenReturn(SCHEDULE_ID);
+		when(r1.getSeatId()).thenReturn(SEAT_ID);
 		when(r1.getStatus()).thenReturn(ReservationStatus.COMPLETED);
-		when(r2.getStatus()).thenReturn(ReservationStatus.CANCELED); // 존재하는 상태로 아무거나 OK
+
+		when(r2.getId()).thenReturn(2L);
+		when(r2.getScheduleId()).thenReturn(SCHEDULE_ID);
+		when(r2.getSeatId()).thenReturn(SEAT_ID + 1);
+		when(r2.getStatus()).thenReturn(ReservationStatus.CANCELED);
 
 		when(reservationRepository.findAllByMemberId(MEMBER_ID)).thenReturn(List.of(r1, r2));
 
@@ -378,35 +413,5 @@ class ReservationServiceTest {
 
 		// then
 		assertThat(result).isSameAs(details);
-	}
-
-	@Test
-	@DisplayName("cancelReservation(): reservationId가 없으면 RESERVATION_NOT_FOUND 예외")
-	void cancelReservation_notFound_throw() {
-		// given
-		when(reservationRepository.findById(RESERVATION_ID)).thenReturn(Optional.empty());
-
-		// when & then
-		assertThrows(BusinessException.class, () -> reservationService.cancelReservation(RESERVATION_ID, MEMBER_ID));
-	}
-
-	@Test
-	@DisplayName("completeReservation(): reservationId가 없으면 RESERVATION_NOT_FOUND 예외")
-	void completeReservation_notFound_throw() {
-		// given
-		when(reservationRepository.findById(RESERVATION_ID)).thenReturn(Optional.empty());
-
-		// when & then
-		assertThrows(BusinessException.class, () -> reservationService.completeReservation(RESERVATION_ID));
-	}
-
-	@Test
-	@DisplayName("expireReservation(): reservationId가 없으면 RESERVATION_NOT_FOUND 예외")
-	void expireReservation_notFound_throw() {
-		// given
-		when(reservationRepository.findById(RESERVATION_ID)).thenReturn(Optional.empty());
-
-		// when & then
-		assertThrows(BusinessException.class, () -> reservationService.expireReservation(RESERVATION_ID));
 	}
 }

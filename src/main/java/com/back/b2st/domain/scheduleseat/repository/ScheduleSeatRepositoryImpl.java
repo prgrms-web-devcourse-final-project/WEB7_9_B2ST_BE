@@ -1,6 +1,8 @@
 package com.back.b2st.domain.scheduleseat.repository;
 
+import static com.back.b2st.domain.performanceschedule.entity.QPerformanceSchedule.*;
 import static com.back.b2st.domain.scheduleseat.entity.QScheduleSeat.*;
+import static com.back.b2st.domain.seat.grade.entity.QSeatGrade.*;
 import static com.back.b2st.domain.seat.seat.entity.QSeat.*;
 
 import java.util.List;
@@ -32,12 +34,24 @@ public class ScheduleSeatRepositoryImpl implements ScheduleSeatRepositoryCustom 
 					seat.sectionName,
 					seat.rowLabel,
 					seat.seatNumber,
-					scheduleSeat.status
+					scheduleSeat.status,
+					seatGrade.grade.stringValue(),
+					seatGrade.price
 				)
 			)
 			.from(scheduleSeat)
 			.join(seat)
 			.on(scheduleSeat.seatId.eq(seat.id))
+
+			.join(performanceSchedule) // [ADD] scheduleId -> performanceId 얻기 위해 조인
+			.on(scheduleSeat.scheduleId.eq(performanceSchedule.performanceScheduleId))
+
+			.leftJoin(seatGrade) // [ADD] (performanceId, seatId)로 SeatGrade 매칭
+			.on(
+				seatGrade.performanceId.eq(performanceSchedule.performance.performanceId)
+					.and(seatGrade.seatId.eq(seat.id))
+			)
+
 			.where(
 				scheduleSeat.scheduleId.eq(scheduleId)
 			)
@@ -64,12 +78,24 @@ public class ScheduleSeatRepositoryImpl implements ScheduleSeatRepositoryCustom 
 					seat.sectionName,
 					seat.rowLabel,
 					seat.seatNumber,
-					scheduleSeat.status
+					scheduleSeat.status,
+					seatGrade.grade.stringValue(),
+					seatGrade.price
 				)
 			)
 			.from(scheduleSeat)
 			.join(seat)
 			.on(scheduleSeat.seatId.eq(seat.id))
+
+			.join(performanceSchedule)
+			.on(scheduleSeat.scheduleId.eq(performanceSchedule.performanceScheduleId))
+
+			.leftJoin(seatGrade)
+			.on(
+				seatGrade.performanceId.eq(performanceSchedule.performance.performanceId)
+					.and(seatGrade.seatId.eq(seat.id))
+			)
+
 			.where(
 				scheduleSeat.scheduleId.eq(scheduleId),
 				scheduleSeat.status.eq(status)

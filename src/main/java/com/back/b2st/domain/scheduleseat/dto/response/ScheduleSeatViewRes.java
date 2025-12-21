@@ -11,6 +11,9 @@ public record ScheduleSeatViewRes(
 	String rowLabel,
 	Integer seatNumber,
 
-	SeatStatus status
+	SeatStatus status,
+
+	String grade,
+	Integer price
 ) {
 }

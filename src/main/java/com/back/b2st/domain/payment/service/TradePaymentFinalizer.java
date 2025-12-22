@@ -1,8 +1,5 @@
 package com.back.b2st.domain.payment.service;
 
-import java.time.Clock;
-import java.time.LocalDateTime;
-
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +29,6 @@ public class TradePaymentFinalizer implements PaymentFinalizer {
 	private EntityManager entityManager;
 
 	private final TicketService ticketService;
-	private final Clock clock;
 
 	@Override
 	public boolean supports(DomainType domainType) {
@@ -61,7 +57,6 @@ public class TradePaymentFinalizer implements PaymentFinalizer {
 
 		// 4. 멱등성 처리: 이미 완료된 경우 검증만 하고 종료
 		if (trade.getStatus() == TradeStatus.COMPLETED) {
-			trade.ensureBuyer(payment.getMemberId(), LocalDateTime.now(clock));
 			ensureTicketTransferred(trade, payment.getMemberId());
 			return;
 		}
@@ -80,7 +75,7 @@ public class TradePaymentFinalizer implements PaymentFinalizer {
 		handleTransfer(trade, payment.getMemberId());
 
 		// 8. 거래 완료 처리
-		trade.completeTransfer(payment.getMemberId(), LocalDateTime.now(clock));
+		trade.complete();
 	}
 
 	private void handleTransfer(Trade trade, Long buyerId) {

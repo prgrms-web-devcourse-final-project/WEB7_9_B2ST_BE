@@ -57,6 +57,3 @@ src/main/generated/
 
 ### custom ###
 src/main/resources/application-secret.yml
-
-# local / sensitive files
-*.pem

@@ -13,6 +13,9 @@ import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
+import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
@@ -40,13 +43,31 @@ public class ReservationService {
 		// 1. HOLD 소유권 검증 (Redis)
 		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
 
+		// 2) DB 좌석 상태 검증 (HOLD + 만료 체크) TODO: 이건 좌석쪽에서 검증해야 할 것 같은데
+		ScheduleSeat scheduleSeat = scheduleSeatRepository
+			.findByScheduleIdAndSeatId(scheduleId, seatId)
+			.orElseThrow(() -> new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND));
+
+		if (scheduleSeat.getStatus() != SeatStatus.HOLD) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
+		}
+
+		if (scheduleSeat.getHoldExpiredAt() != null && scheduleSeat.getHoldExpiredAt().isBefore(LocalDateTime.now())) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
+		}
+
+		// 3) 좌석 중복 예매 방지 (Order 단에서 1차 방어) TODO:
+		if (reservationRepository.existsByScheduleIdAndSeatId(scheduleId, seatId)) {
+			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
+		}
+
 		// 2. Reservation 생성
 		Reservation reservation = request.toEntity(memberId);
 
 		// 3. 저장
 		Reservation saved = reservationRepository.save(reservation);
 
-		// 4. 반환
+		// 4. 반환 TODO: 이걸로 반환을 안 해도 될 것 같음 -> 결제로 넘겨주니까
 		return getReservationDetail(saved.getId(), memberId);
 	}
 
@@ -73,9 +94,14 @@ public class ReservationService {
 
 	/** === 예매 확정 === */
 	@Transactional
-	public void completeReservation(Long reservationId) {
+	public void completeReservation(Long reservationId, Long memberId) {
 
 		Reservation reservation = getReservation(reservationId);
+
+		// 소유자 검증(임시 안전장치: 최종적으로는 PG webhook/관리자 confirm에서만 호출)
+		if (!reservation.getMemberId().equals(memberId)) {
+			throw new BusinessException(ReservationErrorCode.RESERVATION_FORBIDDEN);
+		}
 
 		if (reservation.getStatus() == ReservationStatus.COMPLETED) {
 			return;
@@ -89,6 +115,31 @@ public class ReservationService {
 
 		// 좌석 상태 변경 (HOLD → SOLD)
 		scheduleSeatStateService.changeToSold(
+			reservation.getScheduleId(),
+			reservation.getSeatId()
+		);
+
+		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
+	}
+
+	/** === 결제 실패(카드 등): PENDING -> FAILED + 좌석 복구 === */
+	@Transactional
+	public void failReservation(Long reservationId, Long memberId) { // [MOD] 카드 실패 처리(최소형)
+
+		Reservation reservation = getReservation(reservationId);
+
+		if (!reservation.getMemberId().equals(memberId)) {
+			throw new BusinessException(ReservationErrorCode.RESERVATION_FORBIDDEN);
+		}
+
+		if (!reservation.getStatus().canFail()) {
+			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
+		}
+
+		reservation.fail();
+
+		// 좌석 복구 (HOLD → AVAILABLE)
+		scheduleSeatStateService.changeToAvailable(
 			reservation.getScheduleId(),
 			reservation.getSeatId()
 		);

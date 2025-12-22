@@ -136,6 +136,44 @@ class PaymentConfirmServiceTest {
 	}
 
 	@Test
+	void confirm_allowsWaitingForDeposit() {
+		String orderId = "order-waiting";
+		Long amount = 10000L;
+		Long memberId = 1L;
+
+		Payment payment = Payment.builder()
+			.orderId(orderId)
+			.memberId(memberId)
+			.domainType(DomainType.RESERVATION)
+			.domainId(10L)
+			.amount(amount)
+			.method(PaymentMethod.VIRTUAL_ACCOUNT)
+			.expiresAt(java.time.LocalDateTime.now().plusDays(1))
+			.build();
+
+		Payment confirmedPayment = Payment.builder()
+			.orderId(orderId)
+			.memberId(memberId)
+			.domainType(DomainType.RESERVATION)
+			.domainId(10L)
+			.amount(amount)
+			.method(PaymentMethod.VIRTUAL_ACCOUNT)
+			.expiresAt(payment.getExpiresAt())
+			.build();
+		confirmedPayment.complete(java.time.LocalDateTime.now());
+
+		when(paymentRepository.findByOrderId(orderId))
+			.thenReturn(Optional.of(payment))
+			.thenReturn(Optional.of(confirmedPayment));
+
+		Payment result = paymentConfirmService.confirm(memberId, new PaymentConfirmReq(orderId, amount));
+
+		assertThat(result.getStatus()).isEqualTo(PaymentStatus.DONE);
+		verify(paymentConfirmTransactionService).completeIdempotently(orderId);
+		verify(paymentFinalizeService).finalizeByOrderId(orderId);
+	}
+
+	@Test
 	void confirm_throwsNotFound_whenPaymentDisappearsAfterTransaction() {
 		String orderId = "order-disappeared";
 		Long amount = 10000L;

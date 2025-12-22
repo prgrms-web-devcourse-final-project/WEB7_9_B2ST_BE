@@ -201,4 +201,42 @@ class PaymentCancelServiceTest {
 		// then: 에러 없이 정상 처리 (멱등성)
 		assertThat(result.getStatus()).isEqualTo(PaymentStatus.CANCELED);
 	}
+
+	@Test
+	@DisplayName("존재하지 않는 결제 취소 시도")
+	void cancel_paymentNotFound() {
+		// given
+		Long buyerId = 2L;
+
+		// when & then: 존재하지 않는 orderId로 취소 시도
+		PaymentCancelReq cancelReq = new PaymentCancelReq("구매자 변심");
+		assertThatThrownBy(() -> paymentCancelService.cancel(buyerId, "NON-EXISTENT-ORDER", cancelReq))
+			.isInstanceOf(BusinessException.class)
+			.hasMessageContaining("결제 정보를 찾을 수 없습니다");
+	}
+
+	@Test
+	@DisplayName("도메인 핸들러가 없는 경우")
+	void cancel_noHandlerForDomain() {
+		// given: RESERVATION 타입 결제 (핸들러 없음)
+		Long buyerId = 2L;
+
+		Payment payment = Payment.builder()
+			.orderId("ORDER-CANCEL-5")
+			.memberId(buyerId)
+			.domainType(DomainType.RESERVATION) // TRADE가 아닌 다른 도메인
+			.domainId(1L)
+			.amount(50000L)
+			.method(PaymentMethod.CARD)
+			.expiresAt(null)
+			.build();
+		payment.complete("PAYMENT-KEY-456", java.time.LocalDateTime.now());
+		paymentRepository.save(payment);
+
+		// when & then: 핸들러가 없는 도메인 취소 시도
+		PaymentCancelReq cancelReq = new PaymentCancelReq("구매자 변심");
+		assertThatThrownBy(() -> paymentCancelService.cancel(buyerId, "ORDER-CANCEL-5", cancelReq))
+			.isInstanceOf(BusinessException.class)
+			.hasMessageContaining("결제 취소를 지원하지 않는 도메인입니다");
+	}
 }

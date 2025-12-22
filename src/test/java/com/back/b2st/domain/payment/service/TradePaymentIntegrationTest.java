@@ -103,13 +103,8 @@ class TradePaymentIntegrationTest {
 		assertThat(preparedPayment.getAmount()).isEqualTo(tradePrice);
 		assertThat(preparedPayment.getMemberId()).isEqualTo(buyerId);
 
-		// when: 구매자가 결제 승인 (결제 완료 처리는 Mock 없이 직접 수행)
+		// when: 결제 확정 (PG 없이도 confirm 호출로 결제 완료 처리 + 티켓 양도 실행)
 		String orderId = preparedPayment.getOrderId();
-		Payment paymentToConfirm = paymentRepository.findByOrderId(orderId).orElseThrow();
-		paymentToConfirm.complete("PAYMENT-KEY-123", java.time.LocalDateTime.now());
-		paymentRepository.save(paymentToConfirm);
-
-		// when: 결제 확정 (티켓 양도 실행)
 		Payment confirmedPayment = paymentConfirmService.confirm(buyerId, new PaymentConfirmReq(orderId, tradePrice));
 
 		// then: 결제 완료 상태
@@ -270,11 +265,6 @@ class TradePaymentIntegrationTest {
 					);
 					Payment preparedPayment = paymentPrepareService.prepare(buyerId, prepareReq);
 
-					// 결제 승인까지 시도
-					Payment paymentToConfirm = paymentRepository.findByOrderId(preparedPayment.getOrderId()).orElseThrow();
-					paymentToConfirm.complete("PAYMENT-KEY-" + buyerId, java.time.LocalDateTime.now());
-					paymentRepository.save(paymentToConfirm);
-
 					paymentConfirmService.confirm(buyerId, new PaymentConfirmReq(
 						preparedPayment.getOrderId(),
 						tradePrice
@@ -394,10 +384,6 @@ class TradePaymentIntegrationTest {
 		);
 		Payment preparedPayment = paymentPrepareService.prepare(buyerId, prepareReq);
 		String orderId = preparedPayment.getOrderId();
-
-		Payment paymentToConfirm = paymentRepository.findByOrderId(orderId).orElseThrow();
-		paymentToConfirm.complete("PAYMENT-KEY-123", java.time.LocalDateTime.now());
-		paymentRepository.save(paymentToConfirm);
 
 		paymentConfirmService.confirm(buyerId, new PaymentConfirmReq(orderId, tradePrice));
 

@@ -15,12 +15,9 @@ import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.error.PaymentErrorCode;
 import com.back.b2st.domain.payment.repository.PaymentRepository;
 import com.back.b2st.domain.ticket.entity.Ticket;
-import com.back.b2st.domain.ticket.entity.TicketStatus;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.domain.trade.entity.Trade;
-import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
-import com.back.b2st.domain.trade.error.TradeErrorCode;
 import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -61,7 +58,7 @@ class TradeCancelHandlerTest {
 	}
 
 	@Test
-	@DisplayName("handleCancel - Trade가 없으면 예외 발생")
+	@DisplayName("handleCancel - 티켓 거래 결제는 취소/환불 미지원")
 	void handleCancel_tradeNotFound() {
 		// given
 		Payment payment = Payment.builder()
@@ -80,11 +77,11 @@ class TradeCancelHandlerTest {
 		assertThatThrownBy(() -> tradeCancelHandler.handleCancel(payment))
 			.isInstanceOf(BusinessException.class)
 			.extracting(ex -> ((BusinessException) ex).getErrorCode())
-			.isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
+			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 	}
 
 	@Test
-	@DisplayName("handleCancel - 이미 취소된 거래는 멱등성 보장")
+	@DisplayName("handleCancel - 티켓 거래 결제는 취소/환불 미지원 (이미 취소된 거래여도 동일)")
 	void handleCancel_alreadyCancelled() {
 		// given
 		Long sellerId = 1L;
@@ -123,13 +120,14 @@ class TradeCancelHandlerTest {
 		payment.complete("PAYMENT-KEY-2", java.time.LocalDateTime.now());
 		paymentRepository.save(payment);
 
-		// when - 에러 없이 처리됨 (멱등성)
-		assertThatCode(() -> tradeCancelHandler.handleCancel(payment))
-			.doesNotThrowAnyException();
+		assertThatThrownBy(() -> tradeCancelHandler.handleCancel(payment))
+			.isInstanceOf(BusinessException.class)
+			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 	}
 
 	@Test
-	@DisplayName("handleCancel - COMPLETED가 아닌 상태면 예외 발생")
+	@DisplayName("handleCancel - 티켓 거래 결제는 취소/환불 미지원 (상태와 무관)")
 	void handleCancel_notCompletedStatus() {
 		// given
 		Long sellerId = 1L;
@@ -171,11 +169,12 @@ class TradeCancelHandlerTest {
 		// when & then
 		assertThatThrownBy(() -> tradeCancelHandler.handleCancel(payment))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining("완료된 거래만 취소할 수 있습니다");
+			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 	}
 
 	@Test
-	@DisplayName("handleCancel - 구매자 티켓이 ISSUED가 아니면 예외 발생")
+	@DisplayName("handleCancel - 티켓 거래 결제는 취소/환불 미지원 (티켓 상태와 무관)")
 	void handleCancel_buyerTicketNotIssued() {
 		// given
 		Long sellerId = 1L;
@@ -229,11 +228,12 @@ class TradeCancelHandlerTest {
 		// when & then
 		assertThatThrownBy(() -> tradeCancelHandler.handleCancel(payment))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining("사용/변경된 티켓은 결제 취소할 수 없습니다");
+			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 	}
 
 	@Test
-	@DisplayName("handleCancel - 정상 케이스: 티켓 복구 및 거래 취소")
+	@DisplayName("handleCancel - 티켓 거래 결제는 취소/환불 미지원")
 	void handleCancel_success() {
 		// given
 		Long sellerId = 1L;
@@ -283,23 +283,14 @@ class TradeCancelHandlerTest {
 		payment.complete("PAYMENT-KEY-5", java.time.LocalDateTime.now());
 		paymentRepository.save(payment);
 
-		// when
-		tradeCancelHandler.handleCancel(payment);
-
-		// then - 거래가 취소됨
-		Trade result = tradeRepository.findById(savedTrade.getId()).orElseThrow();
-		assertThat(result.getStatus()).isEqualTo(TradeStatus.CANCELLED);
-
-		// then - 판매자 티켓 복구됨
-		Ticket restoredTicket = ticketRepository.findById(sellerTicket.getId()).orElseThrow();
-		assertThat(restoredTicket.getStatus()).isEqualTo(TicketStatus.ISSUED);
-
-		// then - 구매자 티켓 삭제됨
-		assertThat(ticketRepository.findById(buyerTicket.getId())).isEmpty();
+		assertThatThrownBy(() -> tradeCancelHandler.handleCancel(payment))
+			.isInstanceOf(BusinessException.class)
+			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 	}
 
 	@Test
-	@DisplayName("handleCancel - 구매자 티켓이 없어도 정상 처리")
+	@DisplayName("handleCancel - 티켓 거래 결제는 취소/환불 미지원 (구매자 티켓 유무와 무관)")
 	void handleCancel_noBuyerTicket() {
 		// given
 		Long sellerId = 1L;
@@ -343,16 +334,9 @@ class TradeCancelHandlerTest {
 		payment.complete("PAYMENT-KEY-6", java.time.LocalDateTime.now());
 		paymentRepository.save(payment);
 
-		// when - 에러 없이 처리됨
-		assertThatCode(() -> tradeCancelHandler.handleCancel(payment))
-			.doesNotThrowAnyException();
-
-		// then - 거래가 취소됨
-		Trade result = tradeRepository.findById(savedTrade.getId()).orElseThrow();
-		assertThat(result.getStatus()).isEqualTo(TradeStatus.CANCELLED);
-
-		// then - 판매자 티켓 복구됨
-		Ticket restoredTicket = ticketRepository.findById(sellerTicket.getId()).orElseThrow();
-		assertThat(restoredTicket.getStatus()).isEqualTo(TicketStatus.ISSUED);
+		assertThatThrownBy(() -> tradeCancelHandler.handleCancel(payment))
+			.isInstanceOf(BusinessException.class)
+			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 	}
 }

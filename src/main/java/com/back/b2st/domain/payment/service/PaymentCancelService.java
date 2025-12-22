@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.payment.dto.request.PaymentCancelReq;
+import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentStatus;
 import com.back.b2st.domain.payment.error.PaymentErrorCode;
@@ -42,6 +43,12 @@ public class PaymentCancelService {
 		if (payment.getStatus() != PaymentStatus.DONE) {
 			throw new BusinessException(PaymentErrorCode.INVALID_STATUS,
 				"완료된 결제만 취소할 수 있습니다.");
+		}
+
+		// 5. 정책: 티켓 거래 결제는 취소/환불 미지원
+		if (payment.getDomainType() == DomainType.TRADE) {
+			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE,
+				"티켓 거래 결제는 취소/환불을 지원하지 않습니다.");
 		}
 
 		// 5. 도메인별 취소 처리 (티켓 복구, 거래 상태 변경 등)

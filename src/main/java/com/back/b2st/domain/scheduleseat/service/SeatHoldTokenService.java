@@ -16,7 +16,7 @@ public class SeatHoldTokenService {
 
 	private final StringRedisTemplate redisTemplate;
 
-	public static final Duration HOLD_TTL = Duration.ofMinutes(5);
+	public static final Duration HOLD_TTL = Duration.ofMinutes(1);
 
 	/** === HOLD 소유권 저장 === */
 	public void save(Long scheduleId, Long seatId, Long memberId) {

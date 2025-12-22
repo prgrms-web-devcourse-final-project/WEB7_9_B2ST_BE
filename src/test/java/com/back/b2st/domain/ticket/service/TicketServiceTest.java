@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -133,6 +134,7 @@ class TicketServiceTest {
 			.scheduleId(savedSchedule.getPerformanceScheduleId())
 			.memberId(savedMember.getId())
 			.seatId(savedSeat.getId())
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation savedReservation = reservationRepository.save(reservation);
 

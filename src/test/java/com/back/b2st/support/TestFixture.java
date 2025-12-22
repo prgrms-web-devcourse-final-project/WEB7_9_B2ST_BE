@@ -38,7 +38,8 @@ public class TestFixture {
 		MemberRepository memberRepository,
 		PasswordEncoder passwordEncoder
 	) {
-		return IntStream.rangeClosed(1, count)
+		int row = (int)(memberRepository.count() + 1);
+		return IntStream.rangeClosed(row, row + count - 1)
 			.mapToObj(i -> Member.builder()
 				.email("user" + i + "@test.com")
 				.password(passwordEncoder.encode("1234567a!"))
@@ -200,7 +201,7 @@ public class TestFixture {
 	/**
 	 * 추첨 응모 생성
 	 */
-	public static void createLotteryEntry(
+	public static List<LotteryEntry> createLotteryEntry(
 		List<Member> members,
 		Performance performance,
 		PerformanceSchedule performanceSchedule,
@@ -219,7 +220,7 @@ public class TestFixture {
 					.build();
 			}).toList();
 
-		repo.saveAll(lotteryEntries);
+		return repo.saveAll(lotteryEntries);
 	}
 
 }

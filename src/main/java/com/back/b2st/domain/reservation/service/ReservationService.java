@@ -56,8 +56,12 @@ public class ReservationService {
 			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
 		}
 
-		// 3) 좌석 중복 예매 방지 (Order 단에서 1차 방어) TODO:
-		if (reservationRepository.existsByScheduleIdAndSeatId(scheduleId, seatId)) {
+		// 3) 좌석 중복 예매 방지 (Order 단에서 1차 방어)
+		if (reservationRepository.existsByScheduleIdAndSeatIdAndStatusIn(
+			scheduleId,
+			seatId,
+			List.of(ReservationStatus.PENDING, ReservationStatus.COMPLETED)
+		)) {
 			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
 		}
 

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationStatus;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long>, ReservationRepositoryCustom {
@@ -14,5 +15,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 	List<Reservation> findAllByMemberId(Long memberId);
 
 	/** === 좌석 중복 예매 방지 === */
-	boolean existsByScheduleIdAndSeatId(Long scheduleId, Long seatId);
+	boolean existsByScheduleIdAndSeatIdAndStatusIn(Long scheduleId, Long seatId, List<ReservationStatus> statuses);
+
 }

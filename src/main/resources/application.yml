@@ -1,0 +1,65 @@
+spring:
+  profiles:
+    active: dev # 나중에 배포할 때는 수정해야 할 부분
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/tt_db
+    username: ${POSTGRES_USER}   # .env 값 참조
+    password: ${POSTGRES_PASSWORD} # .env 값 참조
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # 운영/배치 때는 validate로 변경 필요
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        # show_sql: true # 로깅 설정으로 대체하여 주석 처리
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      # .env 값
+      password: ${REDIS_PASSWORD}
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    default-encoding: UTF-8
+
+app:
+  mail:
+    from-address: ${MAIL_FROM_ADDRESS}
+    from-name: ${MAIL_FROM_NAME}
+    verification:
+      expire-minutes: 5
+      code-length: 6
+
+jwt:
+  # .env 값
+  secret: ${JWT_SECRET}
+  access-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    # 쿼리 파라미터바인딩(?에 뭐 들어가는지) 확인용
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.springframework.mail: DEBUG
+    com.sun.mail: DEBUG

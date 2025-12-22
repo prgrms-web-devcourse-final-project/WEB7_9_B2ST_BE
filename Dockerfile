@@ -31,4 +31,4 @@ COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-Dspring.profiles.active=prod", "-jar", "app.jar"]
+CMD ["sh", "-c", "doppler run -- java -Dspring.profiles.active=prod -jar app.jar"]

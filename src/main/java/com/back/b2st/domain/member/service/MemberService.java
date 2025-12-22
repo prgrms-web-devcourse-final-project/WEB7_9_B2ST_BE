@@ -30,6 +30,7 @@ public class MemberService {
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final RefundAccountRepository refundAccountRepository;
 
+	// 이메일 중복 검사 + BCrypt 암호화 + 기본 Role 설정 + 개인정보 마스킹 로그
 	@Transactional
 	public Long signup(SignupReq request) {
 		validateEmail(request);
@@ -51,6 +52,7 @@ public class MemberService {
 		return memberRepository.save(member).getId();
 	}
 
+	// 회원 조회 + DTO 변환(from 팩토리)
 	@Transactional(readOnly = true)
 	public MyInfoRes getMyInfo(Long memberId) {
 		Member member = validateMember(memberId);
@@ -58,6 +60,7 @@ public class MemberService {
 		return MyInfoRes.from(member);
 	}
 
+	// 현재 비밀번호 검증 + 동일 비밀번호 방지 + BCrypt 재암호화
 	@Transactional
 	public void changePassword(Long memberId, PasswordChangeReq request) {
 		Member member = validateMember(memberId);
@@ -67,6 +70,7 @@ public class MemberService {
 		log.info("비밀번호 변경 완료: MemberID={}", memberId);
 	}
 
+	// Soft Delete + Redis 토큰 삭제 + 환불 계좌 삭제 + 마스킹 로그
 	@Transactional
 	public void withdraw(Long memberId, WithdrawReq request) {
 		Member member = validateMember(memberId);

@@ -13,14 +13,10 @@ public class WithdrawalRecoveryToken {
 
 	@Id
 	private String token; // UUID
-
 	private String email;
-
 	private Long memberId;
-
 	@TimeToLive
 	private long ttl;
-
 	private static final long DEFAULT_TTL = 3600 * 24; // 24시간
 
 	@Builder

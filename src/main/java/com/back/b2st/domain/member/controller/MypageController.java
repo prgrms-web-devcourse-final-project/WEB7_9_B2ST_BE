@@ -32,6 +32,7 @@ public class MypageController {
 	private final MemberService memberService;
 	private final RefundAccountService refundAccountService;
 
+	// @CurrentUser(SpEL 기반 커스텀 어노테이션) + DTO 변환(from 팩토리)
 	@GetMapping("/me")
 	public ResponseEntity<BaseResponse<MyInfoRes>> getMyInfo(@CurrentUser UserPrincipal userPrincipal) {
 		MyInfoRes myInfo = memberService.getMyInfo(userPrincipal.getId());
@@ -39,6 +40,7 @@ public class MypageController {
 		return ResponseEntity.ok(BaseResponse.success(myInfo));
 	}
 
+	// 현재 비밀번호 검증 + 동일 비밀번호 방지 + BCrypt 재암호화
 	@PatchMapping("/password")
 	public BaseResponse<Void> changePassword(@CurrentUser UserPrincipal userPrincipal,
 			@Valid @RequestBody PasswordChangeReq request) {
@@ -46,6 +48,7 @@ public class MypageController {
 		return BaseResponse.success(null);
 	}
 
+	// Soft Delete + Redis 토큰 삭제 + 환불 계좌 삭제 + 30일 복구 유예
 	@DeleteMapping("/withdraw")
 	@Operation(summary = "회원 탈퇴", description = "비밀번호 확인 후 탈퇴 처리 (30일간 복구 가능)")
 	public BaseResponse<Void> withdraw(@CurrentUser UserPrincipal userPrincipal,
@@ -54,6 +57,7 @@ public class MypageController {
 		return BaseResponse.success(null);
 	}
 
+	// Upsert 패턴(없으면 생성, 있으면 수정) + 계좌번호 마스킹 로그
 	@PostMapping("/account")
 	public BaseResponse<Void> setRefunAccount(
 			@CurrentUser UserPrincipal userPrincipal,
@@ -62,6 +66,7 @@ public class MypageController {
 		return BaseResponse.success(null);
 	}
 
+	// 계좌번호 마스킹(앞3 + *** + 뒤3) + BankCode Enum 매핑
 	@GetMapping("/account")
 	public BaseResponse<RefundAccountRes> getRefundAccount(@CurrentUser UserPrincipal userPrincipal) {
 		RefundAccountRes response = refundAccountService.getAccount(userPrincipal.getId());

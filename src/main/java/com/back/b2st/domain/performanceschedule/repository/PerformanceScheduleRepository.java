@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.back.b2st.domain.performanceschedule.dto.DrawTargetDto;
+import com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 
 public interface PerformanceScheduleRepository extends JpaRepository<PerformanceSchedule, Long> {
@@ -33,7 +33,7 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 	 * 응모 종료 된 공연 중 아직 추첨하지 않은 공연을 조회
 	 */
 	@Query("""
-			SELECT com.back.b2st.domain.performanceschedule.dto.DrawTargetDto(
+			SELECT new com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance(
 					p.performanceId,
 					ps.performanceScheduleId
 			)
@@ -44,7 +44,7 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 			  AND ps.drawCompleted = false
 			  AND ps.performance.performanceId = p.performanceId
 		""")
-	List<DrawTargetDto> findByClosedBetweenAndNotDrawn(
+	List<DrawTargetPerformance> findByClosedBetweenAndNotDrawn(
 		@Param("start") LocalDateTime startDate,
 		@Param("end") LocalDateTime endDate);
 }

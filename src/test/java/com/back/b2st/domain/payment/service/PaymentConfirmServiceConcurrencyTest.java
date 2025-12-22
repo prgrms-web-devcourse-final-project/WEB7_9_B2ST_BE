@@ -1,5 +1,8 @@
 package com.back.b2st.domain.payment.service;
 
+import static org.assertj.core.api.Assertions.*;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -26,8 +29,6 @@ import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
-
-import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -72,7 +73,7 @@ class PaymentConfirmServiceConcurrencyTest {
 			.scheduleId(scheduleId)
 			.seatId(seatId)
 			.build();
-		scheduleSeat.hold();
+		scheduleSeat.hold(LocalDateTime.now().plusMinutes(5));
 		scheduleSeatRepository.save(scheduleSeat);
 
 		Reservation reservation = Reservation.builder()

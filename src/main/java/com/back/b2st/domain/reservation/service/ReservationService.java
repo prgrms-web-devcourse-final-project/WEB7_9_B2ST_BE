@@ -13,7 +13,6 @@ import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
@@ -68,6 +67,8 @@ public class ReservationService {
 			reservation.getScheduleId(),
 			reservation.getSeatId()
 		);
+
+		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
 	}
 
 	/** === 예매 확정 === */
@@ -91,6 +92,8 @@ public class ReservationService {
 			reservation.getScheduleId(),
 			reservation.getSeatId()
 		);
+
+		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
 	}
 
 	/** === 예매 만료 === */
@@ -105,9 +108,13 @@ public class ReservationService {
 
 		reservation.expire();
 
-		scheduleSeatRepository
-			.findByScheduleIdAndSeatId(reservation.getScheduleId(), reservation.getSeatId())
-			.ifPresent(ScheduleSeat::release);
+		// 좌석 상태 복구 (HOLD → AVAILABLE)
+		scheduleSeatStateService.changeToAvailable(
+			reservation.getScheduleId(),
+			reservation.getSeatId()
+		);
+
+		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
 	}
 
 	/** === 예매 단건 조회 === */

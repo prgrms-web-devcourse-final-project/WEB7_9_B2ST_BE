@@ -1,4 +1,4 @@
-package com.back.b2st.domain.reservation.service;
+package com.back.b2st.domain.scheduleseat.service;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -17,7 +17,6 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
-import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 
 @SpringBootTest
 @ActiveProfiles("test")

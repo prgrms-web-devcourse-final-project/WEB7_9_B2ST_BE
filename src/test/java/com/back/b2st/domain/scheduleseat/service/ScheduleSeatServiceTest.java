@@ -28,6 +28,7 @@ import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @SpringBootTest
@@ -39,7 +40,7 @@ class ScheduleSeatServiceTest {
 	private ScheduleSeatService scheduleSeatService;
 
 	@Autowired
-	private com.back.b2st.domain.venue.venue.repository.VenueRepository venueRepository;
+	private VenueRepository venueRepository;
 
 	@Autowired
 	private PerformanceRepository performanceRepository;
@@ -58,17 +59,21 @@ class ScheduleSeatServiceTest {
 
 	private Long scheduleId;
 
+	// [수정] setUp에서 만든 엔티티를 테스트에서 재사용하기 위해 필드로 보관
+	private Venue venue;
+	private Performance performance;
+
 	@BeforeEach
 	void setUp() {
 		// 공연장 생성
-		Venue venue = venueRepository.save(
+		venue = venueRepository.save(
 			Venue.builder()
 				.name("테스트 공연장")
 				.build()
 		);
 
 		// 공연 생성
-		Performance performance = performanceRepository.save(
+		performance = performanceRepository.save(
 			Performance.builder()
 				.venue(venue)
 				.title("테스트 공연")
@@ -129,11 +134,10 @@ class ScheduleSeatServiceTest {
 	@Test
 	void getSeats_success() {
 		// when
-		List<ScheduleSeatViewRes> seats =
-			scheduleSeatService.getSeats(scheduleId);
+		List<ScheduleSeatViewRes> seats = scheduleSeatService.getSeats(scheduleId);
 
 		// then
-		assertThat(seats).isNotEmpty();
+		assertThat(seats).isNotNull();
 		assertThat(seats).hasSize(5);
 	}
 
@@ -145,9 +149,9 @@ class ScheduleSeatServiceTest {
 			scheduleSeatService.getSeatsByStatus(scheduleId, SeatStatus.AVAILABLE);
 
 		// then
-		assertThat(seats).isNotEmpty();
-		assertThat(seats)
-			.allMatch(seat -> seat.status() == SeatStatus.AVAILABLE);
+		assertThat(seats).isNotNull();
+		assertThat(seats).hasSize(5);
+		assertThat(seats).allSatisfy(seat -> assertThat(seat.status()).isEqualTo(SeatStatus.AVAILABLE));
 	}
 
 	@DisplayName("좌석이 없는 회차를 조회하면 빈 리스트를 반환한다")
@@ -156,7 +160,7 @@ class ScheduleSeatServiceTest {
 		// given
 		PerformanceSchedule emptySchedule = performanceScheduleRepository.save(
 			PerformanceSchedule.builder()
-				.performance(performanceRepository.findAll().get(0))
+				.performance(performance)
 				.roundNo(99)
 				.startAt(LocalDateTime.now().plusDays(3))
 				.bookingType(BookingType.FIRST_COME)
@@ -170,6 +174,7 @@ class ScheduleSeatServiceTest {
 			scheduleSeatService.getSeats(emptySchedule.getPerformanceScheduleId());
 
 		// then
+		assertThat(seats).isNotNull();
 		assertThat(seats).isEmpty();
 	}
 
@@ -180,9 +185,7 @@ class ScheduleSeatServiceTest {
 		Long notExistScheduleId = 9999L;
 
 		// when & then
-		assertThatThrownBy(() ->
-			scheduleSeatService.getSeats(notExistScheduleId)
-		)
+		assertThatThrownBy(() -> scheduleSeatService.getSeats(notExistScheduleId))
 			.isInstanceOf(BusinessException.class);
 	}
 

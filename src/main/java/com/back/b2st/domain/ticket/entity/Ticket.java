@@ -96,4 +96,8 @@ public class Ticket extends BaseEntity {
 	public void expire() {
 		this.status = TicketStatus.EXPIRED;
 	}
+
+	public void restore() {
+		this.status = TicketStatus.ISSUED;
+	}
 }

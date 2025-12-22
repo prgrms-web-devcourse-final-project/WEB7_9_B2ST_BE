@@ -50,6 +50,10 @@ public class Payment extends BaseEntity {
 	@Column(name = "order_id", nullable = false, length = 100)
 	private String orderId;
 
+	/**
+	 * 결제 키 (내부 추적용)
+	 * MVP: 외부 PG 연동 없음, null 가능
+	 */
 	@Column(name = "payment_key", length = 200)
 	private String paymentKey;
 
@@ -74,6 +78,10 @@ public class Payment extends BaseEntity {
 	@Column(name = "status", nullable = false, length = 30)
 	private PaymentStatus status;
 
+	/**
+	 * 무통장 입금 만료 시각
+	 * MVP: 사용 안 함 (입금 만료 처리 없음)
+	 */
 	@Column(name = "expires_at")
 	private LocalDateTime expiresAt;
 

@@ -386,4 +386,61 @@ class TicketServiceTest {
 		assertThat(tickets).isNotNull();
 		assertThat(tickets).isEmpty();
 	}
+
+	@Test
+	@DisplayName("티켓복구_성공")
+	void restoreTicket_success() {
+		// given: TRANSFERRED 상태의 티켓
+		ticketService.transferTicket(rId, mId, sId);
+		em.flush();
+		em.clear();
+
+		// when
+		Ticket restoredTicket = ticketService.restoreTicket(ticket.getId());
+
+		// then
+		assertThat(restoredTicket.getStatus()).isEqualTo(TicketStatus.ISSUED);
+
+		// DB 검증
+		Ticket findTicket = ticketRepository.findById(ticket.getId()).orElseThrow();
+		assertThat(findTicket.getStatus()).isEqualTo(TicketStatus.ISSUED);
+	}
+
+	@Test
+	@DisplayName("티켓복구_실패_TRANSFERRED가_아닌_티켓")
+	void restoreTicket_fail_notTransferred() {
+		// given: ISSUED 상태의 티켓 (TRANSFERRED가 아님)
+		em.flush();
+		em.clear();
+
+		// when & then
+		BusinessException e = assertThrows(BusinessException.class,
+			() -> ticketService.restoreTicket(ticket.getId()));
+
+		assertThat(e.getErrorCode()).isEqualTo(TicketErrorCode.TICKET_NOT_TRANSFERABLE);
+	}
+
+	@Test
+	@DisplayName("티켓생성_멱등성_중복시_기존티켓_반환")
+	void createTicket_idempotency_returnExisting() {
+		// given: 이미 존재하는 티켓
+		Long existingReservationId = ticket.getReservationId();
+		Long existingMemberId = ticket.getMemberId();
+		Long existingSeatId = ticket.getSeatId();
+
+		// when: 같은 정보로 티켓 재생성 시도
+		Ticket result = ticketService.createTicket(existingReservationId, existingMemberId, existingSeatId);
+
+		// then: 새 티켓이 아닌 기존 티켓이 반환됨
+		assertThat(result.getId()).isEqualTo(ticket.getId());
+
+		// DB 검증: 중복 티켓이 생성되지 않음
+		List<Ticket> allTickets = ticketRepository.findAll();
+		long count = allTickets.stream()
+			.filter(t -> t.getReservationId().equals(existingReservationId)
+				&& t.getMemberId().equals(existingMemberId)
+				&& t.getSeatId().equals(existingSeatId))
+			.count();
+		assertThat(count).isEqualTo(1L);
+	}
 }

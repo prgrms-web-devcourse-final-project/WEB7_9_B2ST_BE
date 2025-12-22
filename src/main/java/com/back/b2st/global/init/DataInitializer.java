@@ -346,7 +346,7 @@ public class DataInitializer implements CommandLineRunner {
 			.orElseThrow(() -> new IllegalStateException("ScheduleSeat not found"));
 
 		// 좌석 상태 HOLD 처리 (결제 완료했지만 확정 전)
-		paidScheduleSeat.hold();
+		paidScheduleSeat.hold(LocalDateTime.now().plusMinutes(5));
 
 		// 예매 생성
 		Reservation paidReservation = Reservation.builder()

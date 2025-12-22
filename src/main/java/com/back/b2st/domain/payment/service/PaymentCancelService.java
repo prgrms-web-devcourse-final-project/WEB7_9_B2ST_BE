@@ -1,0 +1,68 @@
+package com.back.b2st.domain.payment.service;
+
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.back.b2st.domain.payment.dto.request.PaymentCancelReq;
+import com.back.b2st.domain.payment.entity.Payment;
+import com.back.b2st.domain.payment.entity.PaymentStatus;
+import com.back.b2st.domain.payment.error.PaymentErrorCode;
+import com.back.b2st.domain.payment.repository.PaymentRepository;
+import com.back.b2st.global.error.exception.BusinessException;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class PaymentCancelService {
+
+	private final PaymentRepository paymentRepository;
+	private final List<PaymentCancelHandler> cancelHandlers;
+	private final Clock clock;
+
+	@Transactional
+	public Payment cancel(Long memberId, String orderId, PaymentCancelReq request) {
+		// 1. 결제 조회
+		Payment payment = paymentRepository.findByOrderId(orderId)
+			.orElseThrow(() -> new BusinessException(PaymentErrorCode.NOT_FOUND));
+
+		// 2. 권한 검증 (본인 결제만 취소 가능)
+		validateOwner(payment, memberId);
+
+		// 3. 멱등성 처리: 이미 취소된 경우
+		if (payment.getStatus() == PaymentStatus.CANCELED) {
+			return payment;
+		}
+
+		// 4. DONE 상태만 취소 가능
+		if (payment.getStatus() != PaymentStatus.DONE) {
+			throw new BusinessException(PaymentErrorCode.INVALID_STATUS,
+				"완료된 결제만 취소할 수 있습니다.");
+		}
+
+		// 5. 도메인별 취소 처리 (티켓 복구, 거래 상태 변경 등)
+		PaymentCancelHandler handler = cancelHandlers.stream()
+			.filter(h -> h.supports(payment.getDomainType()))
+			.findFirst()
+			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND,
+				"결제 취소를 지원하지 않는 도메인입니다."));
+
+		handler.handleCancel(payment);
+
+		// 6. 결제 상태를 CANCELED로 변경
+		LocalDateTime canceledAt = LocalDateTime.now(clock);
+		payment.cancel(request.reason(), canceledAt);
+
+		return payment;
+	}
+
+	private void validateOwner(Payment payment, Long memberId) {
+		if (!payment.getMemberId().equals(memberId)) {
+			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
+		}
+	}
+}

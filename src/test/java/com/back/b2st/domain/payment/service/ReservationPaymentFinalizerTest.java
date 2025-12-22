@@ -226,7 +226,7 @@ class ReservationPaymentFinalizerTest {
 
 		// 상태 전환
 		if (status == SeatStatus.HOLD) {
-			seat.hold();
+			seat.hold(LocalDateTime.now().plusMinutes(5));
 		} else if (status == SeatStatus.SOLD) {
 			seat.sold();
 		}

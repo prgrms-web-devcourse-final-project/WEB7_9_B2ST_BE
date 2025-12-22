@@ -116,6 +116,10 @@ public class Member extends BaseEntity {
 		this.providerId = null;
 	}
 
+	public void linkKakao(String kakaoId) {
+		this.providerId = kakaoId;
+	}
+
 	public enum Role {
 		MEMBER, ADMIN
 	}

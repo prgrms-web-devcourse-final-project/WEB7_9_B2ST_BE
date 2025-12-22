@@ -38,24 +38,26 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
-			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-			.csrf(AbstractHttpConfigurer::disable)
-			.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+				.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+				.csrf(AbstractHttpConfigurer::disable)
+				.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
-			.authorizeHttpRequests(auth -> auth
-				.requestMatchers(
-					"/api/members/signup", "/api/auth/**", "/h2-console/**", "/error", "/api/banks",
-					"/api/email/**",
-					"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html" // Swagger
-				).permitAll()
-				.anyRequest().authenticated())
-			.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-			.exceptionHandling(exception -> exception
-				.authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401 에러 처리
-				.accessDeniedHandler(jwtAccessDeniedHandler) // 403 에러 처리
-			)
-			.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
-				UsernamePasswordAuthenticationFilter.class);
+				.authorizeHttpRequests(auth -> auth
+						// 인증 필요한 auth 하위 경로 (link, logout)
+						.requestMatchers("/api/auth/link/**", "/api/auth/logout").authenticated()
+						.requestMatchers(
+								"/api/members/signup", "/api/auth/**", "/h2-console/**", "/error", "/api/banks",
+								"/api/email/**",
+								"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html" // Swagger
+						).permitAll()
+						.anyRequest().authenticated())
+				.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+				.exceptionHandling(exception -> exception
+						.authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401 에러 처리
+						.accessDeniedHandler(jwtAccessDeniedHandler) // 403 에러 처리
+				)
+				.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+						UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
 	}
@@ -66,12 +68,11 @@ public class SecurityConfig {
 
 		// 프엔주소
 		configuration.setAllowedOrigins(List.of(
-			"http://localhost:3000",
-			"https://b2st.doncrytt.online",
-			"https://api.b2st.doncrytt.online",
-			"https://www.doncrytt.online",
-			"https://doncrytt.vercel.app"
-		));
+				"http://localhost:3000",
+				"https://b2st.doncrytt.online",
+				"https://api.b2st.doncrytt.online",
+				"https://www.doncrytt.online",
+				"https://doncrytt.vercel.app"));
 
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("*"));

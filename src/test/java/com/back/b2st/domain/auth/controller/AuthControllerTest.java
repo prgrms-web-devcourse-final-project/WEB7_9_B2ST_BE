@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.auth.client.KakaoJwksClient;
 import com.back.b2st.domain.auth.dto.request.ConfirmRecoveryReq;
 import com.back.b2st.domain.auth.dto.request.LoginReq;
 import com.back.b2st.domain.auth.dto.request.RecoveryEmailReq;
@@ -63,10 +64,35 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 	@Autowired
 	private ObjectMapper objectMapper;
 
+	@org.springframework.test.context.bean.override.mockito.MockitoBean
+	private KakaoJwksClient kakaoJwksClient;
+
 	@BeforeEach
 	void setup() {
 		refreshTokenRepository.deleteAll();
 		recoveryRepository.deleteAll();
+	}
+
+	// 헬퍼 메서드
+	private Member createMember(String email, String password) {
+		Member member = Member.builder()
+			.email(email)
+			.password(passwordEncoder.encode(password))
+			.name("유저일")
+			.phone("01012345678")
+			.birth(LocalDate.of(1990, 1, 1))
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
+			.build();
+		return memberRepository.save(member);
+	}
+
+	private Member createWithdrawnMember(String email, String password) {
+		Member member = createMember(email, password);
+		member.softDelete();
+		return memberRepository.save(member);
 	}
 
 	@Nested
@@ -283,27 +309,5 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 				.andDo(print())
 				.andExpect(status().isNotFound());
 		}
-	}
-
-	// 헬퍼 메서드
-	private Member createMember(String email, String password) {
-		Member member = Member.builder()
-			.email(email)
-			.password(passwordEncoder.encode(password))
-			.name("유저일")
-			.phone("01012345678")
-			.birth(LocalDate.of(1990, 1, 1))
-			.role(Member.Role.MEMBER)
-			.provider(Member.Provider.EMAIL)
-			.isEmailVerified(true)
-			.isIdentityVerified(true)
-			.build();
-		return memberRepository.save(member);
-	}
-
-	private Member createWithdrawnMember(String email, String password) {
-		Member member = createMember(email, password);
-		member.softDelete();
-		return memberRepository.save(member);
 	}
 }

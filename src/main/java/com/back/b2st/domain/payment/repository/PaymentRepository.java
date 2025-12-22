@@ -16,12 +16,12 @@ import com.back.b2st.domain.payment.entity.PaymentStatus;
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
 	/**
-	 * Toss Payments 주문 ID로 결제 조회 (유니크)
+	 * 주문 ID로 결제 조회 (유니크)
 	 */
 	Optional<Payment> findByOrderId(String orderId);
 
 	/**
-	 * Toss Payments 결제 키로 결제 조회 (승인 후 발급, 유니크)
+	 * 결제 키로 결제 조회 (내부 추적용, 유니크)
 	 */
 	Optional<Payment> findByPaymentKey(String paymentKey);
 
@@ -47,7 +47,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 		+ "SET p.status = com.back.b2st.domain.payment.entity.PaymentStatus.DONE, "
 		+ "p.paidAt = :paidAt "
 		+ "WHERE p.orderId = :orderId "
-		+ "AND p.status = com.back.b2st.domain.payment.entity.PaymentStatus.READY")
+		+ "AND (p.status = com.back.b2st.domain.payment.entity.PaymentStatus.READY "
+		+ "OR p.status = com.back.b2st.domain.payment.entity.PaymentStatus.WAITING_FOR_DEPOSIT)")
 	int completeIfReady(
 		@Param("orderId") String orderId,
 		@Param("paidAt") LocalDateTime paidAt

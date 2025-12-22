@@ -46,8 +46,8 @@ public record SectionLayoutRes(
 					))
 					.toList();
 
-				return new SectionLayoutRes(sectionName, grades);
-			})
+			return new SectionLayoutRes(sectionName, grades);
+		})
 			.toList();
 	}
 }

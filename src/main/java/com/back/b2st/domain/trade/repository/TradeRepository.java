@@ -20,7 +20,9 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
 
 	Page<Trade> findAllByTypeAndStatus(TradeType type, TradeStatus status, Pageable pageable);
 
-	List<Trade> findAllByBuyerIdAndTypeAndStatusOrderByPurchasedAtDesc(Long buyerId, TradeType type, TradeStatus status);
+	List<Trade> findAllByBuyerIdAndTypeAndStatusOrderByPurchasedAtDesc(Long buyerId, TradeType type,
+		TradeStatus status);
 
-	List<Trade> findAllByMemberIdAndTypeAndStatusOrderByPurchasedAtDesc(Long memberId, TradeType type, TradeStatus status);
+	List<Trade> findAllByMemberIdAndTypeAndStatusOrderByPurchasedAtDesc(Long memberId, TradeType type,
+		TradeStatus status);
 }

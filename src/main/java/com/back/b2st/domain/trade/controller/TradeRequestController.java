@@ -79,8 +79,10 @@ public class TradeRequestController {
 
 	@Operation(
 		summary = "교환/양도 신청 수락 (티켓 소유권 이전)",
-		description = "교환/양도 신청을 수락하고 티켓 소유권을 이전합니다.\n\n" +
-			"- TRANSFER: 신청자에게 티켓 양도\n" +
+		description = "교환/양도 신청을 수락하고 티켓 소유권을 이전합니다.\n\n"
+			+
+			"- TRANSFER: 신청자에게 티켓 양도\n"
+			+
 			"- EXCHANGE: 서로의 티켓을 교환"
 	)
 	@PatchMapping("/trade-requests/{tradeRequestId}/accept")

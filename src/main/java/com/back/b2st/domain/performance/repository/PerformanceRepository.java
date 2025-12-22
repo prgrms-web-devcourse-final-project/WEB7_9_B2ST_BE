@@ -1,8 +1,5 @@
 package com.back.b2st.domain.performance.repository;
 
-import com.back.b2st.domain.performance.entity.Performance;
-import com.back.b2st.domain.performance.entity.PerformanceStatus;
-
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -12,6 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.entity.PerformanceStatus;
 
 public interface PerformanceRepository extends JpaRepository<Performance, Long> {
 

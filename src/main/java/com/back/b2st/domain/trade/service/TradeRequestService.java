@@ -7,11 +7,11 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.notification.event.NotificationEmailEvent;
 import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.entity.TicketStatus;
 import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.service.TicketService;
-import com.back.b2st.domain.notification.event.NotificationEmailEvent;
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequestReq;
 import com.back.b2st.domain.trade.dto.response.TradeRequestRes;
 import com.back.b2st.domain.trade.entity.Trade;
@@ -184,7 +184,8 @@ public class TradeRequestService {
 	}
 
 	private TradeRequest findTradeRequestByIdWithLock(Long tradeRequestId) {
-		TradeRequest tradeRequest = entityManager.find(TradeRequest.class, tradeRequestId, LockModeType.PESSIMISTIC_WRITE);
+		TradeRequest tradeRequest = entityManager.find(TradeRequest.class, tradeRequestId,
+			LockModeType.PESSIMISTIC_WRITE);
 		if (tradeRequest == null) {
 			throw new BusinessException(TradeErrorCode.TRADE_REQUEST_NOT_FOUND);
 		}

@@ -83,6 +83,7 @@ class NotificationEmailListenerTest {
 		listener.onNotificationEmailEvent(event);
 
 		// then
-		then(emailSender).should().sendTemplateEmail(eq("user@test.com"), anyString(), eq("email/notification"), anyMap());
+		then(emailSender).should()
+			.sendTemplateEmail(eq("user@test.com"), anyString(), eq("email/notification"), anyMap());
 	}
 }

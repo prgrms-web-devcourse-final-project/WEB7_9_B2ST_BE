@@ -3,7 +3,6 @@ package com.back.b2st.domain.lottery.draw;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo;
 import com.back.b2st.domain.lottery.draw.dto.WeightedApplicant;
+import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
@@ -90,8 +90,12 @@ public class DrawService {
 		EnumMap<SeatGradeType, Long> seatCountByGrade = toSeatCountMap(performanceId);
 
 		// 등급별 응모자 그룹핑
-		Map<SeatGradeType, List<LotteryApplicantInfo>> byGrade = entryInfos.stream()
-			.collect(Collectors.groupingBy(LotteryApplicantInfo::grade));
+		EnumMap<SeatGradeType, List<LotteryApplicantInfo>> byGrade = entryInfos.stream()
+			.collect(Collectors.groupingBy(
+				LotteryApplicantInfo::grade,
+				() -> new EnumMap<>(SeatGradeType.class),
+				Collectors.toList()
+			));
 
 		log.info("{}drawForPerformance] 응모자 수 : {}", p, byGrade.size());
 		byGrade.forEach((grade, infos) -> {
@@ -105,11 +109,6 @@ public class DrawService {
 		for (SeatGradeType gradeType : SeatGradeType.values()) {
 			drawByGrade(gradeType, byGrade, seatCountByGrade, scheduleId);
 		}
-		// 결과 저장
-		// lotteryEntry -> status WIN/LOSE 변경 필요
-		// 당점자 id 가져오기
-		// lotteryResult 생성 (lotteryEntryId, memberId)
-
 	}
 
 	/**
@@ -146,6 +145,28 @@ public class DrawService {
 		log.info("등급 {} - 추첨 진행, 좌석 : {}", grade, seatCounts);
 		List<Long> winnerIds = drawWithWeight(applicantInfos, seatCounts);
 		log.info("등급 {} - 당첨자 {}명 선정 완료", grade, winnerIds.size());
+
+		// todo 결과 저장
+		// lotteryEntry -> status WIN/LOSE 변경 필요
+		// 일괄 변경 작업이 필요하면 LotteryEntry 채로 들고오는 게 맞는데,
+		// 구조 개선?
+		List<LotteryEntry> winEntries = new ArrayList<>();
+		for (Long id : winnerIds) {
+			lotteryEntryRepository.findById(id)
+				.ifPresent(entry -> {
+					entry.setWins();
+					winEntries.add(entry);
+				});
+		}
+
+		// 추첨 완료 회차 & !WIN => LOSE 일괄 변경?
+
+		// LotteryEntity 객체를 가져와서 status 업데이트 하기
+		// vs
+		// id만 우선조회 하고 해당하는 id의 객체만 가져오기
+
+		// lotteryResult 생성 (lotteryEntryId, memberId)
+
 	}
 
 	/**
@@ -159,7 +180,7 @@ public class DrawService {
 		List<WeightedApplicant> weightedApplicants = applicantInfos.stream()
 			.map(applicant -> new WeightedApplicant(
 				applicant,
-				12 / applicant.quantity()) // 가중치: 1장=4, 2장=3, 3장=2, 4장=1
+				12 / applicant.quantity())
 			).toList();
 
 		// 전체 가중치
@@ -170,8 +191,6 @@ public class DrawService {
 		if (totalWeight <= 0)
 			return List.of();
 
-		Collections.shuffle(weightedApplicants);
-
 		// 추첨 진행
 		List<Long> winnerIds = new ArrayList<>();
 		Set<Long> selectedIds = new HashSet<>();
@@ -179,11 +198,11 @@ public class DrawService {
 
 		// 남은 좌석 0 이상,
 		while (remainingSeats > 0 && selectedIds.size() < applicantInfos.size()) {
-			int ramdomDraw = ThreadLocalRandom.current().nextInt(totalWeight);
+			int ramdomDraw = ThreadLocalRandom.current().nextInt(totalWeight) + 1;    // 0 ~ (totalWeight - 1)
 			int currentWeight = 0;
 
-			// 당첨자 선택
 			WeightedApplicant selected = null;
+
 			for (WeightedApplicant applicant : weightedApplicants) {
 				// 기존에 당점된 응모자 생략
 				if (selectedIds.contains(applicant.applicantInfo().id())) {
@@ -211,7 +230,7 @@ public class DrawService {
 				remainingSeats -= requestedQuantity;
 			}
 
-			// 선택된 응모자 처리
+			// 선택된 응모자 제외 (잔여석 제한 포함)
 			selectedIds.add(selected.applicantInfo().id());
 			totalWeight -= selected.weight();
 

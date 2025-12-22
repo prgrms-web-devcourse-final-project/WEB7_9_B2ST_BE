@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.back.b2st.domain.ticket.entity.Ticket;
@@ -54,6 +55,9 @@ class TradeRequestServiceTest {
 
 	@Mock
 	private EntityManager entityManager;
+
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	@BeforeEach
 	void setUp() {

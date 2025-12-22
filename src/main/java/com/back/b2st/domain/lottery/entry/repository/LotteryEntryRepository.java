@@ -1,6 +1,7 @@
 package com.back.b2st.domain.lottery.entry.repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.back.b2st.domain.lottery.draw.dto.LotteryApplicationInfo;
 import com.back.b2st.domain.lottery.entry.dto.response.AppliedLotteryInfo;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 
@@ -30,4 +32,20 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 		@Param("month") LocalDateTime month,
 		Pageable pageable
 	);
+
+	List<Long> findByScheduleId(Long scheduleId);
+
+	/**
+	 * 신청 정보 확인
+	 * @param performanceScheduleId
+	 * @return
+	 */
+	@Query("""
+		select new com.back.b2st.domain.lottery.draw.dto.LotteryApplicationInfo(
+				l.id, l.grade, l.quantity
+		)
+		from LotteryEntry l
+		where l.scheduleId = :scheduleId
+		""")
+	List<LotteryApplicationInfo> findAppliedInfoByScheduleId(@Param("scheduleId") Long performanceScheduleId);
 }

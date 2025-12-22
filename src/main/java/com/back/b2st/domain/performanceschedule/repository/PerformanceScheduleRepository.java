@@ -34,15 +34,15 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 	 */
 	@Query("""
 			SELECT new com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance(
-					p.performanceId,
+					ps.performance.performanceId,
 					ps.performanceScheduleId
 			)
 			FROM PerformanceSchedule ps
-			JOIN FETCH ps.performance p
+			JOIN ps.performance
 			WHERE ps.bookingCloseAt >= :start
 			  AND ps.bookingCloseAt < :end
 			  AND ps.drawCompleted = false
-			  AND ps.performance.performanceId = p.performanceId
+			  AND ps.performance.performanceId = ps.performance.performanceId
 		""")
 	List<DrawTargetPerformance> findByClosedBetweenAndNotDrawn(
 		@Param("start") LocalDateTime startDate,

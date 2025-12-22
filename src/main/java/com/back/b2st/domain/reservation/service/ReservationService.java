@@ -7,16 +7,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
+import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
-import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
-import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
-import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -28,35 +25,18 @@ import lombok.RequiredArgsConstructor;
 public class ReservationService {
 
 	private final ReservationRepository reservationRepository;
-	private final ScheduleSeatRepository scheduleSeatRepository;
 
 	private final SeatHoldTokenService seatHoldTokenService;
 	private final ScheduleSeatStateService scheduleSeatStateService;
 
-	/** === 예매 생성 === */
+	/** === 예매 생성(결제 시작) === */
 	@Transactional
-	public ReservationDetailRes createReservation(Long memberId, ReservationReq request) {
+	public ReservationCreateRes createReservation(Long memberId, ReservationReq request) {
 
 		Long scheduleId = request.scheduleId();
 		Long seatId = request.seatId();
 
-		// 1. HOLD 소유권 검증 (Redis)
-		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
-
-		// 2) DB 좌석 상태 검증 (HOLD + 만료 체크) TODO: 이건 좌석쪽에서 검증해야 할 것 같은데
-		ScheduleSeat scheduleSeat = scheduleSeatRepository
-			.findByScheduleIdAndSeatId(scheduleId, seatId)
-			.orElseThrow(() -> new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND));
-
-		if (scheduleSeat.getStatus() != SeatStatus.HOLD) {
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
-		}
-
-		if (scheduleSeat.getHoldExpiredAt() != null && scheduleSeat.getHoldExpiredAt().isBefore(LocalDateTime.now())) {
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
-		}
-
-		// 3) 좌석 중복 예매 방지 (Order 단에서 1차 방어)
+		// 1) 활성 상태 중복 예매 방지(최소변경)
 		if (reservationRepository.existsByScheduleIdAndSeatIdAndStatusIn(
 			scheduleId,
 			seatId,
@@ -65,14 +45,17 @@ public class ReservationService {
 			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
 		}
 
-		// 2. Reservation 생성
+		// 2) HOLD 소유권 검증 (Redis)
+		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
+
+		// 3) DB 좌석 상태 검증 (HOLD + 만료)
+		scheduleSeatStateService.validateHoldState(scheduleId, seatId); // [MOD]
+
+		// 4) Reservation(PENDING) 생성
 		Reservation reservation = request.toEntity(memberId);
 
-		// 3. 저장
-		Reservation saved = reservationRepository.save(reservation);
-
-		// 4. 반환 TODO: 이걸로 반환을 안 해도 될 것 같음 -> 결제로 넘겨주니까
-		return getReservationDetail(saved.getId(), memberId);
+		// 5) 저장 응답
+		return ReservationCreateRes.from(reservationRepository.save(reservation));
 	}
 
 	/** === 예매 취소 (일단 결제 완료 시 취소 불가) === */
@@ -102,7 +85,7 @@ public class ReservationService {
 
 		Reservation reservation = getReservation(reservationId);
 
-		// 소유자 검증(임시 안전장치: 최종적으로는 PG webhook/관리자 confirm에서만 호출)
+		// 임시 안전장치: 최종적으로는 PG webhook/관리자 confirm에서만 호출되게 분리 권장
 		if (!reservation.getMemberId().equals(memberId)) {
 			throw new BusinessException(ReservationErrorCode.RESERVATION_FORBIDDEN);
 		}
@@ -219,8 +202,7 @@ public class ReservationService {
 	}
 
 	private Reservation getMyReservation(Long reservationId, Long memberId) {
-		Reservation reservation = reservationRepository.findById(reservationId)
-			.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+		Reservation reservation = getReservation(reservationId);
 
 		if (!reservation.getMemberId().equals(memberId)) {
 			throw new BusinessException(ReservationErrorCode.RESERVATION_FORBIDDEN);

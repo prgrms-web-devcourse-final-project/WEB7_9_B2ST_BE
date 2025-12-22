@@ -33,7 +33,8 @@ public class PaymentConfirmService {
 			return payment;
 		}
 
-		if (payment.getStatus() != PaymentStatus.READY) {
+		if (payment.getStatus() != PaymentStatus.READY
+			&& payment.getStatus() != PaymentStatus.WAITING_FOR_DEPOSIT) {
 			throw new BusinessException(PaymentErrorCode.INVALID_STATUS);
 		}
 

@@ -15,6 +15,7 @@ import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.ticket.dto.response.TicketRes;
 import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.entity.TicketStatus;
 import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -101,6 +102,17 @@ public class TicketService {
 	public Ticket expireTicket(Long reservationId, Long memberId, Long seatId) {
 		Ticket ticket = getTicket(reservationId, memberId, seatId);
 		ticket.expire();
+
+		return ticket;
+	}
+
+	@Transactional
+	public Ticket restoreTicket(Long ticketId) {
+		Ticket ticket = getTicketById(ticketId);
+		if (ticket.getStatus() != TicketStatus.TRANSFERRED) {
+			throw new BusinessException(TicketErrorCode.TICKET_NOT_TRANSFERABLE);
+		}
+		ticket.restore();
 
 		return ticket;
 	}

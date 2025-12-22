@@ -6,7 +6,10 @@ public enum ReservationStatus {
 	COMPLETED,     // 예매 확정
 	FAILED,         // 카드 결제 실패 등
 	CANCELED,     // 예매 취소
-	EXPIRED;     // 입금 기한 만료
+	EXPIRED,     // 입금 기한 만료
+
+	// TODO: 임시
+	CREATED;
 
 	/* === 상태 전이 규칙 === */
 	public boolean canComplete() {

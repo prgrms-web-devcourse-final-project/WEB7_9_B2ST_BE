@@ -1,7 +1,11 @@
 package com.back.b2st.domain.payment.service;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
@@ -14,6 +18,7 @@ import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
+import com.back.b2st.domain.notification.event.NotificationEmailEvent;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import jakarta.persistence.EntityManager;
@@ -29,6 +34,8 @@ public class TradePaymentFinalizer implements PaymentFinalizer {
 	private EntityManager entityManager;
 
 	private final TicketService ticketService;
+	private final Clock clock;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Override
 	public boolean supports(DomainType domainType) {
@@ -57,6 +64,7 @@ public class TradePaymentFinalizer implements PaymentFinalizer {
 
 		// 4. 멱등성 처리: 이미 완료된 경우 검증만 하고 종료
 		if (trade.getStatus() == TradeStatus.COMPLETED) {
+			trade.ensureBuyer(payment.getMemberId(), LocalDateTime.now(clock));
 			ensureTicketTransferred(trade, payment.getMemberId());
 			return;
 		}
@@ -75,7 +83,15 @@ public class TradePaymentFinalizer implements PaymentFinalizer {
 		handleTransfer(trade, payment.getMemberId());
 
 		// 8. 거래 완료 처리
-		trade.complete();
+		trade.completeTransfer(payment.getMemberId(), LocalDateTime.now(clock));
+
+		// 9. 알림(메일) 이벤트 발행: 구매자/판매자
+		eventPublisher.publishEvent(
+			NotificationEmailEvent.tradePurchased(payment.getMemberId(), trade.getPerformanceId())
+		);
+		eventPublisher.publishEvent(
+			NotificationEmailEvent.tradeSold(trade.getMemberId(), trade.getPerformanceId())
+		);
 	}
 
 	private void handleTransfer(Trade trade, Long buyerId) {

@@ -9,6 +9,7 @@ on:
       - "src/**"
       - "build.gradle.kts"
       - "Dockerfile"
+      - "docker/**"
     branches:
       - develop
 

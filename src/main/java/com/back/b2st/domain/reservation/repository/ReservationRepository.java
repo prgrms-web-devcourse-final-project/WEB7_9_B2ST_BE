@@ -2,12 +2,18 @@ package com.back.b2st.domain.reservation.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
+
+import jakarta.persistence.LockModeType;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long>, ReservationRepositoryCustom {
@@ -21,4 +27,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 	/** === 만료 대상 조회 메서드 추가 + 활성 중복 체크 유지 === */
 	List<Reservation> findAllByStatusAndExpiresAtLessThanEqual(ReservationStatus status, LocalDateTime now);
 
+	boolean existsByScheduleIdAndSeatId(Long scheduleId, Long seatId);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("SELECT r FROM Reservation r WHERE r.id = :reservationId")
+	Optional<Reservation> findByIdWithLock(@Param("reservationId") Long reservationId);
 }

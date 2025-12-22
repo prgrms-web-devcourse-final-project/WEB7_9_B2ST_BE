@@ -22,8 +22,7 @@ services:
     image: redis:alpine
     container_name: tt_redis
     restart: always
-    #추후 보안을 위해 비밀번호 설정 가능
-    #command: redis-server --requirepass ${REDIS_PASSWORD}
+    command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
       - "${REDIS_PORT:-6379}:6379"
     networks:
@@ -31,10 +30,7 @@ services:
 
   # 스프링 부트 애플리케이션 설정
   app:
-    image: ghcr.io/chehyeon-kim23/tt_backend:latest # 조직이름 대신 아이디로 변경
-    #build:             # 로컬에서 빌드할 때는 이 경로를 참고
-    #  context: ..
-    # dockerfile: Dockerfile
+    image: ghcr.io/chehyeon-kim23/tt_backend:latest
     container_name: tt_app
     restart: always
     depends_on:
@@ -43,32 +39,33 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # 스프링 부트가 도커 네트워크 내부의 서비스 이름으로 접속하도록 설정
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
-
-       # 메일 설정
-      SPRING_MAIL_HOST: smtp.gmail.com
-      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
-      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
-      SPRING_MAIL_PORT: 587
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
-
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION}
-      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
-      #DDL_AUTO: ${DDL_AUTO}
-      SPRING_JPA_HIBERNATE_DDL_AUTO: create
-      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
-      SPRING_JPA_SHOW_SQL: "true"
-
+      - SPRING_PROFILES_ACTIVE=prod
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_EXPIRATION=${JWT_ACCESS_EXPIRATION}
+      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION}
+      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
+      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
+      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+      - KAKAO_TOKEN_URI=${KAKAO_TOKEN_URI}
+      - KAKAO_USER_INFO_URI=${KAKAO_USER_INFO_URI}
+      - KAKAO_ISSUER=${KAKAO_ISSUER}
+      - DDL_AUTO=${DDL_AUTO}
+    command: java -jar app.jar
     networks:
-        - common
+      - common
+
 networks:
   common:
     driver: bridge

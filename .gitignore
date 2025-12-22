@@ -52,6 +52,11 @@ src/main/generated/
 !docker-compose.yml
 !docker/docker-compose.yml
 !.github/workflows/*.yml
+!src/main/resources/application.yml
+!src/main/resources/application-prod.yml
 
 ### custom ###
 src/main/resources/application-secret.yml
+
+# local / sensitive files
+*.pem

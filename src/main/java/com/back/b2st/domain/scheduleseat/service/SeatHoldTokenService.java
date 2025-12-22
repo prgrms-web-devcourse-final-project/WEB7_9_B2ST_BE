@@ -16,7 +16,7 @@ public class SeatHoldTokenService {
 
 	private final StringRedisTemplate redisTemplate;
 
-	public static final Duration HOLD_TTL = Duration.ofMinutes(5);
+	public static final Duration HOLD_TTL = Duration.ofMinutes(1);
 
 	/** === HOLD 소유권 저장 === */
 	public void save(Long scheduleId, Long seatId, Long memberId) {
@@ -46,7 +46,7 @@ public class SeatHoldTokenService {
 		return redisTemplate.opsForValue().get(getKey(scheduleId, seatId));
 	}
 
-	/** === HOLD 소유권 제거 === */ // TODO: 결제가 호출?
+	/** === HOLD 소유권 제거 === */
 	public void remove(Long scheduleId, Long seatId) {
 		redisTemplate.delete(getKey(scheduleId, seatId));
 	}

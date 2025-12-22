@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,7 @@ import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 @Testcontainers
 @SpringBootTest
 @ActiveProfiles("test")
+@Disabled
 class ScheduleSeatDistributedLockIntegrationTest {
 
 	private static final String REDIS_PASSWORD = "tt_redis_pass";

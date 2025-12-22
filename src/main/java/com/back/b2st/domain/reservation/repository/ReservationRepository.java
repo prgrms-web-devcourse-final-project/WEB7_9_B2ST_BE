@@ -1,5 +1,6 @@
 package com.back.b2st.domain.reservation.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationStatus;
 
 import jakarta.persistence.LockModeType;
 
@@ -20,6 +22,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 	List<Reservation> findAllByMemberId(Long memberId);
 
 	/** === 좌석 중복 예매 방지 === */
+	boolean existsByScheduleIdAndSeatIdAndStatusIn(Long scheduleId, Long seatId, List<ReservationStatus> statuses);
+
+	/** === 만료 대상 조회 메서드 추가 + 활성 중복 체크 유지 === */
+	List<Reservation> findAllByStatusAndExpiresAtLessThanEqual(ReservationStatus status, LocalDateTime now);
+
 	boolean existsByScheduleIdAndSeatId(Long scheduleId, Long seatId);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)

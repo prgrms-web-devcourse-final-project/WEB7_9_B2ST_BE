@@ -296,6 +296,7 @@ public class DataInitializer implements CommandLineRunner {
 				.scheduleId(performanceSchedule.getPerformanceScheduleId())
 				.memberId(user1.getId())
 				.seatId(reservedSeat.getId())
+				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 
 			reservation.complete(LocalDateTime.now());
@@ -353,6 +354,7 @@ public class DataInitializer implements CommandLineRunner {
 			.scheduleId(performanceSchedule.getPerformanceScheduleId())
 			.memberId(user1.getId())
 			.seatId(paidSeat.getId())
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 
 		Reservation savedPaidReservation = reservationRepository.save(paidReservation);
@@ -380,6 +382,7 @@ public class DataInitializer implements CommandLineRunner {
 				.scheduleId(performanceSchedule.getPerformanceScheduleId())
 				.memberId(user3.getId())
 				.seatId(reservedSeat.getId())
+				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 
 			reservation.complete(LocalDateTime.now());

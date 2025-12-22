@@ -239,6 +239,7 @@ class ReservationPaymentFinalizerTest {
 			.memberId(memberId)
 			.scheduleId(scheduleId)
 			.seatId(seatId)
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 
 		// 상태 전환

@@ -77,6 +77,7 @@ class PaymentConfirmControllerTest {
 			.memberId(memberId)
 			.scheduleId(scheduleId)
 			.seatId(seatId)
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		reservationRepository.save(reservation);
 
@@ -130,6 +131,7 @@ class PaymentConfirmControllerTest {
 			.memberId(memberId)
 			.scheduleId(scheduleId)
 			.seatId(seatId)
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		reservation.complete(LocalDateTime.now());
 		reservationRepository.save(reservation);

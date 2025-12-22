@@ -2,6 +2,7 @@ package com.back.b2st.domain.trade.service;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -100,16 +101,19 @@ class TradeRequestConcurrencyTest extends AbstractContainerBaseTest {
 			.performanceId(1L)
 			.memberId(ownerId)
 			.seatId(seat1.getId())
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation reservation2 = Reservation.builder()
 			.performanceId(1L)
 			.memberId(requester1Id)
 			.seatId(seat2.getId())
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation reservation3 = Reservation.builder()
 			.performanceId(1L)
 			.memberId(requester2Id)
 			.seatId(seat3.getId())
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		reservationRepository.save(reservation1);
 		reservationRepository.save(reservation2);
@@ -239,11 +243,13 @@ class TradeRequestConcurrencyTest extends AbstractContainerBaseTest {
 			.performanceId(1L)
 			.memberId(ownerId)
 			.seatId(seat1.getId())
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation reservation2 = Reservation.builder()
 			.performanceId(1L)
 			.memberId(requesterId)
 			.seatId(seat2.getId())
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		reservationRepository.save(reservation1);
 		reservationRepository.save(reservation2);

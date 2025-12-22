@@ -80,6 +80,7 @@ class PaymentConfirmServiceConcurrencyTest {
 			.scheduleId(scheduleId)
 			.memberId(memberId)
 			.seatId(seatId)
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation savedReservation = reservationRepository.save(reservation);
 

@@ -362,6 +362,8 @@ class TradePaymentFinalizerTest {
 		// then - 거래가 완료됨
 		Trade result = tradeRepository.findById(savedTrade.getId()).orElseThrow();
 		assertThat(result.getStatus()).isEqualTo(TradeStatus.COMPLETED);
+		assertThat(result.getBuyerId()).isEqualTo(buyerId);
+		assertThat(result.getPurchasedAt()).isNotNull();
 
 		// then - 판매자 티켓이 TRANSFERRED로 변경됨
 		Ticket updatedSellerTicket = ticketRepository.findById(sellerTicket.getId()).orElseThrow();
@@ -423,6 +425,8 @@ class TradePaymentFinalizerTest {
 		// then - 거래는 여전히 COMPLETED
 		Trade result = tradeRepository.findById(savedTrade.getId()).orElseThrow();
 		assertThat(result.getStatus()).isEqualTo(TradeStatus.COMPLETED);
+		assertThat(result.getBuyerId()).isEqualTo(buyerId);
+		assertThat(result.getPurchasedAt()).isNotNull();
 	}
 
 	@Test
@@ -480,5 +484,9 @@ class TradePaymentFinalizerTest {
 		Ticket buyerTicket = ticketRepository.findByReservationIdAndMemberIdAndSeatId(1L, buyerId, 1L)
 			.orElseThrow();
 		assertThat(buyerTicket.getStatus()).isEqualTo(TicketStatus.ISSUED);
+
+		Trade result = tradeRepository.findById(savedTrade.getId()).orElseThrow();
+		assertThat(result.getBuyerId()).isEqualTo(buyerId);
+		assertThat(result.getPurchasedAt()).isNotNull();
 	}
 }

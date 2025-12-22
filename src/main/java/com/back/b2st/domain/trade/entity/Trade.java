@@ -3,6 +3,8 @@ package com.back.b2st.domain.trade.entity;
 import java.time.LocalDateTime;
 
 import com.back.b2st.global.jpa.entity.BaseEntity;
+import com.back.b2st.global.error.exception.BusinessException;
+import com.back.b2st.domain.trade.error.TradeErrorCode;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,13 +23,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "trade",
+	@Table(name = "trade",
 	uniqueConstraints = @UniqueConstraint(
 		name = "uk_trade_ticket_active",
 		columnNames = {"ticket_id", "status"}
 	),
 	indexes = {
 		@Index(name = "idx_trade_member_status", columnList = "member_id, status"),
+		@Index(name = "idx_trade_buyer_status", columnList = "buyer_id, status"),
 		@Index(name = "idx_trade_performance", columnList = "performance_id, status"),
 		@Index(name = "idx_trade_type_status_created", columnList = "type, status, create_at"),
 		@Index(name = "idx_trade_status_created", columnList = "status, create_at"),
@@ -50,6 +53,9 @@ public class Trade extends BaseEntity {
 
 	@Column(name = "member_id", nullable = false)
 	private Long memberId;
+
+	@Column(name = "buyer_id")
+	private Long buyerId;
 
 	@Column(name = "performance_id", nullable = false)
 	private Long performanceId;
@@ -86,6 +92,9 @@ public class Trade extends BaseEntity {
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
 
+	@Column(name = "purchased_at")
+	private LocalDateTime purchasedAt;
+
 	@Builder
 	public Trade(Long memberId, Long performanceId, Long scheduleId, Long ticketId,
 		TradeType type, Integer price, Integer totalCount,
@@ -109,6 +118,27 @@ public class Trade extends BaseEntity {
 
 	public void complete() {
 		this.status = TradeStatus.COMPLETED;
+	}
+
+	public void completeTransfer(Long buyerId, LocalDateTime purchasedAt) {
+		if (this.buyerId != null && !this.buyerId.equals(buyerId)) {
+			throw new BusinessException(TradeErrorCode.UNAUTHORIZED_TRADE_ACCESS, "buyerId mismatch");
+		}
+		this.buyerId = buyerId;
+		this.purchasedAt = purchasedAt;
+		this.status = TradeStatus.COMPLETED;
+	}
+
+	public void ensureBuyer(Long buyerId, LocalDateTime purchasedAt) {
+		if (this.buyerId == null) {
+			this.buyerId = buyerId;
+		}
+		if (!this.buyerId.equals(buyerId)) {
+			throw new BusinessException(TradeErrorCode.UNAUTHORIZED_TRADE_ACCESS, "buyerId mismatch");
+		}
+		if (this.purchasedAt == null) {
+			this.purchasedAt = purchasedAt;
+		}
 	}
 
 	public void cancel() {

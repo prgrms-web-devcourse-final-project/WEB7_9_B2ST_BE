@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.back.b2st.domain.lottery.draw.dto.LotteryApplicationInfo;
+import com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo;
 import com.back.b2st.domain.lottery.entry.dto.response.AppliedLotteryInfo;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 
@@ -41,11 +41,11 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 	 * @return
 	 */
 	@Query("""
-		select new com.back.b2st.domain.lottery.draw.dto.LotteryApplicationInfo(
+		select new com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo(
 				l.id, l.grade, l.quantity
 		)
 		from LotteryEntry l
 		where l.scheduleId = :scheduleId
 		""")
-	List<LotteryApplicationInfo> findAppliedInfoByScheduleId(@Param("scheduleId") Long performanceScheduleId);
+	List<LotteryApplicantInfo> findAppliedInfoByScheduleId(@Param("scheduleId") Long performanceScheduleId);
 }

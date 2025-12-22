@@ -101,7 +101,7 @@ class DrawServiceTest {
 
 	@Test
 	void drawForPerformance() {
-		drawService.drawForPerformance(performanceSchedule.getPerformanceScheduleId());
+		drawService.drawForPerformance(performance.getPerformanceId(), performanceSchedule.getPerformanceScheduleId());
 	}
 
 }

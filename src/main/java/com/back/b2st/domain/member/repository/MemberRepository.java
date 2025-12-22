@@ -18,4 +18,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 	// 탈퇴 처리 후 일정 기간 지난 회원 조회 (익명화 대상)
 	@Query("SELECT m FROM Member m WHERE m.deletedAt IS NOT NULL AND m.deletedAt < :threshold")
 	List<Member> findAllByDeletedAtBefore(@Param("threshold") LocalDateTime threshold);
+
+	Optional<Member> findByProviderId(String providerId);
 }

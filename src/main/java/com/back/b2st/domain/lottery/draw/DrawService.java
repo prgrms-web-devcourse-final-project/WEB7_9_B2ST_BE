@@ -7,7 +7,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
-import com.back.b2st.domain.performanceschedule.dto.DrawTargetDto;
+import com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -24,12 +24,12 @@ public class DrawService {
 	public void executeDraws() {
 		log.info("추첨 시작");
 
-		List<DrawTargetDto> targetPerformances = findBookingClosedPerformances();
+		List<DrawTargetPerformance> targetPerformances = findBookingClosedPerformances();
 
 		log.info("추첨 대상 공연 수 : {}", targetPerformances.size());
 
 		// 각 공연별 추첨
-		for (DrawTargetDto performance : targetPerformances) {
+		for (DrawTargetPerformance performance : targetPerformances) {
 			try {
 				drawForPerformance(performance.performanceScheduleId(), performance.performanceId());
 				log.info("공연 추첨 완료 - scheduleId: {}", performance.performanceScheduleId());
@@ -42,9 +42,9 @@ public class DrawService {
 
 	/**
 	 * 마감 공연 조회
-	 * @return DrawTargetDto = 공연id, 회차id
+	 * @return DrawTargetPerformance = 공연id, 회차id
 	 */
-	private List<DrawTargetDto> findBookingClosedPerformances() {
+	private List<DrawTargetPerformance> findBookingClosedPerformances() {
 		LocalDateTime startDate = LocalDate.now().minusDays(1).atStartOfDay();
 		LocalDateTime endDate = LocalDate.now().atStartOfDay();
 

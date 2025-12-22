@@ -5,7 +5,7 @@ package com.back.b2st.domain.performanceschedule.dto;
  * @param performanceId
  * @param performanceScheduleId
  */
-public record DrawTargetDto(
+public record DrawTargetPerformance(
 	Long performanceId,
 	Long performanceScheduleId
 ) {

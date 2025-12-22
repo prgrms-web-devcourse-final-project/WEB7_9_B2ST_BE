@@ -19,11 +19,11 @@ import lombok.Getter;
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
 
-	@Column(name = "create_at", nullable = false, updatable = false)
+	@Column(name = "created_at", nullable = false, updatable = false)
 	@CreatedDate
 	private LocalDateTime createdAt;
 
-	@Column(name = "create_by")
+	@Column(name = "created_by")
 	@CreatedBy
 	private long createdBy;
 

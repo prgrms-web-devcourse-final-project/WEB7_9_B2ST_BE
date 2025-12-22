@@ -59,7 +59,6 @@ class ScheduleSeatServiceTest {
 
 	private Long scheduleId;
 
-	// [수정] setUp에서 만든 엔티티를 테스트에서 재사용하기 위해 필드로 보관
 	private Venue venue;
 	private Performance performance;
 

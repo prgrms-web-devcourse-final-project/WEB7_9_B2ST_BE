@@ -2,6 +2,8 @@ package com.back.b2st.domain.email.service;
 
 import static com.back.b2st.global.util.MaskingUtil.*;
 
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -30,21 +32,30 @@ public class EmailSender {
 
 	@Async("emailExecutor")
 	public void sendEmailAsync(String to, String code) {
-		Context context = new Context();
-		context.setVariable("code", code);
-		context.setVariable("expireMinutes", 5);
-
-		sendHtmlEmail(to, "[TT] 이메일 인증 코드", "email/verification", context);
+		sendTemplateEmail(to, "[TT] 이메일 인증 코드", "email/verification",
+			Map.of(
+				"code", code,
+				"expireMinutes", 5
+			));
 	}
 
 	@Async("emailExecutor")
 	public void sendRecoveryEmail(String to, String name, String recoveryLink) {
-		Context context = new Context();
-		context.setVariable("name", name);
-		context.setVariable("recoveryLink", recoveryLink);
-		context.setVariable("expiryHours", 24);
+		sendTemplateEmail(to, "[TT] 계정 복구 안내", "email/recovery-email",
+			Map.of(
+				"name", name,
+				"recoveryLink", recoveryLink,
+				"expiryHours", 24
+			));
+	}
 
-		sendHtmlEmail(to, "[TT] 계정 복구 안내", "email/recovery-email", context);
+	@Async("emailExecutor")
+	public void sendTemplateEmail(String to, String subject, String templateName, Map<String, Object> variables) {
+		Context context = new Context();
+		if (variables != null) {
+			variables.forEach(context::setVariable);
+		}
+		sendHtmlEmail(to, subject, templateName, context);
 	}
 
 	// 이메일 발송 헬퍼

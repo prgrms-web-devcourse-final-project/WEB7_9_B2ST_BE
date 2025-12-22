@@ -3,6 +3,7 @@ package com.back.b2st.domain.trade.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,6 +11,7 @@ import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.entity.TicketStatus;
 import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.service.TicketService;
+import com.back.b2st.domain.notification.event.NotificationEmailEvent;
 import com.back.b2st.domain.trade.dto.request.CreateTradeRequestReq;
 import com.back.b2st.domain.trade.dto.response.TradeRequestRes;
 import com.back.b2st.domain.trade.entity.Trade;
@@ -36,6 +38,7 @@ public class TradeRequestService {
 	private final TradeRequestRepository tradeRequestRepository;
 	private final TradeRepository tradeRepository;
 	private final TicketService ticketService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@PersistenceContext
 	private EntityManager entityManager;
@@ -53,6 +56,9 @@ public class TradeRequestService {
 		TradeRequest tradeRequest = TradeRequestMapper.toEntity(request, trade, requesterId);
 
 		TradeRequest savedRequest = tradeRequestRepository.save(tradeRequest);
+		eventPublisher.publishEvent(
+			NotificationEmailEvent.exchangeRequested(trade.getMemberId(), trade.getPerformanceId())
+		);
 		return TradeRequestRes.from(savedRequest);
 	}
 
@@ -97,6 +103,10 @@ public class TradeRequestService {
 
 		// 교환: 양쪽 티켓을 서로 교환
 		handleExchange(trade, tradeRequest);
+
+		eventPublisher.publishEvent(
+			NotificationEmailEvent.exchangeAccepted(tradeRequest.getRequesterId(), trade.getPerformanceId())
+		);
 	}
 
 	private void handleExchange(Trade trade, TradeRequest tradeRequest) {
@@ -149,6 +159,10 @@ public class TradeRequestService {
 		validateTradeRequestIsPending(tradeRequest);
 
 		tradeRequest.reject();
+
+		eventPublisher.publishEvent(
+			NotificationEmailEvent.exchangeRejected(tradeRequest.getRequesterId(), trade.getPerformanceId())
+		);
 	}
 
 	private Trade findTradeById(Long tradeId) {

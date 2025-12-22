@@ -35,14 +35,12 @@ public class EmailService {
 	// 코드 난수
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-	// existsBy 조회 최적화 + boolean 반전
 	@Transactional(readOnly = true)
 	public CheckDuplicateRes checkDuplicate(CheckDuplicateReq request) {
 		boolean exists = memberRepository.existsByEmail(request.email());
 		return new CheckDuplicateRes(!exists);
 	}
 
-	// 이미 인증 회원 체크 + Rate Limiting + SecureRandom + Redis 저장 + 비동기 발송
 	public void sendVerificationCode(SenderVerificationReq request) {
 		String email = request.email();
 
@@ -76,7 +74,6 @@ public class EmailService {
 		}
 	}
 
-	// 시도 횟수 제한(5회) + 코드 검증 + Redis 삭제 + 회원 상태 갱신
 	@Transactional
 	public void verifyCode(VerifyCodeReq request) {
 		String email = request.email();
@@ -108,7 +105,7 @@ public class EmailService {
 		// 회원이 이미 있으면 isEmailVerified = true로 업데이트
 		// 회원이 없으면 (회원가입 전 인증) 스킵 → 회원가입 시 isEmailVerified=true로 생성
 		memberRepository.findByEmail(email)
-				.ifPresent(Member::verifyEmail);
+			.ifPresent(Member::verifyEmail);
 
 		log.info("이메일 인증 성공: email={}", maskEmail(email));
 	}

@@ -62,6 +62,24 @@ public class ScheduleSeatStateService {
 		}
 	}
 
+	/** === Reservation expiresAt 동기화를 위한 holdExpiredAt 반환 === */
+	@Transactional(readOnly = true)
+	public LocalDateTime getHoldExpiredAtOrThrow(Long scheduleId, Long seatId) {
+		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
+
+		if (seat.getStatus() != SeatStatus.HOLD) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
+		}
+
+		LocalDateTime expiredAt = seat.getHoldExpiredAt();
+		if (expiredAt == null) {
+			// hold()에서 반드시 세팅하지만, 데이터 이상 상황 방어
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
+		}
+
+		return expiredAt;
+	}
+
 	/** === 만료된 HOLD 좌석을 AVAILABLE로 일괄 복구 === */
 	@Transactional
 	public int releaseExpiredHolds() {

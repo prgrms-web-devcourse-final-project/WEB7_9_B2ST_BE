@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
+import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.service.ReservationService;
@@ -23,13 +24,13 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/reservations")
-public class ReservationController implements ReservationApi {
+public class ReservationController {
 
 	private final ReservationService reservationService;
 
 	/** === 예매 생성 === */
 	@PostMapping
-	public BaseResponse<ReservationDetailRes> createReservation(
+	public BaseResponse<ReservationCreateRes> createReservation(
 		@CurrentUser UserPrincipal user,
 		@RequestBody ReservationReq request
 	) {
@@ -52,9 +53,10 @@ public class ReservationController implements ReservationApi {
 	/** === 예매 확정(결제 완료) === */
 	@PostMapping("/{reservationId}/complete")
 	public BaseResponse<Void> completeReservation(
-		@PathVariable Long reservationId
+		@PathVariable Long reservationId,
+		@CurrentUser UserPrincipal user
 	) {
-		reservationService.completeReservation(reservationId);
+		reservationService.completeReservation(reservationId, user.getId());
 		return BaseResponse.success();
 	}
 

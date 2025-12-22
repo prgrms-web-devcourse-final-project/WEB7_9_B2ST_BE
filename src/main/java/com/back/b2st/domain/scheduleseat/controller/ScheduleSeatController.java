@@ -61,6 +61,6 @@ public class ScheduleSeatController implements ScheduleSeatApi {
 			scheduleId,
 			seatId
 		);
-		return BaseResponse.success();
+		return BaseResponse.created(null);
 	}
 }

@@ -30,6 +30,9 @@ import lombok.NoArgsConstructor;
 	indexes = {
 		@Index(name = "idx_performance_schedule",
 			columnList = "performance_schedule_id, performance_id"
+		),
+		@Index(name = "idx_performance_booking_close_draw",
+			columnList = "bookingCloseAt, draw_completed"
 		)
 	}
 )

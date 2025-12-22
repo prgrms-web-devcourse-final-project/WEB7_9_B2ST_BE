@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
-import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.back.b2st.domain.reservation.service.ReservationService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
@@ -48,37 +47,6 @@ public class ReservationController {
 		Long memberId = user.getId();
 		reservationService.cancelReservation(reservationId, memberId);
 		return BaseResponse.success();
-	}
-
-	/** === 예매 확정(결제 완료) === */
-	@PostMapping("/{reservationId}/complete")
-	public BaseResponse<Void> completeReservation(
-		@PathVariable Long reservationId,
-		@CurrentUser UserPrincipal user
-	) {
-		reservationService.completeReservation(reservationId, user.getId());
-		return BaseResponse.success();
-	}
-
-	/** === 예매 단건 조회 (심플) === */
-	@GetMapping("/{reservationId}/simple")
-	public BaseResponse<ReservationRes> getReservation(
-		@PathVariable Long reservationId,
-		@CurrentUser UserPrincipal user
-	) {
-		Long memberId = user.getId();
-		ReservationRes response = reservationService.getReservation(reservationId, memberId);
-		return BaseResponse.success(response);
-	}
-
-	/** === 전체 예매 조회 (심플) === */
-	@GetMapping("/me/simple")
-	public BaseResponse<List<ReservationRes>> getMyReservations(
-		@CurrentUser UserPrincipal user
-	) {
-		Long memberId = user.getId();
-		List<ReservationRes> reservations = reservationService.getMyReservations(memberId);
-		return BaseResponse.success(reservations);
 	}
 
 	/** === 예매 조회 === */

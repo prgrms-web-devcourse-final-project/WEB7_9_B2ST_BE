@@ -40,7 +40,10 @@ oauth:
   kakao:
     client-id: ${KAKAO_CLIENT_ID}
     client-secret: ${KAKAO_CLIENT_SECRET}
-    redirect-uri: ${KAKAO_REDIRECT_URI}}
+    redirect-uri: ${KAKAO_REDIRECT_URI}
+    token-uri: ${KAKAO_TOKEN_URI}         # 추가
+    user-info-uri: ${KAKAO_USER_INFO_URI} # 추가
+    issuer: ${KAKAO_ISSUER}
 
 jwt:
   secret: ${JWT_SECRET}

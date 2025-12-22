@@ -45,11 +45,12 @@ public class ReservationPaymentHandler implements PaymentDomainHandler {
 			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
 		}
 
-		if (reservation.getStatus() != ReservationStatus.PENDING) {
+		if (reservation.getStatus() != ReservationStatus.CREATED
+			&& reservation.getStatus() != ReservationStatus.PENDING) {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 		}
 
-		Long scheduleId = reservation.getPerformanceId();
+		Long scheduleId = reservation.getScheduleId();
 		Long seatId = reservation.getSeatId();
 
 		ScheduleSeat scheduleSeat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
@@ -72,4 +73,3 @@ public class ReservationPaymentHandler implements PaymentDomainHandler {
 		return new PaymentTarget(DomainType.RESERVATION, reservationId, expectedAmount);
 	}
 }
-

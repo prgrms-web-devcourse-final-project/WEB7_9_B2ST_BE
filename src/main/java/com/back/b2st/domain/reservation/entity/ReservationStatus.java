@@ -1,6 +1,7 @@
 package com.back.b2st.domain.reservation.entity;
 
 public enum ReservationStatus {
+
 	PENDING,     // 결제 중, 입금 대기
 	COMPLETED,     // 예매 확정
 	FAILED,         // 카드 결제 실패 등

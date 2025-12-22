@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -42,10 +43,25 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 	 */
 	@Query("""
 		select new com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo(
-				l.id, l.grade, l.quantity
+				le.id, le.grade, le.quantity
 		)
-		from LotteryEntry l
-		where l.scheduleId = :scheduleId
+		from LotteryEntry le
+		where le.scheduleId = :scheduleId
 		""")
 	List<LotteryApplicantInfo> findAppliedInfoByScheduleId(@Param("scheduleId") Long performanceScheduleId);
+
+	/**
+	 * 낙첨자 추첨 결과 업데이트
+	 */
+	@Modifying(clearAutomatically = true)
+	@Query("""
+		    update LotteryEntry le
+		    set le.status = com.back.b2st.domain.lottery.entry.entity.LotteryStatus.LOSE
+		    where le.scheduleId = :scheduleId
+		      and le.id not in :winnerIds
+		""")
+	int updateStatusLoseBySchedule(
+		@Param("scheduleId") Long scheduleId,
+		@Param("winnerIds") List<Long> winnerIds
+	);
 }

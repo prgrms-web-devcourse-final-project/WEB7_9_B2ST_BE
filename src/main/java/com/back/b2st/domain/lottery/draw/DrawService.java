@@ -159,7 +159,8 @@ public class DrawService {
 				});
 		}
 
-		// 추첨 완료 회차 & !WIN => LOSE 일괄 변경?
+		// 추첨 완료 회차 & !WIN => LOSE 일괄 변경? -> 필요한 작업인가?
+		lotteryEntryRepository.updateStatusLoseBySchedule(scheduleId, winnerIds);
 
 		// LotteryEntity 객체를 가져와서 status 업데이트 하기
 		// vs

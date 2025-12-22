@@ -1,22 +1,26 @@
 package com.back.b2st.domain.reservation.entity;
 
 public enum ReservationStatus {
-	CREATED, // 예매 생성
-	COMPLETED, // 예매 확정
-	CANCELED,    // 예매 취소
-	EXPIRED,    // 입금 기한 만료
-	PENDING; // TODO: 결제에서 수행해야 할 것 같습니다
+	PENDING,     // 결제 중, 입금 대기
+	COMPLETED,     // 예매 확정
+	FAILED,         // 카드 결제 실패 등
+	CANCELED,     // 예매 취소
+	EXPIRED;     // 입금 기한 만료
 
 	/* === 상태 전이 규칙 === */
 	public boolean canComplete() {
-		return this == CREATED;
+		return this == PENDING;
 	}
 
 	public boolean canCancel() {
-		return this == CREATED;
+		return this == PENDING;
 	}
 
 	public boolean canExpire() {
-		return this == CREATED;
+		return this == PENDING;
+	}
+
+	public boolean canFail() {
+		return this == PENDING;
 	}
 }

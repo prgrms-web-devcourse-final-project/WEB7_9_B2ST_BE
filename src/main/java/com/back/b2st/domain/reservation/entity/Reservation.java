@@ -67,7 +67,7 @@ public class Reservation extends BaseEntity {
 		this.scheduleId = scheduleId;
 		this.memberId = memberId;
 		this.seatId = seatId;
-		this.status = ReservationStatus.CREATED;
+		this.status = ReservationStatus.PENDING;
 	}
 
 	/** === 상태 변경 === */
@@ -83,6 +83,10 @@ public class Reservation extends BaseEntity {
 
 	public void expire() {
 		this.status = ReservationStatus.EXPIRED;
+	}
+
+	public void fail() {
+		this.status = ReservationStatus.FAILED;
 	}
 
 	/** === 임시 호환 코드 === */

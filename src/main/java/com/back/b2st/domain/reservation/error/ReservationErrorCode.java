@@ -18,7 +18,10 @@ public enum ReservationErrorCode implements ErrorCode {
 	/* ===== 예매 상태 ===== */
 	RESERVATION_ALREADY_COMPLETED(HttpStatus.CONFLICT, "R009", "이미 결제가 완료된 예매입니다."),
 	RESERVATION_ALREADY_CANCELED(HttpStatus.CONFLICT, "R010", "이미 취소된 예매입니다."),
-	INVALID_RESERVATION_STATUS(HttpStatus.CONFLICT, "R011", "현재 예매 상태에서는 요청을 수행할 수 없습니다.");
+	INVALID_RESERVATION_STATUS(HttpStatus.CONFLICT, "R011", "현재 예매 상태에서는 요청을 수행할 수 없습니다."),
+
+	/* ===== 중복/충돌 ===== */
+	RESERVATION_ALREADY_EXISTS(HttpStatus.CONFLICT, "R015", "이미 해당 좌석에 대한 예매가 존재합니다.");
 
 	private final HttpStatus status;
 	private final String code;

@@ -22,6 +22,11 @@ RUN ./gradlew bootJar --no-daemon -x test
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+# --- 도플러 CLI 설치 추가 ---
+RUN apt-get update && apt-get install -y curl gnupg && \
+    (curl -Ls https://cli.doppler.com/install.sh || wget -qO- https://cli.doppler.com/install.sh) | sh
+# -------------------------
+
 COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8080

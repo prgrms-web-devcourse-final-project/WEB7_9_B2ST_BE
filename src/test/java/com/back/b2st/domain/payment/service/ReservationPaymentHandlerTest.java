@@ -68,7 +68,7 @@ class ReservationPaymentHandlerTest {
 		Long expectedPrice = 50000L;
 
 		Reservation reservation = createReservation(reservationId, memberId, scheduleId, seatId,
-			ReservationStatus.PENDING);
+			ReservationStatus.CREATED);
 		ScheduleSeat scheduleSeat = createScheduleSeat(scheduleId, seatId, SeatStatus.HOLD);
 		PerformanceSchedule schedule = createPerformanceSchedule(scheduleId, performanceId);
 		SeatGrade seatGrade = createSeatGrade(performanceId, seatId, expectedPrice);

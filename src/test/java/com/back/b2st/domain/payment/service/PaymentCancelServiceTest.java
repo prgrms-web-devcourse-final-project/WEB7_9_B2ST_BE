@@ -48,8 +48,8 @@ class PaymentCancelServiceTest {
 	}
 
 	@Test
-	@DisplayName("결제 취소 성공 - 티켓 복구 및 거래 취소")
-	void cancel_success_restoresTicketAndCancelsTrade() {
+	@DisplayName("티켓 거래(TRADE) 결제는 취소/환불 불가")
+	void cancel_tradeNotRefundable() {
 		// given: 판매자의 티켓 생성
 		Long sellerId = 1L;
 		Long buyerId = 2L;
@@ -103,25 +103,23 @@ class PaymentCancelServiceTest {
 		payment.complete("PAYMENT-KEY-123", java.time.LocalDateTime.now());
 		paymentRepository.save(payment);
 
-		// when: 결제 취소
+		// when & then: 결제 취소 불가
 		PaymentCancelReq cancelReq = new PaymentCancelReq("구매자 변심");
-		Payment canceledPayment = paymentCancelService.cancel(buyerId, "ORDER-CANCEL-1", cancelReq);
+		assertThatThrownBy(() -> paymentCancelService.cancel(buyerId, "ORDER-CANCEL-1", cancelReq))
+			.isInstanceOf(BusinessException.class)
+			.hasMessageContaining("티켓 거래 결제는 취소/환불을 지원하지 않습니다");
 
-		// then: 결제가 취소 상태
-		assertThat(canceledPayment.getStatus()).isEqualTo(PaymentStatus.CANCELED);
-		assertThat(canceledPayment.getFailureReason()).isEqualTo("구매자 변심");
-		assertThat(canceledPayment.getCanceledAt()).isNotNull();
+		// then: 도메인 상태는 변경되지 않음
+		Payment persisted = paymentRepository.findByOrderId("ORDER-CANCEL-1").orElseThrow();
+		assertThat(persisted.getStatus()).isEqualTo(PaymentStatus.DONE);
 
-		// then: 거래가 취소 상태
-		Trade canceledTrade = tradeRepository.findById(savedTrade.getId()).orElseThrow();
-		assertThat(canceledTrade.getStatus()).isEqualTo(TradeStatus.CANCELLED);
+		Trade persistedTrade = tradeRepository.findById(savedTrade.getId()).orElseThrow();
+		assertThat(persistedTrade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
 
-		// then: 판매자 티켓 복구 (TRANSFERRED → ISSUED)
-		Ticket restoredTicket = ticketRepository.findById(sellerTicket.getId()).orElseThrow();
-		assertThat(restoredTicket.getStatus()).isEqualTo(TicketStatus.ISSUED);
+		Ticket persistedSellerTicket = ticketRepository.findById(sellerTicket.getId()).orElseThrow();
+		assertThat(persistedSellerTicket.getStatus()).isEqualTo(TicketStatus.TRANSFERRED);
 
-		// then: 구매자 티켓 삭제
-		assertThat(ticketRepository.findById(buyerTicket.getId())).isEmpty();
+		assertThat(ticketRepository.findById(buyerTicket.getId())).isPresent();
 	}
 
 	@Test

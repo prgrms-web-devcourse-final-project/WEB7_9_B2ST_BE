@@ -39,16 +39,6 @@ public class ScheduleSeatController implements ScheduleSeatApi {
 		return BaseResponse.success(scheduleSeatService.getSeatsByStatus(scheduleId, status));
 	}
 
-	/** === 티켓팅 화면용 AVAILABLE 좌석 조회 === */
-	@GetMapping("/ticketing/schedules/{scheduleId}/seats")
-	public BaseResponse<List<ScheduleSeatViewRes>> getAvailableSeatsForTicketing(
-		@PathVariable Long scheduleId
-	) {
-		return BaseResponse.success(
-			scheduleSeatService.getSeatsByStatus(scheduleId, SeatStatus.AVAILABLE)
-		);
-	}
-
 	/** === 좌석 HOLD === */
 	@PostMapping("/{scheduleId}/seats/{seatId}/hold")
 	public BaseResponse<Void> holdSeat(

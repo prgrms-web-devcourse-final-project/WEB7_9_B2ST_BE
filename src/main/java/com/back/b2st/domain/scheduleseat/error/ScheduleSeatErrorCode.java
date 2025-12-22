@@ -16,7 +16,7 @@ public enum ScheduleSeatErrorCode implements ErrorCode {
 	SEAT_ALREADY_HOLD(HttpStatus.CONFLICT, "R002", "이미 다른 사용자가 선택한 좌석입니다."),
 	SEAT_ALREADY_SOLD(HttpStatus.CONFLICT, "R003", "이미 판매된 좌석입니다."),
 	SEAT_NOT_HOLD(HttpStatus.CONFLICT, "R014", "HOLD 상태의 좌석만 처리할 수 있습니다."),
-	
+
 	SEAT_HOLD_FORBIDDEN(HttpStatus.FORBIDDEN, "R012", "본인이 선점한 좌석이 아닙니다."),
 	SEAT_HOLD_EXPIRED(HttpStatus.GONE, "R013", "좌석 선점 시간이 만료되었습니다."),
 

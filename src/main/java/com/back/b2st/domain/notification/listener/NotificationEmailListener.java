@@ -1,10 +1,12 @@
 package com.back.b2st.domain.notification.listener;
 
+import java.util.Map;
+
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.back.b2st.domain.email.service.EmailSender;
 import com.back.b2st.domain.member.entity.Member;
@@ -13,8 +15,6 @@ import com.back.b2st.domain.notification.event.NotificationEmailEvent;
 import com.back.b2st.domain.notification.service.NotificationMessageFactory;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
-
-import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 

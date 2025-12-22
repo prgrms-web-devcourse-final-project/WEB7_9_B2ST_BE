@@ -2,9 +2,9 @@ package com.back.b2st.domain.trade.entity;
 
 import java.time.LocalDateTime;
 
-import com.back.b2st.global.jpa.entity.BaseEntity;
-import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
+import com.back.b2st.global.error.exception.BusinessException;
+import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -23,7 +23,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-	@Table(name = "trade",
+@Table(name = "trade",
 	uniqueConstraints = @UniqueConstraint(
 		name = "uk_trade_ticket_active",
 		columnNames = {"ticket_id", "status"}

@@ -1,14 +1,14 @@
 package com.back.b2st.domain.venue.venue.service;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.back.b2st.domain.venue.venue.dto.response.VenueRes;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.code.CommonErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -19,10 +19,10 @@ public class VenueService {
 
 	public VenueRes getVenue(Long venueId) {
 		return venueRepository.findById(venueId)
-				.map(VenueRes::from)
-				.orElseThrow(() -> new BusinessException(
-						CommonErrorCode.NOT_FOUND,
-						"venueId=" + venueId
-				));
+			.map(VenueRes::from)
+			.orElseThrow(() -> new BusinessException(
+				CommonErrorCode.NOT_FOUND,
+				"venueId=" + venueId
+			));
 	}
 }

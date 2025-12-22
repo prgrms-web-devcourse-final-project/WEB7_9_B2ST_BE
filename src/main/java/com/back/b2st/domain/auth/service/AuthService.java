@@ -123,14 +123,20 @@ public class AuthService {
 
 		// 카카오 로그인 URL 새성
 		String authrizeUrl = String.format(
-				"https://kauth.kakao.com/oauth/authorize" +
-						"?client_id=%s" +
-						"&redirect_uri=%s" +
-						"&response_type=code" +
-						"&scope=openid%%20profile_nickname%%20account_email" + // URL 인코딩
-						"&nonce=%s" +
-						"&state=%s",
-				kakaoClientId, kakaoRedirectUri, nonce, state);
+			"https://kauth.kakao.com/oauth/authorize"
+				+
+				"?client_id=%s"
+				+
+				"&redirect_uri=%s"
+				+
+				"&response_type=code"
+				+
+				"&scope=openid%%20profile_nickname%%20account_email"
+				+ // URL 인코딩
+				"&nonce=%s"
+				+
+				"&state=%s",
+			kakaoClientId, kakaoRedirectUri, nonce, state);
 
 		return new KakaoAuthorizeUrlRes(authrizeUrl, state, nonce);
 	}
@@ -155,7 +161,7 @@ public class AuthService {
 
 		// Redis 업데이트
 		saveRefreshToken(email, newToken.refreshToken(),
-				storedToken.getFamily(), storedToken.getGeneration() + 1);
+			storedToken.getFamily(), storedToken.getGeneration() + 1);
 
 		return newToken;
 	}
@@ -246,10 +252,10 @@ public class AuthService {
 	// 다른 계정에 연동된 카카오 계정이 아닌지
 	private void validateKakaoNotLinkedToOther(String kakaoId, Long currentMemberId) {
 		memberRepository.findByProviderId(kakaoId)
-				.filter(linked -> !linked.getId().equals(currentMemberId))
-				.ifPresent(linked -> {
-					throw new BusinessException(AuthErrorCode.OAUTH_ALREADY_LINKED);
-				});
+			.filter(linked -> !linked.getId().equals(currentMemberId))
+			.ifPresent(linked -> {
+				throw new BusinessException(AuthErrorCode.OAUTH_ALREADY_LINKED);
+			});
 	}
 
 	private void validateNonce(String nonce) {
@@ -286,22 +292,22 @@ public class AuthService {
 
 	private Member findMemberById(Long memberId) {
 		return memberRepository.findById(memberId)
-				.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 	}
 
 	private Member findMemberByEmail(String email) {
 		return memberRepository.findByEmail(email)
-				.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 	}
 
 	private RefreshToken findStoredRefreshToken(String email) {
 		return refreshTokenRepository.findById(email)
-				.orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_TOKEN));
+			.orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_TOKEN));
 	}
 
 	private WithdrawalRecoveryToken findRecoveryToken(String token) {
 		return recoveryRepository.findById(token)
-				.orElseThrow(() -> new BusinessException(AuthErrorCode.RECOVERY_TOKEN_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(AuthErrorCode.RECOVERY_TOKEN_NOT_FOUND));
 	}
 
 	private Optional<Member> findMemberByProviderId(String providerId) {
@@ -320,13 +326,13 @@ public class AuthService {
 	// 로그인 리퀘 인증
 	private Authentication authenticateWithEmailPassword(LoginReq request) {
 		UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(request.email(),
-				request.password());
+			request.password());
 		return authenticationManagerBuilder.getObject().authenticate(authToken);
 	}
 
 	// 인증 객체서 유저 엔티티 추출
 	private Member extractMemberFromAuthentication(Authentication authentication) {
-		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+		CustomUserDetails userDetails = (CustomUserDetails)authentication.getPrincipal();
 		return userDetails.getMember();
 	}
 
@@ -355,8 +361,8 @@ public class AuthService {
 		}
 		// 이메일로 가입된 회원 확인
 		return memberRepository.findByEmail(email)
-				.map(existing -> linkKakaoToExistingMember(existing, kakaoId))
-				.orElseGet(() -> createNewKakaoMember(email, kakaoId, nickname));
+			.map(existing -> linkKakaoToExistingMember(existing, kakaoId))
+			.orElseGet(() -> createNewKakaoMember(email, kakaoId, nickname));
 	}
 
 	// 이메일 연동
@@ -379,17 +385,17 @@ public class AuthService {
 		String sanitizedNickname = NicknameUtils.sanitize(nickname, defaultKakaoNickname);
 
 		Member member = Member.builder()
-				.email(email)
-				.password(null)
-				.name(sanitizedNickname)
-				.phone(null)
-				.birth(null)
-				.role(Member.Role.MEMBER)
-				.provider(Member.Provider.KAKAO)
-				.providerId(kakaoId)
-				.isEmailVerified(true)
-				.isIdentityVerified(false)
-				.build();
+			.email(email)
+			.password(null)
+			.name(sanitizedNickname)
+			.phone(null)
+			.birth(null)
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.KAKAO)
+			.providerId(kakaoId)
+			.isEmailVerified(true)
+			.isIdentityVerified(false)
+			.build();
 		Member saved = memberRepository.save(member);
 		log.info("[Kakao] 신규 회원 생성: MemberID={}, KakaoID={}", saved.getId(), kakaoId);
 		return saved;
@@ -399,10 +405,10 @@ public class AuthService {
 	private TokenInfo generateTokenForMember(Member member) {
 		CustomUserDetails userDetails = new CustomUserDetails(member);
 		UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-				userDetails, null, userDetails.getAuthorities());
+			userDetails, null, userDetails.getAuthorities());
 		TokenInfo tokenInfo = jwtTokenProvider.generateToken(authToken);
 		saveRefreshToken(member.getEmail(), tokenInfo.refreshToken(),
-				UUID.randomUUID().toString(), 1L);
+			UUID.randomUUID().toString(), 1L);
 		return tokenInfo;
 	}
 
@@ -415,10 +421,10 @@ public class AuthService {
 	private String createRecoveryToken(String email, Long memberId) {
 		String token = UUID.randomUUID().toString();
 		WithdrawalRecoveryToken recoveryToken = WithdrawalRecoveryToken.builder()
-				.token(token)
-				.email(email)
-				.memberId(memberId)
-				.build();
+			.token(token)
+			.email(email)
+			.memberId(memberId)
+			.build();
 		recoveryRepository.save(recoveryToken);
 		return token;
 	}

@@ -3,10 +3,11 @@ package com.back.b2st.domain.payment.service;
 import java.time.Clock;
 import java.time.LocalDateTime;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.context.ApplicationEventPublisher;
 
+import com.back.b2st.domain.notification.event.NotificationEmailEvent;
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.error.PaymentErrorCode;
@@ -18,7 +19,6 @@ import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
-import com.back.b2st.domain.notification.event.NotificationEmailEvent;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import jakarta.persistence.EntityManager;
@@ -30,12 +30,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TradePaymentFinalizer implements PaymentFinalizer {
 
-	@PersistenceContext
-	private EntityManager entityManager;
-
 	private final TicketService ticketService;
 	private final Clock clock;
 	private final ApplicationEventPublisher eventPublisher;
+	@PersistenceContext
+	private EntityManager entityManager;
 
 	@Override
 	public boolean supports(DomainType domainType) {

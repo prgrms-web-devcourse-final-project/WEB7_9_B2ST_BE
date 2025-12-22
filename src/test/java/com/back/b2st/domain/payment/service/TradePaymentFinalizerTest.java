@@ -12,7 +12,6 @@ import org.springframework.test.context.ActiveProfiles;
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentMethod;
-import com.back.b2st.domain.payment.error.PaymentErrorCode;
 import com.back.b2st.domain.payment.repository.PaymentRepository;
 import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.entity.TicketStatus;
@@ -80,7 +79,7 @@ class TradePaymentFinalizerTest {
 		// when & then
 		assertThatThrownBy(() -> tradePaymentFinalizer.finalizePayment(payment))
 			.isInstanceOf(BusinessException.class)
-			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.extracting(ex -> ((BusinessException)ex).getErrorCode())
 			.isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
 	}
 
@@ -263,7 +262,7 @@ class TradePaymentFinalizerTest {
 		// when & then
 		assertThatThrownBy(() -> tradePaymentFinalizer.finalizePayment(payment))
 			.isInstanceOf(BusinessException.class)
-			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.extracting(ex -> ((BusinessException)ex).getErrorCode())
 			.isEqualTo(TicketErrorCode.TICKET_NOT_TRANSFERABLE);
 	}
 

@@ -46,7 +46,7 @@ public class SeatHoldTokenService {
 		return redisTemplate.opsForValue().get(getKey(scheduleId, seatId));
 	}
 
-	/** === HOLD 소유권 제거 === */ // TODO: 결제가 호출?
+	/** === HOLD 소유권 제거 === */
 	public void remove(Long scheduleId, Long seatId) {
 		redisTemplate.delete(getKey(scheduleId, seatId));
 	}

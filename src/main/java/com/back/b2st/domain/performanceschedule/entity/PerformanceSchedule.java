@@ -32,7 +32,7 @@ import lombok.NoArgsConstructor;
 			columnList = "performance_schedule_id, performance_id"
 		),
 		@Index(name = "idx_performance_booking_close_draw",
-			columnList = "bookingCloseAt, draw_completed"
+			columnList = "booking_close_at, draw_completed"
 		)
 	}
 )
@@ -69,7 +69,7 @@ public class PerformanceSchedule extends BaseEntity {
 	@Column(name = "booking_close_at")
 	private LocalDateTime bookingCloseAt;    // 예매 마감 시각
 
-	@Column(name = "draw_completed ")
+	@Column(name = "draw_completed")
 	private boolean drawCompleted;             // 추첨 완료 여부
 
 	@Builder

@@ -200,17 +200,19 @@ public class ReservationService {
 
 	/** === PENDING 만료 배치 처리(스케줄러는 이 메서드만 호출) === */
 	@Transactional
-	public int expirePendingReservations() {
+	public int expirePendingReservationsBatch() {
 		LocalDateTime now = LocalDateTime.now();
 
-		List<Reservation> expiredTargets =
-			reservationRepository.findAllByStatusAndExpiresAtLessThanEqual(ReservationStatus.PENDING, now);
-
-		for (Reservation reservation : expiredTargets) {
-			expireReservation(reservation.getId());
+		List<Long> expiredIds = reservationRepository.findExpiredPendingIds(ReservationStatus.PENDING, now);
+		if (expiredIds.isEmpty()) {
+			return 0;
 		}
 
-		return expiredTargets.size();
+		return reservationRepository.bulkExpirePendingByIds(
+			expiredIds,
+			ReservationStatus.PENDING,
+			ReservationStatus.EXPIRED
+		);
 	}
 
 	// === 공통 유틸 === //

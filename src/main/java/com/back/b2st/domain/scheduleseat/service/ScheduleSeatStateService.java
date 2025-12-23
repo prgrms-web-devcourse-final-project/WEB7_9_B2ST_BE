@@ -82,7 +82,7 @@ public class ScheduleSeatStateService {
 
 	/** === 만료된 HOLD 좌석을 AVAILABLE로 일괄 복구 === */
 	@Transactional
-	public int releaseExpiredHolds() {
+	public int releaseExpiredHoldsBatch() {
 		LocalDateTime now = LocalDateTime.now();
 
 		var expiredKeys = scheduleSeatRepository.findExpiredHoldKeys(SeatStatus.HOLD, now);

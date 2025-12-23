@@ -16,8 +16,7 @@ public class DrawScheduler {
 
 	private final DrawService drawService;
 
-	// 테스트용: 1분마다 실행 (나중에 새벽 3시로 변경)
-	@Scheduled(cron = "0 * * * * *")  // 매분 0초에 실행
+	@Scheduled(cron = "${lottery.draw.cron:0 0 3 * * *}")
 	@Transactional
 	public void executeDailyDraw() {
 		log.info("=== 추첨 스케줄러 시작 ===");

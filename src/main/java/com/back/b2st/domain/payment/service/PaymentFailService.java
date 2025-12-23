@@ -1,14 +1,14 @@
 package com.back.b2st.domain.payment.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentStatus;
 import com.back.b2st.domain.payment.error.PaymentErrorCode;
 import com.back.b2st.domain.payment.repository.PaymentRepository;
-import com.back.b2st.domain.reservation.service.ReservationService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 public class PaymentFailService {
 
 	private final PaymentRepository paymentRepository;
-	private final ReservationService reservationService;
+	private final List<PaymentFailureHandler> failureHandlers;
 
 	@Transactional
 	public Payment fail(Long memberId, String orderId, String reason) {
@@ -45,9 +45,9 @@ public class PaymentFailService {
 	}
 
 	private void handleDomainFailure(Payment payment) {
-		if (payment.getDomainType() == DomainType.RESERVATION) {
-			reservationService.failReservation(payment.getDomainId());
-		}
+		failureHandlers.stream()
+			.filter(h -> h.supports(payment.getDomainType()))
+			.findFirst()
+			.ifPresent(h -> h.handleFailure(payment));
 	}
 }
-

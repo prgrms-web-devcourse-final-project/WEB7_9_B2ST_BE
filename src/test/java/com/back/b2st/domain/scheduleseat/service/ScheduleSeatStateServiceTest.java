@@ -100,14 +100,14 @@ class ScheduleSeatStateServiceTest {
 
 	@Test
 	@DisplayName("releaseExpiredHolds(): bulk update 호출 후 업데이트 건수 반환")
-	void releaseExpiredHolds_callsRepositoryAndReturnCount() {
+	void releaseExpiredHolds_Batch_callsRepositoryAndReturnCount() {
 		when(scheduleSeatRepository.releaseExpiredHolds(
 			eq(SeatStatus.HOLD),
 			eq(SeatStatus.AVAILABLE),
 			any(LocalDateTime.class))
 		).thenReturn(3);
 
-		int updated = scheduleSeatStateService.releaseExpiredHolds();
+		int updated = scheduleSeatStateService.releaseExpiredHoldsBatch();
 
 		assertThat(updated).isEqualTo(3);
 

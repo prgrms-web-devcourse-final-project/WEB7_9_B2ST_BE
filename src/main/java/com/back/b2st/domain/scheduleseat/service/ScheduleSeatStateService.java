@@ -84,7 +84,18 @@ public class ScheduleSeatStateService {
 	@Transactional
 	public int releaseExpiredHolds() {
 		LocalDateTime now = LocalDateTime.now();
-		return scheduleSeatRepository.releaseExpiredHolds(SeatStatus.HOLD, SeatStatus.AVAILABLE, now);
+
+		var expiredKeys = scheduleSeatRepository.findExpiredHoldKeys(SeatStatus.HOLD, now);
+
+		int updated = scheduleSeatRepository.releaseExpiredHolds(SeatStatus.HOLD, SeatStatus.AVAILABLE, now);
+
+		for (Object[] row : expiredKeys) {
+			Long scheduleId = (Long)row[0];
+			Long seatId = (Long)row[1];
+			seatHoldTokenService.remove(scheduleId, seatId);
+		}
+
+		return updated;
 	}
 
 	// === 상태 변경 AVAILABLE → HOLD === //

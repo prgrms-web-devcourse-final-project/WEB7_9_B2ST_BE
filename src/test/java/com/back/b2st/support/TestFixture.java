@@ -1,6 +1,8 @@
 package com.back.b2st.support;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -108,8 +110,8 @@ public class TestFixture {
 					.roundNo(i)
 					.startAt(LocalDateTime.now().plusDays(i))
 					.bookingType(bookingType)
-					.bookingOpenAt(LocalDateTime.now().minusDays(1))
-					.bookingCloseAt(LocalDateTime.now().minusDays(1).plusHours(12))
+					.bookingOpenAt(LocalDateTime.of(LocalDate.now().minusDays(2), LocalTime.MIDNIGHT))
+					.bookingCloseAt(LocalDateTime.of(LocalDate.now().minusDays(2), LocalTime.of(12, 0)))
 					.build()
 				)
 				.toList()

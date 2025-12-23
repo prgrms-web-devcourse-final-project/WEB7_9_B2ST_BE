@@ -170,7 +170,4 @@ class PaymentControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("DONE"));
 	}
-
-	// TODO: 결제 취소(cancel) 및 실패(fail) 엔드포인트 통합 테스트 추가 필요
-	// 현재 path variable을 사용하는 엔드포인트에 대한 MockMvc 테스트에서 404 오류가 발생하여 추후 해결 필요
 }

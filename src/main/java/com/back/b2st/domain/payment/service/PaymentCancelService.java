@@ -51,16 +51,22 @@ public class PaymentCancelService {
 				"티켓 거래 결제는 취소/환불을 지원하지 않습니다.");
 		}
 
-		// 5. 도메인별 취소 처리 (티켓 복구, 거래 상태 변경 등)
+		// 6. 정책: 예매 결제는 취소/환불 미지원 (결제 완료 후 예매 취소 불가)
+		if (payment.getDomainType() == DomainType.RESERVATION) {
+			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE,
+				"예매 결제는 취소/환불을 지원하지 않습니다.");
+		}
+
+		// 7. 도메인별 취소 처리 (티켓 복구, 거래 상태 변경 등)
 		PaymentCancelHandler handler = cancelHandlers.stream()
 			.filter(h -> h.supports(payment.getDomainType()))
 			.findFirst()
-			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND,
+			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE,
 				"결제 취소를 지원하지 않는 도메인입니다."));
 
 		handler.handleCancel(payment);
 
-		// 6. 결제 상태를 CANCELED로 변경
+		// 8. 결제 상태를 CANCELED로 변경
 		LocalDateTime canceledAt = LocalDateTime.now(clock);
 		payment.cancel(request.reason(), canceledAt);
 

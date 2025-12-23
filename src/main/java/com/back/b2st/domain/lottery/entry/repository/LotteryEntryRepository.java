@@ -51,16 +51,18 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 	List<LotteryApplicantInfo> findAppliedInfoByScheduleId(@Param("scheduleId") Long performanceScheduleId);
 
 	/**
-	 * 낙첨자 추첨 결과 업데이트
+	 * 당첨, 낙첨 추첨 결과 업데이트
 	 */
 	@Modifying(clearAutomatically = true)
 	@Query("""
-		    update LotteryEntry le
-		    set le.status = com.back.b2st.domain.lottery.entry.entity.LotteryStatus.LOSE
-		    where le.scheduleId = :scheduleId
-		      and le.id not in :winnerIds
+		update LotteryEntry le
+		set le.status =
+			case when le.id in :winnerIds then com.back.b2st.domain.lottery.entry.entity.LotteryStatus.WIN
+				else com.back.b2st.domain.lottery.entry.entity.LotteryStatus.LOSE
+			end
+		where le.scheduleId = :scheduleId
 		""")
-	int updateStatusLoseBySchedule(
+	int updateStatusBySchedule(
 		@Param("scheduleId") Long scheduleId,
 		@Param("winnerIds") List<Long> winnerIds
 	);

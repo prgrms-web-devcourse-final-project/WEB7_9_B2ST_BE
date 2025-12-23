@@ -36,11 +36,23 @@ public class ReservationService {
 		Long scheduleId = request.scheduleId();
 		Long seatId = request.seatId();
 
-		// 1) 활성 상태 중복 예매 방지(최소변경)
-		if (reservationRepository.existsByScheduleIdAndSeatIdAndStatusIn(
+		LocalDateTime now = LocalDateTime.now();
+
+		// COMPLETED는 무조건 중복 방지
+		if (reservationRepository.existsByScheduleIdAndSeatIdAndStatus(
 			scheduleId,
 			seatId,
-			List.of(ReservationStatus.PENDING, ReservationStatus.COMPLETED)
+			ReservationStatus.COMPLETED
+		)) {
+			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
+		}
+
+		// PENDING은 "활성(PENDING && expiresAt > now)"만 중복 방지
+		if (reservationRepository.existsByScheduleIdAndSeatIdAndStatusAndExpiresAtAfter(
+			scheduleId,
+			seatId,
+			ReservationStatus.PENDING,
+			now
 		)) {
 			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
 		}
@@ -60,7 +72,7 @@ public class ReservationService {
 		try {
 			return ReservationCreateRes.from(reservationRepository.save(reservation));
 		} catch (DataIntegrityViolationException e) {
-			// 6) DB(부분 유니크 인덱스)가 최종으로 막아주는 케이스를 에러코드로 매핑
+			// TODO: 추후 DB partial unique?
 			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
 		}
 	}
@@ -69,7 +81,7 @@ public class ReservationService {
 	@Transactional
 	public void completeReservation(Long reservationId) {
 
-		Reservation reservation = getReservation(reservationId);
+		Reservation reservation = getReservationWithLock(reservationId);
 
 		if (reservation.getStatus() == ReservationStatus.COMPLETED) {
 			return;
@@ -94,7 +106,7 @@ public class ReservationService {
 	@Transactional
 	public void failReservation(Long reservationId) {
 
-		Reservation reservation = getReservation(reservationId);
+		Reservation reservation = getReservationWithLock(reservationId);
 
 		if (reservation.getStatus() == ReservationStatus.FAILED) {
 			return;
@@ -124,7 +136,7 @@ public class ReservationService {
 	@Transactional
 	public void cancelReservation(Long reservationId, Long memberId) {
 
-		Reservation reservation = getMyReservation(reservationId, memberId);
+		Reservation reservation = getMyReservationWithLock(reservationId, memberId);
 
 		if (!reservation.getStatus().canCancel()) {
 			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
@@ -145,9 +157,13 @@ public class ReservationService {
 	@Transactional
 	public void expireReservation(Long reservationId) {
 
-		Reservation reservation = getReservation(reservationId);
+		Reservation reservation = getReservationWithLock(reservationId);
 
+		LocalDateTime now = LocalDateTime.now();
 		if (!reservation.getStatus().canExpire()) {
+			return;
+		}
+		if (reservation.getExpiresAt() == null || reservation.getExpiresAt().isAfter(now)) { // ✅
 			return;
 		}
 
@@ -182,19 +198,34 @@ public class ReservationService {
 		return reservationRepository.findMyReservationDetails(memberId);
 	}
 
+	/** === PENDING 만료 배치 처리(스케줄러는 이 메서드만 호출) === */
+	@Transactional
+	public int expirePendingReservationsBatch() {
+		LocalDateTime now = LocalDateTime.now();
+
+		List<Long> expiredIds = reservationRepository.findExpiredPendingIds(ReservationStatus.PENDING, now);
+		if (expiredIds.isEmpty()) {
+			return 0;
+		}
+
+		return reservationRepository.bulkExpirePendingByIds(
+			expiredIds,
+			ReservationStatus.PENDING,
+			ReservationStatus.EXPIRED
+		);
+	}
+
 	// === 공통 유틸 === //
-	private Reservation getReservation(Long reservationId) {
-		return reservationRepository.findById(reservationId)
+	private Reservation getReservationWithLock(Long reservationId) {
+		return reservationRepository.findByIdWithLock(reservationId)
 			.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
 	}
 
-	private Reservation getMyReservation(Long reservationId, Long memberId) {
-		Reservation reservation = getReservation(reservationId);
-
+	private Reservation getMyReservationWithLock(Long reservationId, Long memberId) {
+		Reservation reservation = getReservationWithLock(reservationId);
 		if (!reservation.getMemberId().equals(memberId)) {
 			throw new BusinessException(ReservationErrorCode.RESERVATION_FORBIDDEN);
 		}
 		return reservation;
 	}
-
 }

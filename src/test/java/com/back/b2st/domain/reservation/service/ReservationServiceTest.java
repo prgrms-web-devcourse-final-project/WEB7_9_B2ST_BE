@@ -58,10 +58,17 @@ class ReservationServiceTest {
 		when(request.scheduleId()).thenReturn(SCHEDULE_ID);
 		when(request.seatId()).thenReturn(SEAT_ID);
 
-		when(reservationRepository.existsByScheduleIdAndSeatIdAndStatusIn(
+		when(reservationRepository.existsByScheduleIdAndSeatIdAndStatus(
 			eq(SCHEDULE_ID),
 			eq(SEAT_ID),
-			anyList()
+			eq(ReservationStatus.COMPLETED)
+		)).thenReturn(false);
+
+		when(reservationRepository.existsByScheduleIdAndSeatIdAndStatusAndExpiresAtAfter(
+			eq(SCHEDULE_ID),
+			eq(SEAT_ID),
+			eq(ReservationStatus.PENDING),
+			any(LocalDateTime.class)
 		)).thenReturn(false);
 
 		when(scheduleSeatStateService.getHoldExpiredAtOrThrow(SCHEDULE_ID, SEAT_ID))
@@ -91,18 +98,47 @@ class ReservationServiceTest {
 	}
 
 	@Test
-	@DisplayName("createReservation(): 활성 상태 중복 예매면 예외")
-	void createReservation_duplicate_throw() {
+	@DisplayName("createReservation(): COMPLETED 중복 예매면 예외")
+	void createReservation_duplicate_completed_throw() {
 		// given
 		ReservationReq request = mock(ReservationReq.class);
 
 		when(request.scheduleId()).thenReturn(SCHEDULE_ID);
 		when(request.seatId()).thenReturn(SEAT_ID);
 
-		when(reservationRepository.existsByScheduleIdAndSeatIdAndStatusIn(
+		when(reservationRepository.existsByScheduleIdAndSeatIdAndStatus(
 			eq(SCHEDULE_ID),
 			eq(SEAT_ID),
-			anyList()
+			eq(ReservationStatus.COMPLETED)
+		)).thenReturn(true);
+
+		// when & then
+		assertThatThrownBy(() -> reservationService.createReservation(MEMBER_ID, request))
+			.isInstanceOf(BusinessException.class)
+			.extracting(e -> ((BusinessException)e).getErrorCode())
+			.isEqualTo(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
+	}
+
+	@Test
+	@DisplayName("createReservation(): 활성 PENDING 중복 예매면 예외")
+	void createReservation_duplicate_activePending_throw() {
+		// given
+		ReservationReq request = mock(ReservationReq.class);
+
+		when(request.scheduleId()).thenReturn(SCHEDULE_ID);
+		when(request.seatId()).thenReturn(SEAT_ID);
+
+		when(reservationRepository.existsByScheduleIdAndSeatIdAndStatus(
+			eq(SCHEDULE_ID),
+			eq(SEAT_ID),
+			eq(ReservationStatus.COMPLETED)
+		)).thenReturn(false);
+
+		when(reservationRepository.existsByScheduleIdAndSeatIdAndStatusAndExpiresAtAfter(
+			eq(SCHEDULE_ID),
+			eq(SEAT_ID),
+			eq(ReservationStatus.PENDING),
+			any(LocalDateTime.class)
 		)).thenReturn(true);
 
 		// when & then
@@ -119,7 +155,7 @@ class ReservationServiceTest {
 		Reservation reservation = mock(Reservation.class);
 		ReservationStatus status = mock(ReservationStatus.class);
 
-		when(reservationRepository.findById(RESERVATION_ID))
+		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
 			.thenReturn(Optional.of(reservation));
 		when(reservation.getMemberId()).thenReturn(MEMBER_ID);
 		when(reservation.getStatus()).thenReturn(status);
@@ -143,13 +179,30 @@ class ReservationServiceTest {
 	}
 
 	@Test
+	@DisplayName("cancelReservation(): 본인 예매가 아니면 FORBIDDEN 예외")
+	void cancelReservation_forbidden_throw() {
+		// given
+		Reservation reservation = mock(Reservation.class);
+
+		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
+			.thenReturn(Optional.of(reservation));
+		when(reservation.getMemberId()).thenReturn(OTHER_MEMBER_ID);
+
+		// when & then
+		assertThatThrownBy(() -> reservationService.cancelReservation(RESERVATION_ID, MEMBER_ID))
+			.isInstanceOf(BusinessException.class)
+			.extracting(e -> ((BusinessException)e).getErrorCode())
+			.isEqualTo(ReservationErrorCode.RESERVATION_FORBIDDEN);
+	}
+
+	@Test
 	@DisplayName("completeReservation(): 정상 완료 시 SOLD 전환 및 토큰 제거")
 	void completeReservation_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
 		ReservationStatus status = mock(ReservationStatus.class);
 
-		when(reservationRepository.findById(RESERVATION_ID))
+		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
 			.thenReturn(Optional.of(reservation));
 		when(reservation.getStatus()).thenReturn(status);
 		when(status.canComplete()).thenReturn(true);
@@ -167,16 +220,17 @@ class ReservationServiceTest {
 	}
 
 	@Test
-	@DisplayName("expireReservation(): 만료 가능 시 AVAILABLE 복구")
+	@DisplayName("expireReservation(): 만료 가능 + expiresAt 지난 경우 AVAILABLE 복구")
 	void expireReservation_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
 		ReservationStatus status = mock(ReservationStatus.class);
 
-		when(reservationRepository.findById(RESERVATION_ID))
+		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
 			.thenReturn(Optional.of(reservation));
 		when(reservation.getStatus()).thenReturn(status);
 		when(status.canExpire()).thenReturn(true);
+		when(reservation.getExpiresAt()).thenReturn(LocalDateTime.now().minusSeconds(1));
 		when(reservation.getScheduleId()).thenReturn(SCHEDULE_ID);
 		when(reservation.getSeatId()).thenReturn(SEAT_ID);
 
@@ -188,6 +242,28 @@ class ReservationServiceTest {
 		inOrder.verify(reservation).expire();
 		inOrder.verify(scheduleSeatStateService).changeToAvailable(SCHEDULE_ID, SEAT_ID);
 		inOrder.verify(seatHoldTokenService).remove(SCHEDULE_ID, SEAT_ID);
+	}
+
+	@Test
+	@DisplayName("expireReservation(): expiresAt이 아직 안 지났으면 아무것도 안 함")
+	void expireReservation_notExpired_then_noop() {
+		// given
+		Reservation reservation = mock(Reservation.class);
+		ReservationStatus status = mock(ReservationStatus.class);
+
+		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
+			.thenReturn(Optional.of(reservation));
+		when(reservation.getStatus()).thenReturn(status);
+		when(status.canExpire()).thenReturn(true);
+		when(reservation.getExpiresAt()).thenReturn(LocalDateTime.now().plusMinutes(1));
+
+		// when
+		reservationService.expireReservation(RESERVATION_ID);
+
+		// then
+		verify(reservation, never()).expire();
+		verify(scheduleSeatStateService, never()).changeToAvailable(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).remove(anyLong(), anyLong());
 	}
 
 	@Test

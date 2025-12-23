@@ -2,6 +2,8 @@ package com.back.b2st.domain.performanceschedule.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
@@ -41,6 +43,7 @@ import lombok.NoArgsConstructor;
 	sequenceName = "performance_schedule_seq",
 	allocationSize = 50
 )
+@DynamicUpdate
 public class PerformanceSchedule extends BaseEntity {
 
 	@Id

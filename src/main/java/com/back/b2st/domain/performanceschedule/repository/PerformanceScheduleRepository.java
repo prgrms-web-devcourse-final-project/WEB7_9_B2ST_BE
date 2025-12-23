@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -47,4 +48,16 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 	List<DrawTargetPerformance> findByClosedBetweenAndNotDrawn(
 		@Param("start") LocalDateTime startDate,
 		@Param("end") LocalDateTime endDate);
+
+	/**
+	 * 회차 추첨 완료 업데이트
+	 * @param scheduleId
+	 */
+	@Modifying(clearAutomatically = true)
+	@Query("""
+		update PerformanceSchedule ps
+		set ps.drawCompleted = true
+		where ps.performanceScheduleId = :scheduleId
+		""")
+	void updateStautsById(@Param("scheduleId") Long scheduleId);
 }

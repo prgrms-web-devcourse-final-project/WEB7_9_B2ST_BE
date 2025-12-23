@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
@@ -33,6 +34,7 @@ import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Transactional
 class DrawSchedulerTest {
 	@Autowired
 	private DrawScheduler drawScheduler;
@@ -120,5 +122,30 @@ class DrawSchedulerTest {
 		System.out.println("추첨 완료된 회차: " + completed.size());
 
 		assertThat(completed).isNotEmpty();
+
+		// 당첨자 확인
+		List<LotteryEntry> allEntries = lotteryEntryRepository.findAll();
+		long winCount = allEntries.stream()
+			.filter(e -> e.getStatus() == com.back.b2st.domain.lottery.entry.entity.LotteryStatus.WIN)
+			.count();
+
+		System.out.println("총 당첨자: " + winCount + "명");
+
+		assertThat(winCount).isGreaterThan(0);
+	}
+
+	@Test
+	@DisplayName("스케줄러 실행 - 추첨 대상 없을 때")
+	void schedulerTest_NoTarget() {
+		// given: 모든 스케줄의 추첨 완료 처리
+		performanceScheduleRepository.findAll().forEach(schedule -> {
+			performanceScheduleRepository.updateStautsById(schedule.getPerformanceScheduleId());
+		});
+
+		// when
+		drawScheduler.executeDailyDraw();
+
+		// then: 에러 없이 정상 완료
+		System.out.println("추첨 대상 없음 - 정상 종료");
 	}
 }

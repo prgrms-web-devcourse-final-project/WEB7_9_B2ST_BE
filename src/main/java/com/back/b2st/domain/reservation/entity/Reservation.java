@@ -103,17 +103,4 @@ public class Reservation extends BaseEntity {
 			return this;
 		}
 	}
-
-	@Deprecated
-	public Long getPerformanceId() {
-		return scheduleId;
-	}
-
-	public void cancel() {
-		cancel(LocalDateTime.now());
-	}
-
-	public void complete() {
-		complete(LocalDateTime.now());
-	}
 }

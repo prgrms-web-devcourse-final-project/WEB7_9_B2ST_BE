@@ -31,7 +31,7 @@ import com.back.b2st.security.UserPrincipal;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class PaymentConfirmControllerTest {
+class PaymentControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;

@@ -3,6 +3,7 @@ package com.back.b2st.support;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -108,7 +109,7 @@ public class TestFixture {
 					.startAt(LocalDateTime.now().plusDays(i))
 					.bookingType(bookingType)
 					.bookingOpenAt(LocalDateTime.now().minusDays(1))
-					.bookingCloseAt(LocalDateTime.now().minusHours(1))
+					.bookingCloseAt(LocalDateTime.now().minusDays(1).plusHours(12))
 					.build()
 				)
 				.toList()
@@ -206,7 +207,6 @@ public class TestFixture {
 		Performance performance,
 		PerformanceSchedule performanceSchedule,
 		SeatGradeType seatGradeType,
-		Integer quantity,
 		LotteryEntryRepository repo
 	) {
 		List<LotteryEntry> lotteryEntries = IntStream.range(0, members.size())
@@ -216,7 +216,7 @@ public class TestFixture {
 					.performanceId(performance.getPerformanceId())
 					.scheduleId(performanceSchedule.getPerformanceScheduleId())
 					.grade(seatGradeType)
-					.quantity(quantity)
+					.quantity((ThreadLocalRandom.current().nextInt(4) + 1))
 					.build();
 			}).toList();
 

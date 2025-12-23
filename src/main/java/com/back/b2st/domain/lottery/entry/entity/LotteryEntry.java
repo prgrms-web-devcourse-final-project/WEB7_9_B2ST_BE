@@ -106,6 +106,10 @@ public class LotteryEntry extends BaseEntity {
 		this.status = LotteryStatus.APPLIED;
 	}
 
+	public void setApplied() {
+		this.status = LotteryStatus.APPLIED;
+	}
+
 	public void setWins() {
 		this.status = LotteryStatus.WIN;
 	}

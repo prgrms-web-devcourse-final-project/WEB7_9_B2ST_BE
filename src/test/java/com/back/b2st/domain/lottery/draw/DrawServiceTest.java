@@ -36,8 +36,6 @@ import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 
-import jakarta.persistence.EntityManager;
-
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -64,9 +62,6 @@ class DrawServiceTest {
 	private SeatGradeRepository seatGradeRepository;
 	@Autowired
 	private LotteryEntryRepository lotteryEntryRepository;
-
-	@Autowired
-	EntityManager entityManager;
 
 	List<Member> members1;
 	List<Member> members2;

@@ -20,7 +20,7 @@ public class ScheduleSeatTestController {
 	/** === 만료된 HOLD 좌석 일괄 해제 (수동) === */
 	@PostMapping("/expired/release")
 	public BaseResponse<Integer> releaseExpiredHolds() {
-		int updated = scheduleSeatStateService.releaseExpiredHolds();
+		int updated = scheduleSeatStateService.releaseExpiredHoldsBatch();
 		return BaseResponse.success(updated);
 	}
 

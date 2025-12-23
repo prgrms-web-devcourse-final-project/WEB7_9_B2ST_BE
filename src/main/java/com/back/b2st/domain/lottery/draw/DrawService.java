@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo;
 import com.back.b2st.domain.lottery.draw.dto.WeightedApplicant;
-import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
@@ -48,8 +47,7 @@ public class DrawService {
 		for (DrawTargetPerformance performance : targetPerformances) {
 			try {
 				drawForPerformance(performance.performanceId(), performance.performanceScheduleId());
-				log.info("{}executeDraws] 공연 추첨 완료 - scheduleId: {}",
-					p, performance.performanceScheduleId());
+				log.info("{}executeDraws] 공연 추첨 완료 - scheduleId: {}", p, performance.performanceScheduleId());
 			} catch (Exception e) {
 				log.error("{}executeDraws] 공연 추첨 실패 - scheduleId: {}",
 					p, performance.performanceScheduleId(), e);
@@ -97,18 +95,25 @@ public class DrawService {
 				Collectors.toList()
 			));
 
-		log.info("{}drawForPerformance] 응모자 수 : {}", p, byGrade.size());
-		byGrade.forEach((grade, infos) -> {
-			log.info("등급: {}, 응모 수: {}", grade, infos.size());
-			infos.forEach(info ->
-				log.info("  - entryId={}, quantity={}", info.id(), info.quantity())
-			);
-		});
-
 		// 각 등급별 추첨 진행
+		List<Long> allWinnerIds = new ArrayList<>();
+
 		for (SeatGradeType gradeType : SeatGradeType.values()) {
-			drawByGrade(gradeType, byGrade, seatCountByGrade, scheduleId);
+			allWinnerIds.addAll(
+				drawByGrade(gradeType, byGrade, seatCountByGrade, scheduleId)
+			);
 		}
+
+		// todo 결과 저장
+		// lotteryEntry -> status WIN/LOSE 변경 필요
+		// 일괄 변경 작업이 필요하면 LotteryEntry 채로 들고오는 게 맞는데,
+		// LotteryEntity 객체를 가져와서 status 업데이트 하기
+		// vs
+		// id만 우선조회 하고 해당하는 id의 객체만 가져오기
+
+		// 추첨 완료 회차 & !WIN => LOSE 일괄 변경? -> 필요한 작업인가?
+		lotteryEntryRepository.updateStatusBySchedule(scheduleId, allWinnerIds);
+		performanceScheduleRepository.updateStautsById(scheduleId);
 	}
 
 	/**
@@ -118,7 +123,7 @@ public class DrawService {
 	 * @param seatCountByGrade    등급별 좌석 수
 	 * @param scheduleId    공연 회차 id
 	 */
-	private void drawByGrade(
+	private List<Long> drawByGrade(
 		SeatGradeType grade,
 		Map<SeatGradeType, List<LotteryApplicantInfo>> byGrade,
 		EnumMap<SeatGradeType, Long> seatCountByGrade,
@@ -129,42 +134,23 @@ public class DrawService {
 		// 해당 등급 좌석 수
 		Long seatCounts = seatCountByGrade.getOrDefault(grade, 0L);
 
-		log.info("{}drawByGrade()] 등급: {}, 좌석 수: {}, 응모자 수: {}", grade, seatCounts, applicantInfos.size());
+		log.info("{} drawByGrade()] 등급: {}, 좌석 수: {}, 응모자 수: {}", p, grade, seatCounts, applicantInfos.size());
 
 		if (applicantInfos.isEmpty()) {
 			log.info("등급 {} - 응모자 없음", grade);
-			return;
+			return List.of();
 		}
 
 		if (seatCounts == 0) {
 			log.warn("등급 {} - 좌석 없음, 응모자 {}명은 추첨 불가", grade, applicantInfos.size());
-			return;
+			return List.of();
 		}
 
 		// 추첨 진행 + 가중치
 		log.info("등급 {} - 추첨 진행, 좌석 : {}", grade, seatCounts);
 		List<Long> winnerIds = drawWithWeight(applicantInfos, seatCounts);
 		log.info("등급 {} - 당첨자 {}명 선정 완료", grade, winnerIds.size());
-
-		// todo 결과 저장
-		// lotteryEntry -> status WIN/LOSE 변경 필요
-		// 일괄 변경 작업이 필요하면 LotteryEntry 채로 들고오는 게 맞는데,
-		// 구조 개선?
-		List<LotteryEntry> winEntries = new ArrayList<>();
-		for (Long id : winnerIds) {
-			lotteryEntryRepository.findById(id)
-				.ifPresent(entry -> {
-					entry.setWins();
-					winEntries.add(entry);
-				});
-		}
-
-		// 추첨 완료 회차 & !WIN => LOSE 일괄 변경? -> 필요한 작업인가?
-		lotteryEntryRepository.updateStatusLoseBySchedule(scheduleId, winnerIds);
-
-		// LotteryEntity 객체를 가져와서 status 업데이트 하기
-		// vs
-		// id만 우선조회 하고 해당하는 id의 객체만 가져오기
+		return winnerIds;
 
 		// lotteryResult 생성 (lotteryEntryId, memberId)
 
@@ -234,13 +220,13 @@ public class DrawService {
 			// 선택된 응모자 제외 (잔여석 제한 포함)
 			selectedIds.add(selected.applicantInfo().id());
 			totalWeight -= selected.weight();
-
-			log.debug("{}drawWithWeight] 당첨: entryId={}, quantity={}, 남은 좌석={}", p,
-				selected.applicantInfo().id(), requestedQuantity, remainingSeats);
+			
+			// log.debug("{}drawWithWeight] 당첨: entryId={}, quantity={}, 남은 좌석={}", p,
+			// 	selected.applicantInfo().id(), requestedQuantity, remainingSeats);
 		}
 
-		log.info("{}drawWithWeight] 추첨 완료 - 당첨자: {}명, 배정 좌석: {}, 남은 좌석: {}", p,
-			winnerIds.size(), seatCounts - remainingSeats, remainingSeats);
+		// log.info("{}drawWithWeight] 추첨 완료 - 당첨자: {}명, 배정 좌석: {}, 남은 좌석: {}", p,
+		// 	winnerIds.size(), seatCounts - remainingSeats, remainingSeats);
 
 		return winnerIds;
 	}

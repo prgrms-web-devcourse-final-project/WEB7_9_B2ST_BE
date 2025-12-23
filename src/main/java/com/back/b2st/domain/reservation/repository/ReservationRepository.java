@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,12 +18,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 
 	/** === 로그인 유저 예매 전체 조회 === */
 	List<Reservation> findAllByMemberId(Long memberId);
-
-	/** === 좌석 중복 예매 방지 === */
-	boolean existsByScheduleIdAndSeatIdAndStatusIn(Long scheduleId, Long seatId, List<ReservationStatus> statuses);
-
-	/** === 만료 대상 조회 메서드 추가 + 활성 중복 체크 유지 === */
-	List<Reservation> findAllByStatusAndExpiresAtLessThanEqual(ReservationStatus status, LocalDateTime now);
 
 	/** 활성 PENDING 존재 여부(만료된 PENDING은 제외) */
 	boolean existsByScheduleIdAndSeatIdAndStatusAndExpiresAtAfter(
@@ -43,4 +38,28 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 	//@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT r FROM Reservation r WHERE r.id = :reservationId")
 	Optional<Reservation> findByIdWithLock(@Param("reservationId") Long reservationId);
+
+	/** 만료 대상 예약 ID만 가져오기 */
+	@Query("""
+		select r.id
+		  from Reservation r
+		 where r.status = :pending
+		   and r.expiresAt is not null
+		   and r.expiresAt <= :now
+		""")
+	List<Long> findExpiredPendingIds(@Param("pending") ReservationStatus pending, @Param("now") LocalDateTime now);
+
+	/** PENDING -> EXPIRED 일괄 처리 */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+		update Reservation r
+		   set r.status = :expired
+		 where r.id in :ids
+		   and r.status = :pending
+		""")
+	int bulkExpirePendingByIds(
+		@Param("ids") List<Long> ids,
+		@Param("pending") ReservationStatus pending,
+		@Param("expired") ReservationStatus expired
+	);
 }

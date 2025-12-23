@@ -72,7 +72,7 @@ public class ReservationService {
 		try {
 			return ReservationCreateRes.from(reservationRepository.save(reservation));
 		} catch (DataIntegrityViolationException e) {
-			// ✅ (추후 DB partial unique까지 넣으면 여기서 최종 방어가 됨)
+			// TODO: 추후 DB partial unique?
 			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
 		}
 	}

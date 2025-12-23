@@ -1,39 +1,34 @@
 package com.back.b2st.domain.reservation.scheduler;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.reservation.entity.Reservation;
-import com.back.b2st.domain.reservation.entity.ReservationStatus;
-import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.reservation.service.ReservationService;
+import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ReservationScheduler {
 
-	private final ReservationRepository reservationRepository;
 	private final ReservationService reservationService;
+	private final ScheduleSeatStateService scheduleSeatStateService;
 
-	/** === PENDING 만료 회수 === */
 	@Scheduled(fixedDelay = 5000)
-	@Transactional
 	public void expirePendingReservations() {
+		// 예매 해제 (예매랑 연관된 좌석도 해제)
+		int expiredReservations = reservationService.expirePendingReservations();
 
-		LocalDateTime now = LocalDateTime.now();
+		// 좌석 해제
+		int releasedHolds = scheduleSeatStateService.releaseExpiredHolds();
 
-		List<Reservation> expiredTargets =
-			reservationRepository.findAllByStatusAndExpiresAtLessThanEqual(ReservationStatus.PENDING, now);
-
-		for (Reservation reservation : expiredTargets) {
-			// ReservationService 내부에서 좌석/토큰 정리까지 수행
-			reservationService.expireReservation(reservation.getId());
+		if (expiredReservations > 0 || releasedHolds > 0) {
+			log.info("스케줄러 처리 결과 - 만료된 예매={}건, 해제된 좌석 HOLD={}건",
+				expiredReservations,
+				releasedHolds);
 		}
 	}
 }

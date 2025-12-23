@@ -31,7 +31,7 @@ import lombok.NoArgsConstructor;
 	name = "lottery_entries",
 	indexes = {
 		@Index(name = "idx_lottery_entries_member_created", columnList = "member_id, created_at"),
-		@Index(name = "idx_lottery_entries_performance", columnList = "performance_id"),
+		@Index(name = "idx_lottery_entries_performance", columnList = "performance_id, schedule_id"),
 		@Index(name = "idx_lottery_entries_schedule", columnList = "schedule_id"),
 		@Index(name = "idx_lottery_entries_member_performance_schedule", columnList = "member_id, performance_id, schedule_id"),
 		@Index(name = "idx_lottery_entries_status", columnList = "status"),
@@ -104,5 +104,17 @@ public class LotteryEntry extends BaseEntity {
 		this.grade = grade;
 		this.quantity = quantity;
 		this.status = LotteryStatus.APPLIED;
+	}
+
+	public void setApplied() {
+		this.status = LotteryStatus.APPLIED;
+	}
+
+	public void setWins() {
+		this.status = LotteryStatus.WIN;
+	}
+
+	public void setLose() {
+		this.status = LotteryStatus.LOSE;
 	}
 }

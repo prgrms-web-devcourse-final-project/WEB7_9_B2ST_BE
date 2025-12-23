@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 
 public interface PerformanceScheduleRepository extends JpaRepository<PerformanceSchedule, Long> {
@@ -25,7 +26,17 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 	Optional<PerformanceSchedule> findByPerformanceScheduleIdAndPerformance_PerformanceId(
 		Long scheduleId, Long performanceId);
 
-	boolean existsByPerformanceScheduleIdAndPerformance_PerformanceId(Long scheduleId, Long performanceId);
+	@Query("""
+		select case when count(ps) > 0 then true else false end
+		from PerformanceSchedule ps
+		where ps.performanceScheduleId = :scheduleId
+		  and ps.performance.performanceId = :performanceId
+		  and ps.bookingType = : bookingType
+		""")
+	boolean existsByPerformanceAndScheduleMatch(
+		@Param("scheduleId") Long scheduleId,
+		@Param("performanceId") Long performanceId,
+		@Param("bookingType") BookingType bookingType);
 
 	//예매 오픈 시간이 이미 지난(또는 지금 오픈해야 하는) 회차들을 목록으로 가져올 때 사용
 	List<PerformanceSchedule> findAllByBookingOpenAtBeforeOrderByBookingOpenAtAsc(LocalDateTime now);

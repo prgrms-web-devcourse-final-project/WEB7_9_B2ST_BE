@@ -32,7 +32,7 @@ public class PaymentCancelService {
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.NOT_FOUND));
 
 		// 2. 권한 검증 (본인 결제만 취소 가능)
-		validateOwner(payment, memberId);
+		payment.validateOwner(memberId);
 
 		// 3. 멱등성 처리: 이미 취소된 경우
 		if (payment.getStatus() == PaymentStatus.CANCELED) {
@@ -65,11 +65,5 @@ public class PaymentCancelService {
 		payment.cancel(request.reason(), canceledAt);
 
 		return payment;
-	}
-
-	private void validateOwner(Payment payment, Long memberId) {
-		if (!payment.getMemberId().equals(memberId)) {
-			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
-		}
 	}
 }

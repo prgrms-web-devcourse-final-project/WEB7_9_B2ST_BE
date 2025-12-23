@@ -25,7 +25,7 @@ public class PaymentFailService {
 		Payment payment = paymentRepository.findByOrderId(orderId)
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.NOT_FOUND));
 
-		validateOwner(payment, memberId);
+		payment.validateOwner(memberId);
 
 		// 멱등: 이미 실패 처리된 경우에도 도메인 후처리를 재시도할 수 있도록 허용
 		if (payment.getStatus() == PaymentStatus.FAILED) {
@@ -47,12 +47,6 @@ public class PaymentFailService {
 	private void handleDomainFailure(Payment payment) {
 		if (payment.getDomainType() == DomainType.RESERVATION) {
 			reservationService.failReservation(payment.getDomainId());
-		}
-	}
-
-	private void validateOwner(Payment payment, Long memberId) {
-		if (!payment.getMemberId().equals(memberId)) {
-			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
 		}
 	}
 }

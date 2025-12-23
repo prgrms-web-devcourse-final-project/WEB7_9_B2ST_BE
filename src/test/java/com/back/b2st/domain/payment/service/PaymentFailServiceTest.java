@@ -135,5 +135,42 @@ class PaymentFailServiceTest {
 			.extracting(ex -> ((BusinessException)ex).getErrorCode())
 			.isEqualTo(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
 	}
+
+	@Test
+	void fail_throwsNotFound_whenPaymentDoesNotExist() {
+		String orderId = "NON-EXISTENT-ORDER";
+		Long memberId = 1L;
+
+		when(paymentRepository.findByOrderId(orderId)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> paymentFailService.fail(memberId, orderId, "any"))
+			.isInstanceOf(BusinessException.class)
+			.extracting(ex -> ((BusinessException)ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.NOT_FOUND);
+	}
+
+	@Test
+	void fail_doesNotCallDomainService_whenDomainTypeIsNotReservation() {
+		String orderId = "ORDER-5";
+		Long memberId = 1L;
+		String reason = "user canceled";
+
+		Payment payment = Payment.builder()
+			.orderId(orderId)
+			.memberId(memberId)
+			.domainType(null)
+			.domainId(null)
+			.amount(15000L)
+			.method(PaymentMethod.CARD)
+			.expiresAt(null)
+			.build();
+
+		when(paymentRepository.findByOrderId(orderId)).thenReturn(Optional.of(payment));
+
+		Payment failed = paymentFailService.fail(memberId, orderId, reason);
+
+		assertThat(failed.getStatus()).isEqualTo(PaymentStatus.FAILED);
+		assertThat(failed.getFailureReason()).isEqualTo(reason);
+	}
 }
 

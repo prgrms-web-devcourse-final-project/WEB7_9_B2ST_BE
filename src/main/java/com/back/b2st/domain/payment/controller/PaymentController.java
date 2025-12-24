@@ -70,7 +70,8 @@ public class PaymentController {
 	@Operation(
 		summary = "결제 취소",
 		description = "완료된 결제를 취소합니다.\n\n"
-			+ "- 티켓 거래(TRADE) 결제는 취소/환불을 지원하지 않습니다."
+			+ "- 티켓 거래(TRADE) 결제는 취소/환불을 지원하지 않습니다.\n"
+			+ "- 예매(RESERVATION) 결제는 취소/환불을 지원하지 않습니다."
 	)
 	@PostMapping("/{orderId}/cancel")
 	public ResponseEntity<BaseResponse<PaymentCancelRes>> cancel(

@@ -7,6 +7,7 @@ import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
  */
 public record LotteryApplicantInfo(
 	Long id,
+	Long memberId,
 	SeatGradeType grade,
 	Integer quantity
 ) {

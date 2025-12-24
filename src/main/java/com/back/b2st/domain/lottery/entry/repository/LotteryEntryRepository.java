@@ -43,7 +43,7 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 	 */
 	@Query("""
 		select new com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo(
-				le.id, le.grade, le.quantity
+				le.id, le.memberId, le.grade, le.quantity
 		)
 		from LotteryEntry le
 		where le.scheduleId = :scheduleId

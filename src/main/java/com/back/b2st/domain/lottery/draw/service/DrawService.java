@@ -1,4 +1,4 @@
-package com.back.b2st.domain.lottery.draw;
+package com.back.b2st.domain.lottery.draw.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,7 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo;
 import com.back.b2st.domain.lottery.draw.dto.WeightedApplicant;
+import com.back.b2st.domain.lottery.draw.dto.WinnerInfo;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
+import com.back.b2st.domain.lottery.result.entity.LotteryResult;
+import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
@@ -35,6 +38,7 @@ public class DrawService {
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final LotteryEntryRepository lotteryEntryRepository;
 	private final SeatGradeRepository seatGradeRepository;
+	private final LotteryResultRepository lotteryResultRepository;
 
 	public void executeDraws() {
 		log.info("추첨 시작");
@@ -95,9 +99,9 @@ public class DrawService {
 				Collectors.toList()
 			));
 
-		// 각 등급별 추첨 진행
 		List<Long> allWinnerIds = new ArrayList<>();
 
+		// 각 등급별 추첨 진행
 		for (SeatGradeType gradeType : SeatGradeType.values()) {
 			allWinnerIds.addAll(
 				drawByGrade(gradeType, byGrade, seatCountByGrade, scheduleId)
@@ -114,6 +118,33 @@ public class DrawService {
 		// 추첨 완료 회차 & !WIN => LOSE 일괄 변경? -> 필요한 작업인가?
 		lotteryEntryRepository.updateStatusBySchedule(scheduleId, allWinnerIds);
 		performanceScheduleRepository.updateStautsById(scheduleId);
+
+		// 응모 id와 당첨자 id추출
+		List<WinnerInfo> winnerInfos = entryInfos.stream()
+			.filter(info -> allWinnerIds.contains(info.id()))
+			.map(info -> new WinnerInfo(info.id(), info.memberId()))
+			.toList();
+
+		saveLotteryResult(winnerInfos);
+	}
+
+	/**
+	 * 당첨자 저장
+	 * @param winnerInfos 응모id, 사용자 id
+	 */
+	private void saveLotteryResult(List<WinnerInfo> winnerInfos) {
+		List<LotteryResult> results = new ArrayList<>();
+
+		for (WinnerInfo info : winnerInfos) {
+			results.add(
+				LotteryResult.builder()
+					.lotteryEntryId(info.id())
+					.memberId(info.memberId())
+					.build()
+			);
+		}
+
+		lotteryResultRepository.saveAll(results);
 	}
 
 	/**
@@ -220,7 +251,7 @@ public class DrawService {
 			// 선택된 응모자 제외 (잔여석 제한 포함)
 			selectedIds.add(selected.applicantInfo().id());
 			totalWeight -= selected.weight();
-			
+
 			// log.debug("{}drawWithWeight] 당첨: entryId={}, quantity={}, 남은 좌석={}", p,
 			// 	selected.applicantInfo().id(), requestedQuantity, remainingSeats);
 		}

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Repository;
 
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
+
+import jakarta.persistence.LockModeType;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long>, ReservationRepositoryCustom {
@@ -35,7 +38,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 	);
 
 	/** 상태 변경 경쟁(complete/fail/expire) 직렬화를 위한 락 조회 */
-	//@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT r FROM Reservation r WHERE r.id = :reservationId")
 	Optional<Reservation> findByIdWithLock(@Param("reservationId") Long reservationId);
 

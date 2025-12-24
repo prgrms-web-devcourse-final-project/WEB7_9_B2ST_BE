@@ -20,6 +20,7 @@ import com.back.b2st.domain.payment.service.PaymentCancelService;
 import com.back.b2st.domain.payment.service.PaymentConfirmService;
 import com.back.b2st.domain.payment.service.PaymentFailService;
 import com.back.b2st.domain.payment.service.PaymentPrepareService;
+import com.back.b2st.domain.reservation.service.ReservationService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.security.UserPrincipal;
@@ -40,6 +41,8 @@ public class PaymentController {
 	private final PaymentConfirmService paymentConfirmService;
 	private final PaymentCancelService paymentCancelService;
 	private final PaymentFailService paymentFailService;
+
+	private final ReservationService reservationService;
 
 	@Operation(
 		summary = "결제 준비",

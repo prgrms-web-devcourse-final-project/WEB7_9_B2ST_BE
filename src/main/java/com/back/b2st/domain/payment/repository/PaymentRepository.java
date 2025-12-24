@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.back.b2st.domain.payment.entity.DomainType;
@@ -80,5 +80,14 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 	List<Payment> findByMemberIdAndDomainTypeOrderByCreatedAtDesc(
 		Long memberId,
 		DomainType domainType
+	);
+
+	/**
+	 * 예매 완료 시 호출되는 조회용
+	 */
+	Optional<Payment> findByDomainTypeAndDomainIdAndMemberId(
+		DomainType domainType,
+		Long domainId,
+		Long memberId
 	);
 }

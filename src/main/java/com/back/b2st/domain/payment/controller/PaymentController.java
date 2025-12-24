@@ -13,6 +13,7 @@ import com.back.b2st.domain.payment.dto.request.PaymentFailReq;
 import com.back.b2st.domain.payment.dto.request.PaymentPrepareReq;
 import com.back.b2st.domain.payment.dto.response.PaymentCancelRes;
 import com.back.b2st.domain.payment.dto.response.PaymentConfirmRes;
+import com.back.b2st.domain.payment.dto.response.PaymentConfirmWithReservationRes;
 import com.back.b2st.domain.payment.dto.response.PaymentFailRes;
 import com.back.b2st.domain.payment.dto.response.PaymentPrepareRes;
 import com.back.b2st.domain.payment.entity.Payment;
@@ -20,6 +21,8 @@ import com.back.b2st.domain.payment.service.PaymentCancelService;
 import com.back.b2st.domain.payment.service.PaymentConfirmService;
 import com.back.b2st.domain.payment.service.PaymentFailService;
 import com.back.b2st.domain.payment.service.PaymentPrepareService;
+import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
+import com.back.b2st.domain.reservation.service.ReservationService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.security.UserPrincipal;
@@ -41,6 +44,8 @@ public class PaymentController {
 	private final PaymentCancelService paymentCancelService;
 	private final PaymentFailService paymentFailService;
 
+	private final ReservationService reservationService;
+
 	@Operation(
 		summary = "결제 준비",
 		description = "결제 정보를 생성하고 orderId를 반환합니다."
@@ -59,12 +64,24 @@ public class PaymentController {
 		description = "결제를 승인하고 도메인별 후처리를 수행합니다."
 	)
 	@PostMapping("/confirm")
-	public ResponseEntity<BaseResponse<PaymentConfirmRes>> confirm(
+	public BaseResponse<PaymentConfirmWithReservationRes> confirm(
 		@Parameter(hidden = true) @CurrentUser UserPrincipal user,
 		@Valid @RequestBody PaymentConfirmReq request
 	) {
 		Payment payment = paymentConfirmService.confirm(user.getId(), request);
-		return ResponseEntity.ok(BaseResponse.success(PaymentConfirmRes.from(payment)));
+
+		ReservationDetailRes reservation =
+			reservationService.getReservationDetail(
+				payment.getDomainId(),
+				user.getId()
+			);
+
+		return BaseResponse.success(
+			new PaymentConfirmWithReservationRes(
+				reservation,
+				PaymentConfirmRes.from(payment)
+			)
+		);
 	}
 
 	@Operation(

@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.lottery.draw.service.DrawService;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.entity.LotteryStatus;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;

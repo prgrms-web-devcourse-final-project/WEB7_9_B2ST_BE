@@ -1,4 +1,4 @@
-package com.back.b2st.domain.lottery.draw;
+package com.back.b2st.domain.lottery.draw.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -220,7 +220,7 @@ public class DrawService {
 			// 선택된 응모자 제외 (잔여석 제한 포함)
 			selectedIds.add(selected.applicantInfo().id());
 			totalWeight -= selected.weight();
-			
+
 			// log.debug("{}drawWithWeight] 당첨: entryId={}, quantity={}, 남은 좌석={}", p,
 			// 	selected.applicantInfo().id(), requestedQuantity, remainingSeats);
 		}

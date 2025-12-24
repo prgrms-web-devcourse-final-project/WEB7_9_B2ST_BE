@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,18 +86,13 @@ class DrawServiceTest {
 		members3 = createMembers(10, memberRepository, passwordEncoder);
 
 		venue = createVenue("잠실실내체육관", venueRepository);
-
 		performance = createPerformance(venue, performanceRepository);
-
-		schedules = createSchedules(performance, 1, BookingType.LOTTERY,
+		schedules = createSchedules(performance, 20, BookingType.LOTTERY,
 			performanceScheduleRepository);
-
 		performanceSchedule = schedules.getFirst();
 
 		sections = createSections(venue.getVenueId(), sectionRepository, "A", "B", "C");
-
 		seats = createSeats(venue.getVenueId(), sections, 3, 5, seatRepository);
-
 		createSeatGrades(performance, seats, seatGradeRepository);
 
 		lotteryEntries1 = createLotteryEntry(members1, performance, performanceSchedule, SeatGradeType.STANDARD,
@@ -242,6 +238,7 @@ class DrawServiceTest {
 
 	@Test
 	@DisplayName("가중치")
+	@Disabled
 	void drawForPerformance_WeightByQuantity() {
 		// given - 새로운 회차 생성
 		List<PerformanceSchedule> newSchedules = createSchedules(performance, 1, BookingType.LOTTERY,

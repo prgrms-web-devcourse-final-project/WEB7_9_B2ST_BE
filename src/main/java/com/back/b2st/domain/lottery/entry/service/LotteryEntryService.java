@@ -21,6 +21,7 @@ import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
@@ -118,8 +119,8 @@ public class LotteryEntryService {
 	 * 공연, 회차 검증
 	 */
 	private void validateSchedule(Long scheduleId, Long performanceId) {
-		if (!(performanceScheduleRepository.existsByPerformanceScheduleIdAndPerformance_PerformanceId(
-			scheduleId, performanceId))) {
+		if (!(performanceScheduleRepository.existsByPerformanceAndScheduleMatch(
+			scheduleId, performanceId, BookingType.LOTTERY))) {
 			throw new BusinessException(LotteryEntryErrorCode.SCHEDULE_NOT_FOUND);
 		}
 	}

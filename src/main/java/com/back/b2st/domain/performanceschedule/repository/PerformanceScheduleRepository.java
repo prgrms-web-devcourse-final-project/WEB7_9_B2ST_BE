@@ -31,7 +31,7 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 		from PerformanceSchedule ps
 		where ps.performanceScheduleId = :scheduleId
 		  and ps.performance.performanceId = :performanceId
-		  and ps.bookingType = : bookingType
+		  and ps.bookingType = :bookingType
 		""")
 	boolean existsByPerformanceAndScheduleMatch(
 		@Param("scheduleId") Long scheduleId,

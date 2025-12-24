@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
+import com.back.b2st.domain.reservation.dto.response.ReservationDetailWithPaymentRes;
 import com.back.b2st.global.common.BaseResponse;
 import com.back.b2st.security.UserPrincipal;
 
@@ -24,10 +25,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public interface ReservationApi {
 
 	/* =========================
-	 * 1. 예매 생성(결제 시작)
+	 * 1. 예매 생성 (결제 시작)
 	 * ========================= */
 	@Operation(
-		summary = "예매 생성(결제 시작)",
+		summary = "예매 생성 (결제 시작)",
 		description = """
 			좌석 HOLD가 완료된 상태에서 예매(PENDING)를 생성합니다.
 			- 로그인 사용자만 가능
@@ -84,14 +85,15 @@ public interface ReservationApi {
 	);
 
 	/* =========================
-	 * 3. 예매 상세 조회
+	 * 3. 예매 상세 조회 (결제 정보 포함)
 	 * ========================= */
 	@Operation(
-		summary = "예매 상세 조회",
+		summary = "예매 상세 조회 (결제 정보 포함)",
 		description = """
 			예매 ID로 예매 상세 정보를 조회합니다.
 			- 공연 / 회차 / 좌석 정보 포함
-			- 로그인 사용자 본인 예매만 조회 가능(쿼리에서 memberId 조건으로 제한)
+			- 결제 정보(payment) 함께 반환
+			- 로그인 사용자 본인 예매만 조회 가능
 			"""
 	)
 	@ApiResponses({
@@ -100,7 +102,7 @@ public interface ReservationApi {
 		@ApiResponse(responseCode = "404", description = "예매 정보 없음 (RESERVATION_NOT_FOUND)")
 	})
 	@GetMapping("/{reservationId}")
-	BaseResponse<ReservationDetailRes> getReservationDetail(
+	BaseResponse<ReservationDetailWithPaymentRes> getReservationDetail(
 		@Parameter(description = "예매 ID", example = "1")
 		@PathVariable Long reservationId,
 		@Parameter(hidden = true)
@@ -108,13 +110,14 @@ public interface ReservationApi {
 	);
 
 	/* =========================
-	 * 4. 내 예매 목록 조회(디테일)
+	 * 4. 내 예매 목록 조회 (디테일)
 	 * ========================= */
 	@Operation(
-		summary = "내 예매 목록 조회(디테일)",
+		summary = "내 예매 목록 조회 (디테일)",
 		description = """
 			로그인한 사용자의 모든 예매 내역을 조회합니다.
 			- 공연 / 회차 / 좌석 정보 포함
+			- 결제 정보는 포함되지 않습니다.
 			"""
 	)
 	@ApiResponses({

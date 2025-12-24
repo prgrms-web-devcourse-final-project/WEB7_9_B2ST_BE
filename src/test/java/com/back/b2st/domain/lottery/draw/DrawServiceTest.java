@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.*;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,8 @@ import com.back.b2st.domain.lottery.draw.service.DrawService;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.entity.LotteryStatus;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
+import com.back.b2st.domain.lottery.result.entity.LotteryResult;
+import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.performance.entity.Performance;
@@ -78,6 +81,8 @@ class DrawServiceTest {
 	List<LotteryEntry> lotteryEntries1;
 	List<LotteryEntry> lotteryEntries2;
 	List<LotteryEntry> lotteryEntries3;
+	@Autowired
+	private LotteryResultRepository lotteryResultRepository;
 
 	@BeforeEach
 	void setUp() {
@@ -88,7 +93,7 @@ class DrawServiceTest {
 
 		venue = createVenue("잠실실내체육관", venueRepository);
 		performance = createPerformance(venue, performanceRepository);
-		schedules = createSchedules(performance, 20, BookingType.LOTTERY,
+		schedules = createSchedules(performance, 3, BookingType.LOTTERY,
 			performanceScheduleRepository);
 		performanceSchedule = schedules.getFirst();
 
@@ -405,5 +410,56 @@ class DrawServiceTest {
 
 		// 모든 당첨자는 4장 받음 (부분 당첨 없음)
 		assertThat(winEntries).allMatch(e -> e.getQuantity() == 4);
+	}
+
+	@Test
+	@DisplayName("결과 저장")
+	void drawForPerformance_saveResult() {
+		// given : STANDARD 10명, VIP 10명, ROYAL 10명 응모
+		Map<SeatGradeType, Long> seatCountsByGrade = getSeatCountsByGrade(performance);
+
+		// when
+		drawService.executeDraws();
+
+		// then
+		List<LotteryEntry> allEntries = lotteryEntryRepository.findAll();
+		List<LotteryResult> allResult = lotteryResultRepository.findAll();
+
+		List<LotteryEntry> winEntries = lotteryEntryRepository.findAll().stream()
+			.filter(entry -> entry.getStatus().equals(LotteryStatus.WIN))
+			.toList();
+
+		// 결과 테이블과 당첨자 id가 일치하면 성공
+		Set<Long> resultIds = allResult.stream()
+			.map(LotteryResult::getLotteryEntryId)
+			.collect(Collectors.toSet());
+
+		Set<Long> winEntryIds = winEntries.stream()
+			.map(LotteryEntry::getId)
+			.collect(Collectors.toSet());
+
+		boolean isExactlySame = resultIds.equals(winEntryIds);
+		assertThat(isExactlySame).isTrue();
+
+		// 당첨 x 결과 o
+		List<Long> resultOnlyIds = allResult.stream()
+			.map(LotteryResult::getLotteryEntryId)
+			.filter(id -> !winEntryIds.contains(id))
+			.toList();
+
+		// 당첨 o 결과 x
+		List<Long> winOnlyIds = winEntries.stream()
+			.map(LotteryEntry::getId)
+			.filter(id -> !resultIds.contains(id))
+			.toList();
+
+		assertThat(resultOnlyIds.size()).isEqualTo(0);
+		assertThat(winOnlyIds.size()).isEqualTo(0);
+
+		// 추첨 완료 상태 확인
+		PerformanceSchedule result = performanceScheduleRepository
+			.findById(performanceSchedule.getPerformanceScheduleId()).orElseThrow();
+
+		assertThat(result.isDrawCompleted()).isTrue();
 	}
 }

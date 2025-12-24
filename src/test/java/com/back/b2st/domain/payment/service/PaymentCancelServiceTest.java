@@ -214,15 +214,15 @@ class PaymentCancelServiceTest {
 	}
 
 	@Test
-	@DisplayName("도메인 핸들러가 없는 경우")
-	void cancel_noHandlerForDomain() {
-		// given: RESERVATION 타입 결제 (핸들러 없음)
+	@DisplayName("예매(RESERVATION) 결제는 취소/환불 불가")
+	void cancel_reservationNotRefundable() {
+		// given: RESERVATION 타입 결제
 		Long buyerId = 2L;
 
 		Payment payment = Payment.builder()
 			.orderId("ORDER-CANCEL-5")
 			.memberId(buyerId)
-			.domainType(DomainType.RESERVATION) // TRADE가 아닌 다른 도메인
+			.domainType(DomainType.RESERVATION)
 			.domainId(1L)
 			.amount(50000L)
 			.method(PaymentMethod.CARD)
@@ -235,6 +235,6 @@ class PaymentCancelServiceTest {
 		PaymentCancelReq cancelReq = new PaymentCancelReq("구매자 변심");
 		assertThatThrownBy(() -> paymentCancelService.cancel(buyerId, "ORDER-CANCEL-5", cancelReq))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining("결제 취소를 지원하지 않는 도메인입니다");
+			.hasMessageContaining("예매 결제는 취소/환불을 지원하지 않습니다");
 	}
 }

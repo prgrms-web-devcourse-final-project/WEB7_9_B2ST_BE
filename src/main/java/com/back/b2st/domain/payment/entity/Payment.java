@@ -189,6 +189,15 @@ public class Payment extends BaseEntity {
 	}
 
 	/**
+	 * 소유자 검증 (권한 확인)
+	 */
+	public void validateOwner(Long requestMemberId) {
+		if (!this.memberId.equals(requestMemberId)) {
+			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
+		}
+	}
+
+	/**
 	 * 무통장 입금 만료 여부 확인
 	 */
 	public boolean isExpired(LocalDateTime now) {

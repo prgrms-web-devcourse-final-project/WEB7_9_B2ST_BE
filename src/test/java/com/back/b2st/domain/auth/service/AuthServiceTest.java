@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -48,6 +49,8 @@ import com.back.b2st.security.UserPrincipal;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
+	private static final String TEST_CLIENT_IP = "127.0.0.1";
+
 	@InjectMocks
 	private AuthService authService;
 
@@ -77,6 +80,12 @@ class AuthServiceTest {
 
 	@Mock
 	private OAuthNonceRepository nonceRepository;
+
+	@Mock
+	private LoginSecurityService loginSecurityService;
+
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	// 헬퍼 메서드
 	private Member createActiveMember(Long id, String email) {
@@ -179,7 +188,7 @@ class AuthServiceTest {
 			given(jwtTokenProvider.generateToken(any(Authentication.class))).willReturn(expectedToken);
 
 			// when
-			TokenInfo result = authService.login(request);
+			TokenInfo result = authService.login(request, TEST_CLIENT_IP);
 
 			// then
 			assertThat(result.accessToken()).isEqualTo("access");

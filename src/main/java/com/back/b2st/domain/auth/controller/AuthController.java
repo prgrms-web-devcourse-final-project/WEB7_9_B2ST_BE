@@ -1,5 +1,7 @@
 package com.back.b2st.domain.auth.controller;
 
+import java.util.List;
+
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,13 +38,21 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
 	private final AuthService authService;
+	private static final List<String> IP_HEADERS = List.of(
+		"X-Forwarded-For", // 프록시나 로드밸런서 뒤에 있을 때 원래 클라이언트 IP
+		"X-Real-IP", // Nginx 등에서 설정하는 실제 클라이언트 IP
+		"Proxy-Client-IP", // Apache 프록시
+		"WL-Proxy-Client-IP" // WebLogic 프록시
+	);
 
 	// Spring Security + JWT + Redis(Refresh Token) + Cookie(HttpOnly, Secure, SameSite)
 	@PostMapping("/login")
 	public BaseResponse<TokenInfo> login(
 		@Valid @RequestBody LoginReq request,
+		HttpServletRequest httpRequest,
 		HttpServletResponse response) {
-		TokenInfo tokenInfo = authService.login(request);
+		String clientIp = getClientIp(httpRequest);
+		TokenInfo tokenInfo = authService.login(request, clientIp);
 		CookieUtils.setRefreshTokenCookie(response, tokenInfo.refreshToken());
 		return BaseResponse.success(tokenInfo);
 	}
@@ -97,6 +107,7 @@ public class AuthController {
 			throw new BusinessException(AuthErrorCode.INVALID_TOKEN);
 		}
 
+		// 요청 바디 우선, 없으면 헤더에서 Access Token 추출
 		String accessToken = (requestBody != null) ? requestBody.accessToken() : resolveToken(request);
 
 		if (accessToken == null) {
@@ -136,7 +147,19 @@ public class AuthController {
 		return BaseResponse.success(null);
 	}
 
-	// Util로 뺄까 고민중
+	// 밑으로 유틸리티 메서드
+
+	// 여러 헤더에서 클라이언트 IP 추출 로직
+	private String getClientIp(HttpServletRequest httpRequest) {
+		return IP_HEADERS.stream()
+			.map(httpRequest::getHeader)
+			.filter(StringUtils::hasText)
+			.map(ip -> ip.split(",")[0].trim()) // 여러 IP가 있을 경우 첫 번째 IP 사용
+			.findFirst()
+			.orElseGet(httpRequest::getRemoteAddr);
+	}
+
+	// Authorization 헤더에서 Bearer 토큰 추출 로직
 	private String resolveToken(
 		HttpServletRequest request) {
 		String bearerToken = request.getHeader("Authorization");

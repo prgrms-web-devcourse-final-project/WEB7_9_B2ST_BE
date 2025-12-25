@@ -31,7 +31,9 @@ public enum AuthErrorCode implements ErrorCode {
 	OAUTH_EMAIL_NOT_PROVIDED(HttpStatus.BAD_REQUEST, "A411", "이메일 정보 제공에 동의해주세요."),
 	// 다른 회원이 이미 해당 카카오 계정 사용 중
 	// 일반적으로 발생하지 않음 (이메일 기준 조회라서)
-	OAUTH_ALREADY_LINKED(HttpStatus.CONFLICT, "A412", "이미 다른 계정에 연동된 소셜 계정입니다.");
+	OAUTH_ALREADY_LINKED(HttpStatus.CONFLICT, "A412", "이미 다른 계정에 연동된 소셜 계정입니다."),
+
+	ACCOUNT_LOCKED(HttpStatus.FORBIDDEN, "A413", "로그인 시도 횟수를 초과하여 계정이 일시적으로 잠겼습니다.");
 
 	private final HttpStatus status;
 	private final String code;

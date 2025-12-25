@@ -44,19 +44,18 @@ class LoginSecurityServiceTest {
 		}
 
 		@Test
-		@DisplayName("잠긴 계정은 ACCOUNT_LOCKED 예외 발생")
+		@DisplayName("잠긴 계정은 LOGIN_FAILED 예외 발생 (보안: 잠금상태 숨김)")
 		void whenLocked_thenThrowException() {
 			// given
 			when(redisTemplate.hasKey("login:lock:" + TEST_EMAIL)).thenReturn(true);
 			when(redisTemplate.getExpire("login:lock:" + TEST_EMAIL, TimeUnit.SECONDS))
 				.thenReturn(300L); // 5분 남음
-			// when & then
+			// when & then: 보안상 LOGIN_FAILED로 반환 (잠금 상태 숨김)
 			assertThatThrownBy(() -> loginSecurityService.checkAccountLock(TEST_EMAIL))
 				.isInstanceOf(BusinessException.class)
 				.satisfies(e -> {
 					BusinessException be = (BusinessException)e;
-					assertThat(be.getErrorCode()).isEqualTo(AuthErrorCode.ACCOUNT_LOCKED);
-					assertThat(be.getMessage()).contains("5분");
+					assertThat(be.getErrorCode()).isEqualTo(AuthErrorCode.LOGIN_FAILED);
 				});
 		}
 	}
@@ -87,7 +86,8 @@ class LoginSecurityServiceTest {
 				.isInstanceOf(BusinessException.class)
 				.satisfies(e -> {
 					BusinessException be = (BusinessException)e;
-					assertThat(be.getErrorCode()).isEqualTo(AuthErrorCode.ACCOUNT_LOCKED);
+					// 보안상 LOGIN_FAILED로 반환 (잠금 상태 숨김)
+					assertThat(be.getErrorCode()).isEqualTo(AuthErrorCode.LOGIN_FAILED);
 				});
 			// 잠금 처리 확인
 			verify(valueOperations).set(

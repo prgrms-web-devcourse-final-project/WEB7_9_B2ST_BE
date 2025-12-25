@@ -33,22 +33,18 @@ import tools.jackson.databind.ObjectMapper;
 @Transactional
 class EmailIntegrationTest extends AbstractContainerBaseTest {
 
+	private static final String TEST_EMAIL = "integration-test@example.com";
 	// 실제 SMTP 연결 없이 테스트
 	@MockitoBean
 	private JavaMailSender javaMailSender;
-
 	@Autowired
 	private MockMvc mockMvc;
-
 	@Autowired
 	private ObjectMapper objectMapper;
-
 	@Autowired
 	private MemberRepository memberRepository;
-
 	@Autowired
 	private EmailVerificationRepository emailVerificationRepository;
-	private static final String TEST_EMAIL = "integration-test@example.com";
 
 	@BeforeEach
 	void setUp() {

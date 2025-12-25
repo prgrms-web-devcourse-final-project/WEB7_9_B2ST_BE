@@ -29,6 +29,14 @@ class MemberCleanupSchedulerTest {
 	@Mock
 	private MemberRepository memberRepository;
 
+	// 밑으로 헬퍼 메서드
+	private Member createExpiredMember(Long id) {
+		Member member = createMemberWithId(id, "expired@test.com", "password");
+		member.softDelete();
+		ReflectionTestUtils.setField(member, "deletedAt", LocalDateTime.now().minusDays(35));
+		return member;
+	}
+
 	@Nested
 	@DisplayName("익명화 처리")
 	class AnonymizeTest {
@@ -92,13 +100,5 @@ class MemberCleanupSchedulerTest {
 			assertThat(normalMember.getEmail()).startsWith("withdrawn_");
 			assertThat(anotherMember.getEmail()).startsWith("withdrawn_");
 		}
-	}
-
-	// 밑으로 헬퍼 메서드
-	private Member createExpiredMember(Long id) {
-		Member member = createMemberWithId(id, "expired@test.com", "password");
-		member.softDelete();
-		ReflectionTestUtils.setField(member, "deletedAt", LocalDateTime.now().minusDays(35));
-		return member;
 	}
 }

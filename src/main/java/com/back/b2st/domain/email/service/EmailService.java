@@ -15,7 +15,6 @@ import com.back.b2st.domain.email.entity.EmailVerification;
 import com.back.b2st.domain.email.error.EmailErrorCode;
 import com.back.b2st.domain.email.repository.EmailVerificationRepository;
 import com.back.b2st.domain.member.entity.Member;
-import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -27,22 +26,30 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class EmailService {
 
+	// 코드 난수
+	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 	private final EmailVerificationRepository emailVerificationRepository;
 	private final EmailSender emailSender;
 	private final MemberRepository memberRepository;
 	private final EmailRateLimiter rateLimiter;
 
-	// 코드 난수
-	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-
-	// existsBy 조회 최적화 + boolean 반전
+	/**
+	 * 이메일 중복 확인 - existsBy 조회 최적화 + boolean 반전
+	 *
+	 * @param request 이메일 중복 확인 요청
+	 * @return 사용 가능 여부
+	 */
 	@Transactional(readOnly = true)
 	public CheckDuplicateRes checkDuplicate(CheckDuplicateReq request) {
 		boolean exists = memberRepository.existsByEmail(request.email());
 		return new CheckDuplicateRes(!exists);
 	}
 
-	// 이미 인증 회원 체크 + Rate Limiting + SecureRandom + Redis 저장 + 비동기 발송
+	/**
+	 * 인증 코드 발송 - 이미 인증 회원 체크 + Rate Limiting + SecureRandom + Redis 저장 + 비동기 발송
+	 *
+	 * @param request 인증 코드 발송 요청
+	 */
 	public void sendVerificationCode(SenderVerificationReq request) {
 		String email = request.email();
 
@@ -58,10 +65,10 @@ public class EmailService {
 
 		// redis 저장. 기존 있으면 덮어쓰기
 		EmailVerification emailVerification = EmailVerification.builder()
-				.email(email)
-				.code(code)
-				.attemptCount(0)
-				.build();
+			.email(email)
+			.code(code)
+			.attemptCount(0)
+			.build();
 
 		emailVerificationRepository.save(emailVerification);
 
@@ -76,7 +83,11 @@ public class EmailService {
 		}
 	}
 
-	// 시도 횟수 제한(5회) + 코드 검증 + Redis 삭제 + 회원 상태 갱신
+	/**
+	 * 인증 코드 검증 - 시도 횟수 제한(5회) + 코드 검증 + Redis 삭제 + 회원 상태 갱신
+	 *
+	 * @param request 인증 코드 검증 요청
+	 */
 	@Transactional
 	public void verifyCode(VerifyCodeReq request) {
 		String email = request.email();
@@ -84,7 +95,7 @@ public class EmailService {
 
 		// redis 조회
 		EmailVerification verification = emailVerificationRepository.findById(email)
-				.orElseThrow(() -> new BusinessException(EmailErrorCode.VERIFICATION_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(EmailErrorCode.VERIFICATION_NOT_FOUND));
 
 		// 시도 횟수 확인
 		if (verification.isMaxAttemptExceeded()) {
@@ -108,7 +119,7 @@ public class EmailService {
 		// 회원이 이미 있으면 isEmailVerified = true로 업데이트
 		// 회원이 없으면 (회원가입 전 인증) 스킵 → 회원가입 시 isEmailVerified=true로 생성
 		memberRepository.findByEmail(email)
-				.ifPresent(Member::verifyEmail);
+			.ifPresent(Member::verifyEmail);
 
 		log.info("이메일 인증 성공: email={}", maskEmail(email));
 	}

@@ -26,9 +26,9 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Table(name = "login_logs", indexes = {
-		@Index(name = "idx_login_log_email", columnList = "email"),
-		@Index(name = "idx_login_log_client_ip", columnList = "clientIp"),
-		@Index(name = "idx_login_log_attempted_at", columnList = "attemptedAt")
+	@Index(name = "idx_login_log_email", columnList = "email"),
+	@Index(name = "idx_login_log_client_ip", columnList = "clientIp"),
+	@Index(name = "idx_login_log_attempted_at", columnList = "attemptedAt")
 })
 @SequenceGenerator(name = "login_log_id_gen", sequenceName = "login_logs_seq", allocationSize = 50)
 public class LoginLog {
@@ -70,9 +70,9 @@ public class LoginLog {
 		ACCOUNT_NOT_FOUND;
 
 		private static final Map<ErrorCode, FailReason> errorCodeToFailReason = Map.of(
-				AuthErrorCode.ACCOUNT_LOCKED, ACCOUNT_LOCKED,
-				MemberErrorCode.ALREADY_WITHDRAWN, ACCOUNT_WITHDRAWN,
-				MemberErrorCode.MEMBER_NOT_FOUND, ACCOUNT_NOT_FOUND);
+			AuthErrorCode.ACCOUNT_LOCKED, ACCOUNT_LOCKED,
+			MemberErrorCode.ALREADY_WITHDRAWN, ACCOUNT_WITHDRAWN,
+			MemberErrorCode.MEMBER_NOT_FOUND, ACCOUNT_NOT_FOUND);
 
 		public static FailReason fromErrorCode(ErrorCode errorCode) {
 			if (errorCode == null) {

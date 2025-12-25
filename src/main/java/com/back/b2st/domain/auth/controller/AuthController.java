@@ -37,15 +37,21 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthController {
 
-	private final AuthService authService;
 	private static final List<String> IP_HEADERS = List.of(
 		"X-Forwarded-For", // 프록시나 로드밸런서 뒤에 있을 때 원래 클라이언트 IP
 		"X-Real-IP", // Nginx 등에서 설정하는 실제 클라이언트 IP
 		"Proxy-Client-IP", // Apache 프록시
 		"WL-Proxy-Client-IP" // WebLogic 프록시
 	);
+	private final AuthService authService;
 
-	// Spring Security + JWT + Redis(Refresh Token) + Cookie(HttpOnly, Secure, SameSite)
+	/**
+	 * 로그인 처리 - Spring Security + JWT + Redis(Refresh Token) + Cookie(HttpOnly, Secure, SameSite)
+	 *
+	 * @param request     로그인 요청 정보
+	 * @param httpRequest HTTP 요청 (IP 추출용)
+	 * @param response    HTTP 응답 (쿠키 설정용)
+	 */
 	@PostMapping("/login")
 	public BaseResponse<TokenInfo> login(
 		@Valid @RequestBody LoginReq request,
@@ -57,7 +63,12 @@ public class AuthController {
 		return BaseResponse.success(tokenInfo);
 	}
 
-	// OIDC + RSA 서명 검증(JWKS 캐싱) + nonce 검증(Redis) + 자동 계정 연동 + 닉네임 정제
+	/**
+	 * 카카오 로그인 - OIDC + RSA 서명 검증(JWKS 캐싱) + nonce 검증(Redis) + 자동 계정 연동 + 닉네임 정제
+	 *
+	 * @param request  카카오 로그인 요청 (인가코드)
+	 * @param response HTTP 응답 (쿠키 설정용)
+	 */
 	@PostMapping("/kakao")
 	@Operation(summary = "카카오 로그인", description = "카카오 인가 코드로 로그인 또는 회원가입 처리")
 	public BaseResponse<TokenInfo> kakaoLogin(
@@ -68,7 +79,14 @@ public class AuthController {
 		return BaseResponse.success(tokenInfo);
 	}
 
-	// 백엔드 콜백 테스트용 (내부적으로 kakaoLogin 호출)
+	/**
+	 * 카카오 콜백 (테스트용) - 백엔드 콜백 테스트용 (내부적으로 kakaoLogin 호출)
+	 *
+	 * @param code     카카오 인가코드
+	 * @param state    CSRF 방지용 state
+	 * @param response HTTP 응답
+	 * @return JWT 토큰 정보
+	 */
 	@GetMapping("/kakao/callback")
 	@Operation(summary = "카카오 콜백 (테스트용)", description = "Swagger/브라우저에서 직접 테스트 시 사용")
 	public BaseResponse<TokenInfo> kakaoCallback(
@@ -78,7 +96,12 @@ public class AuthController {
 		return kakaoLogin(new KakaoLoginReq(code, state), response);
 	}
 
-	// OIDC + 기존 회원 연동 검증 + 중복 연동 방지
+	/**
+	 * 카카오 계정 연동 - OIDC + 기존 회원 연동 검증 + 중복 연동 방지
+	 *
+	 * @param userPrincipal 현재 로그인한 사용자 정보
+	 * @param request       카카오 로그인 요청 (인가코드)
+	 */
 	@PostMapping("/link/kakao")
 	@Operation(summary = "카카오 계정 연동", description = "로그인한 회원에 카카오 계정 연동")
 	public BaseResponse<Void> linkKakao(
@@ -88,7 +111,11 @@ public class AuthController {
 		return BaseResponse.success(null);
 	}
 
-	// nonce/state 생성 + Redis 저장(TTL 5분) + URL 빌딩
+	/**
+	 * 카카오 로그인 URL 생성 - nonce/state 생성 + Redis 저장(TTL 5분) + URL 빌딩
+	 *
+	 * @return 카카오 로그인 URL 정보
+	 */
 	@GetMapping("/kakao/authorize-url")
 	@Operation(summary = "카카오 로그인 URL 생성", description = "nonce 포함된 카카오 로그인 URL 반환")
 	public BaseResponse<KakaoAuthorizeUrlRes> getKakaoAuthorizeUrl() {
@@ -96,7 +123,14 @@ public class AuthController {
 		return BaseResponse.success(response);
 	}
 
-	// Refresh Token Rotation + 토큰 탈취 감지(Family/Generation) + Redis 갱신
+	/**
+	 * 토큰 재발급 - Refresh Token Rotation + 토큰 탈취 감지(Family/Generation) + Redis 갱신
+	 *
+	 * @param refreshToken 리프레시 토큰 (쿠키에서 추출)
+	 * @param requestBody  액세스 토큰 (요청 바디)
+	 * @param request      HTTP 요청
+	 * @param response     HTTP 응답 (쿠키 설정용)
+	 */
 	@PostMapping("/reissue")
 	public BaseResponse<TokenInfo> reissue(
 		@CookieValue(name = "refreshToken", required = false) String refreshToken,
@@ -119,7 +153,12 @@ public class AuthController {
 		return BaseResponse.success(tokenInfo);
 	}
 
-	// Redis 토큰 삭제 + 쿠키 즉시 만료 처리
+	/**
+	 * 로그아웃 - Redis 토큰 삭제 + 쿠키 즉시 만료 처리
+	 *
+	 * @param userPrincipal 현재 로그인한 사용자 정보
+	 * @param response      HTTP 응답 (쿠키 삭제용)
+	 */
 	@PostMapping("/logout")
 	public BaseResponse<Void> logout(
 		@CurrentUser UserPrincipal userPrincipal,
@@ -129,7 +168,11 @@ public class AuthController {
 		return BaseResponse.success(null);
 	}
 
-	// Rate Limiting + 복구 토큰(UUID) + Redis(TTL 24시간) + 비동기 이메일 발송
+	/**
+	 * 탈퇴 회원 복구 이메일 발송 - Rate Limiting + 복구 토큰(UUID) + Redis(TTL 24시간) + 비동기 이메일 발송
+	 *
+	 * @param request 복구 이메일 요청 정보
+	 */
 	@PostMapping("/withdrawal-recovery")
 	@Operation(summary = "탈퇴 회원 복구 이메일 발송", description = "입력한 이메일로 계정 복구 링크 발송")
 	public BaseResponse<Void> sendRecoveryEmail(
@@ -138,7 +181,11 @@ public class AuthController {
 		return BaseResponse.success(null);
 	}
 
-	// 1회용 토큰 검증 + Soft Delete 해제
+	/**
+	 * 계정 복구 확인 - 1회용 토큰 검증 + Soft Delete 해제
+	 *
+	 * @param request 복구 확인 요청 정보
+	 */
 	@PostMapping("/confirm-recovery")
 	@Operation(summary = "계정 복구 확인", description = "발송된 링크 접속 시 해당 api로 검증")
 	public BaseResponse<Void> confirmRecovery(
@@ -147,7 +194,7 @@ public class AuthController {
 		return BaseResponse.success(null);
 	}
 
-	// 밑으로 유틸리티 메서드
+	// 밑으로 유틸 메서드
 
 	// 여러 헤더에서 클라이언트 IP 추출 로직
 	private String getClientIp(HttpServletRequest httpRequest) {

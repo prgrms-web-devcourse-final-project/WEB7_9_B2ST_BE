@@ -18,11 +18,6 @@ import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.test.AbstractContainerBaseTest;
 
-/**
- * LoginSecurityService 통합 테스트
- * - Testcontainers Redis 사용 (AbstractContainerBaseTest 상속)
- * - 실제 Redis 연동하여 Rate Limiting + 계정 잠금 검증
- */
 @SpringBootTest
 @ActiveProfiles("test")
 class LoginSecurityServiceIntegrationTest extends AbstractContainerBaseTest {
@@ -64,12 +59,12 @@ class LoginSecurityServiceIntegrationTest extends AbstractContainerBaseTest {
 					fail("4회 이전에는 잠기면 안됨");
 				}
 			}
-			// then: 5회째 실패 시 잠금
+			// then: 5회째 실패 시 잠금 (보안상 LOGIN_FAILED로 반환)
 			assertThatThrownBy(() -> loginSecurityService.recordFailedAttempt(TEST_EMAIL, TEST_IP))
 				.isInstanceOf(BusinessException.class)
 				.extracting("errorCode")
-				.isEqualTo(AuthErrorCode.ACCOUNT_LOCKED);
-			// 잠금 상태 확인
+				.isEqualTo(AuthErrorCode.LOGIN_FAILED);
+			// 잠금 상태 확인 (내부적으로는 잠금됨)
 			assertThat(loginSecurityService.isAccountLocked(TEST_EMAIL)).isTrue();
 		}
 
@@ -83,11 +78,11 @@ class LoginSecurityServiceIntegrationTest extends AbstractContainerBaseTest {
 				} catch (BusinessException ignored) {
 				}
 			}
-			// when & then: 잠금 확인 시 예외
+			// when & then: 잠금 확인 시 예외 (보안상 LOGIN_FAILED로 반환)
 			assertThatThrownBy(() -> loginSecurityService.checkAccountLock(TEST_EMAIL))
 				.isInstanceOf(BusinessException.class)
 				.extracting("errorCode")
-				.isEqualTo(AuthErrorCode.ACCOUNT_LOCKED);
+				.isEqualTo(AuthErrorCode.LOGIN_FAILED);
 		}
 
 		@Test

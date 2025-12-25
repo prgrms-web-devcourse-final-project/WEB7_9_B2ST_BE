@@ -55,6 +55,31 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		memberRepository.deleteAll();
 	}
 
+	// 헬퍼 메서드
+	private Member createMember(String email, String password, String name) {
+		return Member.builder()
+			.email(email)
+			.password(passwordEncoder.encode(password))
+			.name(name)
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
+			.build();
+	}
+
+	private String getAccessToken(String email, String password) throws Exception {
+		LoginReq loginRequest = buildLoginRequest(email, password);
+
+		String response = mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(loginRequest)))
+			.andReturn().getResponse().getContentAsString();
+
+		JsonNode jsonNode = objectMapper.readTree(response);
+		return jsonNode.path("data").path("accessToken").asText();
+	}
+
 	@Nested
 	@DisplayName("내 정보 조회 API")
 	class GetMyInfoTest {
@@ -301,30 +326,5 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value(MemberErrorCode.PASSWORD_MISMATCH.getMessage()));
 		}
-	}
-
-	// 헬퍼 메서드
-	private Member createMember(String email, String password, String name) {
-		return Member.builder()
-			.email(email)
-			.password(passwordEncoder.encode(password))
-			.name(name)
-			.role(Member.Role.MEMBER)
-			.provider(Member.Provider.EMAIL)
-			.isEmailVerified(true)
-			.isIdentityVerified(true)
-			.build();
-	}
-
-	private String getAccessToken(String email, String password) throws Exception {
-		LoginReq loginRequest = buildLoginRequest(email, password);
-
-		String response = mockMvc.perform(post("/api/auth/login")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(loginRequest)))
-			.andReturn().getResponse().getContentAsString();
-
-		JsonNode jsonNode = objectMapper.readTree(response);
-		return jsonNode.path("data").path("accessToken").asText();
 	}
 }

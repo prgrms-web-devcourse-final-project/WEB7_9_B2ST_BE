@@ -27,8 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LoginSecurityService {
 
-	private final StringRedisTemplate redisTemplate;
-
 	// 세팅 상수
 	private static final int MAX_ATTEMPTS = 5; // 최대 로그인 시도 횟수
 	private static final Duration LOCKOUT_DURATION = Duration.ofMinutes(10); // 계정 잠금 시간
@@ -38,8 +36,9 @@ public class LoginSecurityService {
 	private static final String LOCK_KEY_PREFIX = "login:lock:";
 	// Lua 스크립트
 	private static final String INCREMENT_ATTEMPT_SCRIPT = "local count = redis.call('INCR', KEYS[1]) " +
-			"if count == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end " + // 첫 시도면 만료시간 설정
-			"return count";
+		"if count == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end " + // 첫 시도면 만료시간 설정
+		"return count";
+	private final StringRedisTemplate redisTemplate;
 	private final DefaultRedisScript<Long> incrementScript = createIncrementScript();
 
 	private DefaultRedisScript<Long> createIncrementScript() {
@@ -61,9 +60,11 @@ public class LoginSecurityService {
 
 		if (Boolean.TRUE.equals(redisTemplate.hasKey(lockKey))) { // null 방지
 			Long ttl = redisTemplate.getExpire(lockKey, TimeUnit.SECONDS);
-			int remainingMinutes = ttl != null ? (int) Math.ceil(ttl / 60.0) : 0;
+			int remainingMinutes = ttl != null ? (int)Math.ceil(ttl / 60.0) : 0;
+			// 내부 로그에만 잠금 정보 기록 (운영용)
 			log.warn("🔒 잠긴 계정 로그인 시도: email={}, 남은시간={}분", maskEmail(email), remainingMinutes);
-			throw new BusinessException(AuthErrorCode.ACCOUNT_LOCKED, remainingMinutes + "분 후에 다시 시도해주세요.");
+			// 클라이언트에는 일반 로그인 실패로 응답 (보안: 계정 잠금 상태 노출 방지)
+			throw new BusinessException(AuthErrorCode.LOGIN_FAILED);
 		}
 	}
 
@@ -80,9 +81,9 @@ public class LoginSecurityService {
 
 		// 원자적으로 시도 횟수 증가 + TTL 설정
 		Long attempts = redisTemplate.execute(
-				incrementScript,
-				List.of(attemptKey),
-				String.valueOf(ATTEMPT_WINDOW.getSeconds()));
+			incrementScript,
+			List.of(attemptKey),
+			String.valueOf(ATTEMPT_WINDOW.getSeconds()));
 
 		if (attempts == null) {
 			attempts = 1L;
@@ -93,8 +94,11 @@ public class LoginSecurityService {
 		// 최대 시도 초과 시 계정 잠금
 		if (attempts >= MAX_ATTEMPTS) {
 			lockAccount(email);
-			log.warn("🔒 계정 잠금 발생: email={}, IP={}", maskEmail(email), clientIp);
-			throw new BusinessException(AuthErrorCode.ACCOUNT_LOCKED, LOCKOUT_DURATION.toMinutes() + "분 후에 다시 시도해주세요.");
+			// 내부 로그에만 잠금 정보 기록 (운영용)
+			log.warn("🔒 계정 잠금 발생: email={}, IP={}, 잠금시간={}분", maskEmail(email), clientIp,
+				LOCKOUT_DURATION.toMinutes());
+			// 클라이언트에는 일반 로그인 실패로 응답 (보안: 계정 잠금 상태 노출 방지)
+			throw new BusinessException(AuthErrorCode.LOGIN_FAILED);
 		}
 	}
 

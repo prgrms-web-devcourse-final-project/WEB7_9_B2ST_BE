@@ -21,11 +21,6 @@ import com.back.b2st.domain.auth.repository.LoginLogRepository;
 import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.global.test.AbstractContainerBaseTest;
 
-/**
- * LoginEventListener 통합 테스트
- * - Testcontainers Redis 사용 (AbstractContainerBaseTest 상속)
- * - 이벤트 발행 → 비동기 처리 → DB 저장 검증
- */
 @SpringBootTest
 @ActiveProfiles("test")
 class LoginEventListenerIntegrationTest extends AbstractContainerBaseTest {

@@ -18,7 +18,8 @@ public enum AuthErrorCode implements ErrorCode {
 
 	// 탈퇴 철회
 	RECOVERY_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND, "A406", "복구 토큰이 유효하지 않거나 만료되었습니다."),
-	NOT_WITHDRAWN_MEMBER(HttpStatus.BAD_REQUEST, "A407", "탈퇴 상태가 아닌 회원입니다."),
+	// 회원 상태 노출 방지를 위해 모호한 메시지 사용
+	NOT_WITHDRAWN_MEMBER(HttpStatus.BAD_REQUEST, "A407", "요청을 처리할 수 없습니다."),
 	WITHDRAWAL_PERIOD_EXPIRED(HttpStatus.BAD_REQUEST, "A408", "복구 가능 기간(30일)이 만료되었습니다."),
 
 	// 소셜 로그인

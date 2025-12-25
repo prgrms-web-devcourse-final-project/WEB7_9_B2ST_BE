@@ -32,15 +32,14 @@ public enum BankCode {
 	SHINHYUP("048", "신협"),
 	POST("071", "우체국");
 
-	private final String code;
-	private final String description;
-
 	private static final Map<String, BankCode> CODE_MAP =
 		Arrays.stream(values())
 			.collect(Collectors.toUnmodifiableMap(
 				BankCode::getCode,
 				Function.identity()
 			));
+	private final String code;
+	private final String description;
 
 	@JsonCreator
 	public static BankCode fromCode(String code) {

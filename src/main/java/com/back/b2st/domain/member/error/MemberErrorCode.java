@@ -11,8 +11,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum MemberErrorCode implements ErrorCode {
 
-	// 회원가입
-	DUPLICATE_EMAIL(HttpStatus.CONFLICT, "M401", "이미 가입된 이메일입니다."), // 409 Conflict
+	// 회원가입 - Account Enumeration 방지를 위해 모호한 메시지 사용
+	DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "M401", "요청을 처리할 수 없습니다."),
 
 	// 조회
 	MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M403", "해당하는 회원을 찾을 수 없습니다."),

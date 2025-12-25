@@ -7,6 +7,22 @@ public record KakaoUserInfo(
 	@JsonProperty("kakao_account")
 	KakaoAccount kakaoAccount
 ) {
+	public String getEmail() {
+		return kakaoAccount != null ? kakaoAccount.email() : null;
+	}
+
+	public String getNickname() {
+		if (kakaoAccount != null && kakaoAccount.profile() != null) {
+			return kakaoAccount.profile().nickname();
+		}
+		return null;
+	}
+
+	public boolean isEmailVerified() {
+		return kakaoAccount != null
+			&& Boolean.TRUE.equals(kakaoAccount.isEmailVerified());
+	}
+
 	public record KakaoAccount(
 		String email,
 		@JsonProperty("is_email_valid")
@@ -22,21 +38,5 @@ public record KakaoUserInfo(
 		@JsonProperty("profile_image_url")
 		String profileImageUrl // TODO: p1를 위해 남겨놓음
 	) {
-	}
-
-	public String getEmail() {
-		return kakaoAccount != null ? kakaoAccount.email() : null;
-	}
-
-	public String getNickname() {
-		if (kakaoAccount != null && kakaoAccount.profile() != null) {
-			return kakaoAccount.profile().nickname();
-		}
-		return null;
-	}
-
-	public boolean isEmailVerified() {
-		return kakaoAccount != null
-			&& Boolean.TRUE.equals(kakaoAccount.isEmailVerified());
 	}
 }

@@ -18,10 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MemberCleanupScheduler {
 
-	private final MemberRepository memberRepository;
-
 	// 탈퇴 유예 기간 30일
 	private static final int WITHDRAWAL_GRACE_PERIOD_DAYS = 30;
+	private final MemberRepository memberRepository;
 
 	// 매일 새벽 3시
 	@Scheduled(cron = "0 0 3 * * *")
@@ -47,7 +46,7 @@ public class MemberCleanupScheduler {
 				member.anonymize();
 				processedCount++;
 
-				log.debug("[MemberCleanup] 회원 익명화 완료: MemberID={}", member.getId());
+				log.info("[MemberCleanup] 회원 익명화 완료: MemberID={}", member.getId());
 
 			} catch (Exception e) {
 				log.error("[MemberCleanup] 회원 익명화 실패: MemberID={}, Error={}", member.getId(), e.getMessage(), e);

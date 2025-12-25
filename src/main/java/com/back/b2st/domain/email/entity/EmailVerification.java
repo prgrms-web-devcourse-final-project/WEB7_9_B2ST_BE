@@ -28,7 +28,7 @@ public class EmailVerification {
 			.attemptCount(this.attemptCount + 1)
 			.build();
 	}
-	
+
 	public boolean isMaxAttemptExceeded() {
 		return this.attemptCount >= 5;
 	}

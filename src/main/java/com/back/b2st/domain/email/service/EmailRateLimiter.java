@@ -18,11 +18,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class EmailRateLimiter {
 
-	private final StringRedisTemplate redisTemplate;
-
 	private static final String RATE_LIMIT_PREFIX = "email:rate:";
 	private static final int MAX_REQUEST_PER_HOUR = 5;
 	private static final long WINDOW_SECONDS = 3600; // 1시간
+	private final StringRedisTemplate redisTemplate;
 
 	public void checkRateLimit(String email) {
 		String key = RATE_LIMIT_PREFIX + email;

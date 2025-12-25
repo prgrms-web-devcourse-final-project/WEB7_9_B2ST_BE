@@ -49,13 +49,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AuthService {
 
-	@Value("${oauth.kakao.client-id}")
-	private String kakaoClientId;
-	@Value("${oauth.kakao.redirect-uri}")
-	private String kakaoRedirectUri;
-	@Value("${oauth.kakao.default-nickname:카카오사용자}")
-	private String defaultKakaoNickname;
-
 	private final AuthenticationManagerBuilder authenticationManagerBuilder;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final RefreshTokenRepository refreshTokenRepository;
@@ -67,6 +60,12 @@ public class AuthService {
 	private final OAuthNonceRepository nonceRepository;
 	private final LoginSecurityService loginSecurityService;
 	private final ApplicationEventPublisher eventPublisher;
+	@Value("${oauth.kakao.client-id}")
+	private String kakaoClientId;
+	@Value("${oauth.kakao.redirect-uri}")
+	private String kakaoRedirectUri;
+	@Value("${oauth.kakao.default-nickname:카카오사용자}")
+	private String defaultKakaoNickname;
 
 	/**
 	 * 로그인 처리
@@ -109,7 +108,12 @@ public class AuthService {
 		}
 	}
 
-	// OIDC ID Token 파싱 + nonce 검증 + 자동 계정 연동 + 닉네임 정제
+	/**
+	 * 카카오 로그인 - OIDC ID Token 파싱 + nonce 검증 + 자동 계정 연동 + 닉네임 정제
+	 *
+	 * @param request 카카오 로그인 요청 (인가코드)
+	 * @return JWT 토큰 정보
+	 */
 	@Transactional
 	public TokenInfo kakaoLogin(KakaoLoginReq request) {
 		// OIDC 호출. 액세스 토큰 발급 + 정보 조회
@@ -132,7 +136,12 @@ public class AuthService {
 		return tokenInfo;
 	}
 
-	// 카카오 ID 조회 + 중복 연동 방지 + 회원 연동
+	/**
+	 * 카카오 계정 연동 - 카카오 ID 조회 + 중복 연동 방지 + 회원 연동
+	 *
+	 * @param memberId 회원 ID
+	 * @param request  카카오 로그인 요청 (인가코드)
+	 */
 	@Transactional
 	public void linkKakaoAccount(Long memberId, KakaoLoginReq request) {
 		// 카카오 정보 조회
@@ -149,7 +158,11 @@ public class AuthService {
 		log.info("[Kakao] 계정 연동 완료: MemberID={}, KakaoId={}", memberId, kakaoId);
 	}
 
-	// nonce/state 생성 + Redis 저장(TTL 5분) + URL 빌딩
+	/**
+	 * 카카오 로그인 URL 생성 - nonce/state 생성 + Redis 저장(TTL 5분) + URL 빌딩
+	 *
+	 * @return 카카오 로그인 URL 정보
+	 */
 	public KakaoAuthorizeUrlRes generateKakaoAuthorizeUrl() {
 		// 랜덤 생성
 		String nonce = UUID.randomUUID().toString();
@@ -172,7 +185,13 @@ public class AuthService {
 		return new KakaoAuthorizeUrlRes(authrizeUrl, state, nonce);
 	}
 
-	// Refresh Token Rotation + 탈취 감지(Family/Generation) + Redis 갱신
+	/**
+	 * 토큰 재발급 - Refresh Token Rotation + 탈취 감지(Family/Generation) + Redis 갱신
+	 *
+	 * @param accessToken  액세스 토큰
+	 * @param refreshToken 리프레시 토큰
+	 * @return 새 JWT 토큰 정보
+	 */
 	@Transactional
 	public TokenInfo reissue(String accessToken, String refreshToken) {
 		// 검증
@@ -197,13 +216,21 @@ public class AuthService {
 		return newToken;
 	}
 
-	// Redis 토큰 삭제
+	/**
+	 * 로그아웃 - Redis 토큰 삭제
+	 *
+	 * @param principal 현재 로그인한 사용자 정보
+	 */
 	@Transactional
 	public void logout(UserPrincipal principal) {
 		refreshTokenRepository.deleteById(principal.getEmail());
 	}
 
-	// Rate Limiting + 복구 토큰(UUID) + Redis(TTL 24시간) + 비동기 발송
+	/**
+	 * 탈퇴 회원 복구 이메일 발송 - Rate Limiting + 복구 토큰(UUID) + Redis(TTL 24시간) + 비동기 발송
+	 *
+	 * @param request 복구 이메일 요청 정보
+	 */
 	@Transactional
 	public void sendRecoveryEmail(RecoveryEmailReq request) {
 		String email = request.email();
@@ -221,7 +248,11 @@ public class AuthService {
 		log.info("복구 이메일 발송: Email={}", maskEmail(email));
 	}
 
-	// 1회용 토큰 검증 + Soft Delete 해제
+	/**
+	 * 계정 복구 확인 - 1회용 토큰 검증 + Soft Delete 해제
+	 *
+	 * @param request 복구 확인 요청 정보
+	 */
 	@Transactional
 	public void confirmRecovery(ConfirmRecoveryReq request) {
 		WithdrawalRecoveryToken recoveryToken = findRecoveryToken(request.token());
@@ -299,7 +330,8 @@ public class AuthService {
 		boolean exists = nonceRepository.existsById(nonce);
 
 		if (!exists) {
-			log.warn("[Kakao] 유효하지 않은 nonce: {}", nonce);
+			// 보안: nonce 값 노출 방지
+			log.warn("[Kakao] 유효하지 않은 nonce 감지");
 			throw new BusinessException(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
@@ -312,7 +344,7 @@ public class AuthService {
 	private void validateTokenNotReused(RefreshToken storedToken, String providedToken, String email) {
 		if (!storedToken.getToken().equals(providedToken)) {
 			refreshTokenRepository.deleteById(email);
-			log.warn("🚨 토큰 탈취 감지! (Token Reuse Detected) User: {}", email);
+			log.warn("🚨 토큰 탈취 감지! (Token Reuse Detected) User: {}", maskEmail(email));
 			throw new BusinessException(AuthErrorCode.TOKEN_REUSE_DETECTED);
 		}
 	}

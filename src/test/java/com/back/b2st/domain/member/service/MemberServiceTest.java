@@ -47,6 +47,20 @@ class MemberServiceTest {
 	@Mock
 	private RefundAccountRepository refundAccountRepository;
 
+	// 헬퍼 메서드
+	private SignupReq buildSignupReq() {
+		return new SignupReq(
+			"test@email.com",
+			"validPw123!",
+			"tester",
+			"01012345678",
+			LocalDate.of(2000, 1, 1));
+	}
+
+	private PasswordChangeReq buildPasswordChangeReq() {
+		return new PasswordChangeReq("oldPw", "newPw123!");
+	}
+
 	@Nested
 	@DisplayName("회원가입")
 	class SignupTest {
@@ -75,9 +89,9 @@ class MemberServiceTest {
 			given(memberRepository.existsByEmail(request.email())).willReturn(true);
 
 			assertThatThrownBy(() -> memberService.signup(request))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(MemberErrorCode.DUPLICATE_EMAIL);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(MemberErrorCode.DUPLICATE_EMAIL);
 		}
 	}
 
@@ -112,9 +126,9 @@ class MemberServiceTest {
 			given(passwordEncoder.matches("oldPw", "encodedOldPw")).willReturn(false);
 
 			assertThatThrownBy(() -> memberService.changePassword(memberId, request))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
 		}
 	}
 
@@ -148,9 +162,9 @@ class MemberServiceTest {
 			given(passwordEncoder.matches("wrongPassword", "encodedPw")).willReturn(false);
 
 			assertThatThrownBy(() -> memberService.withdraw(1L, request))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(MemberErrorCode.PASSWORD_MISMATCH);
 		}
 
 		@Test
@@ -163,9 +177,9 @@ class MemberServiceTest {
 			given(memberRepository.findById(1L)).willReturn(Optional.of(member));
 
 			assertThatThrownBy(() -> memberService.withdraw(1L, request))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(MemberErrorCode.ALREADY_WITHDRAWN);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(MemberErrorCode.ALREADY_WITHDRAWN);
 		}
 
 		@Test
@@ -183,19 +197,5 @@ class MemberServiceTest {
 
 			then(refundAccountRepository).should().delete(account);
 		}
-	}
-
-	// 헬퍼 메서드
-	private SignupReq buildSignupReq() {
-		return new SignupReq(
-				"test@email.com",
-				"validPw123!",
-				"tester",
-				"01012345678",
-				LocalDate.of(2000, 1, 1));
-	}
-
-	private PasswordChangeReq buildPasswordChangeReq() {
-		return new PasswordChangeReq("oldPw", "newPw123!");
 	}
 }

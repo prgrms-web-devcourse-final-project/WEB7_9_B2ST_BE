@@ -33,6 +33,11 @@ class MemberControllerTest {
 	@Autowired
 	private ObjectMapper objectMapper;
 
+	// 헬퍼 메서드
+	private SignupReq createSignupRequest(String email, String pw, String name) {
+		return new SignupReq(email, pw, name, "01012345678", LocalDate.of(1990, 1, 1));
+	}
+
 	@Nested
 	@DisplayName("회원가입 API")
 	class SignupTest {
@@ -63,10 +68,5 @@ class MemberControllerTest {
 			mockMvc.perform(post("/api/members/signup").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(request))).andDo(print()).andExpect(status().isBadRequest());
 		}
-	}
-
-	// 헬퍼 메서드
-	private SignupReq createSignupRequest(String email, String pw, String name) {
-		return new SignupReq(email, pw, name, "01012345678", LocalDate.of(1990, 1, 1));
 	}
 }

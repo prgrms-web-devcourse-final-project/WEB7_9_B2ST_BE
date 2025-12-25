@@ -6,6 +6,7 @@ public record ReservationCreateRes(
 	Long reservationId,
 	String status
 ) {
+
 	public static ReservationCreateRes from(Reservation reservation) {
 		return new ReservationCreateRes(
 			reservation.getId(),

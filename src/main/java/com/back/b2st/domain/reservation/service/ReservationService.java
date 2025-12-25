@@ -77,31 +77,6 @@ public class ReservationService {
 		}
 	}
 
-	/** === 예매 확정 (결제에서 호출되어야 함) === */
-	@Transactional
-	public void completeReservation(Long reservationId) {
-
-		Reservation reservation = getReservationWithLock(reservationId);
-
-		if (reservation.getStatus() == ReservationStatus.COMPLETED) {
-			return;
-		}
-
-		if (!reservation.getStatus().canComplete()) {
-			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
-		}
-
-		reservation.complete(LocalDateTime.now());
-
-		// 좌석 상태 변경 (HOLD → SOLD)
-		scheduleSeatStateService.changeToSold(
-			reservation.getScheduleId(),
-			reservation.getSeatId()
-		);
-
-		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
-	}
-
 	/** === 결제 실패 (결제에서 호출되어야 함) === */
 	@Transactional
 	public void failReservation(Long reservationId) {
@@ -163,7 +138,7 @@ public class ReservationService {
 		if (!reservation.getStatus().canExpire()) {
 			return;
 		}
-		if (reservation.getExpiresAt() == null || reservation.getExpiresAt().isAfter(now)) { // ✅
+		if (reservation.getExpiresAt() == null || reservation.getExpiresAt().isAfter(now)) {
 			return;
 		}
 
@@ -213,6 +188,32 @@ public class ReservationService {
 			ReservationStatus.PENDING,
 			ReservationStatus.EXPIRED
 		);
+	}
+
+	/** === 예매 확정 (결제에서 호출되어야 함) === */
+	@Transactional
+	@Deprecated
+	public void completeReservation(Long reservationId) {
+
+		Reservation reservation = getReservationWithLock(reservationId);
+
+		if (reservation.getStatus() == ReservationStatus.COMPLETED) {
+			return;
+		}
+
+		if (!reservation.getStatus().canComplete()) {
+			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
+		}
+
+		reservation.complete(LocalDateTime.now());
+
+		// 좌석 상태 변경 (HOLD → SOLD)
+		scheduleSeatStateService.changeToSold(
+			reservation.getScheduleId(),
+			reservation.getSeatId()
+		);
+
+		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
 	}
 
 	// === 공통 유틸 === //

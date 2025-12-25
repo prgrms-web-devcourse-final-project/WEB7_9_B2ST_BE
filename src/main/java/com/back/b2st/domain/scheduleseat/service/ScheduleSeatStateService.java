@@ -45,11 +45,57 @@ public class ScheduleSeatStateService {
 		}
 	}
 
+	/** === Reservation 생성 직전에 DB 좌석이 유효한 HOLD 상태인지 검증 === */
+	@Transactional(readOnly = true)
+	public void validateHoldState(Long scheduleId, Long seatId) {
+		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
+
+		if (seat.getStatus() != SeatStatus.HOLD) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
+		}
+
+		LocalDateTime expiredAt = seat.getHoldExpiredAt();
+		LocalDateTime now = LocalDateTime.now();
+
+		if (expiredAt != null && expiredAt.isBefore(now)) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
+		}
+	}
+
+	/** === Reservation expiresAt 동기화를 위한 holdExpiredAt 반환 === */
+	@Transactional(readOnly = true)
+	public LocalDateTime getHoldExpiredAtOrThrow(Long scheduleId, Long seatId) {
+		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
+
+		if (seat.getStatus() != SeatStatus.HOLD) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
+		}
+
+		LocalDateTime expiredAt = seat.getHoldExpiredAt();
+		if (expiredAt == null) {
+			// hold()에서 반드시 세팅하지만, 데이터 이상 상황 방어
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
+		}
+
+		return expiredAt;
+	}
+
 	/** === 만료된 HOLD 좌석을 AVAILABLE로 일괄 복구 === */
 	@Transactional
-	public int releaseExpiredHolds() {
+	public int releaseExpiredHoldsBatch() {
 		LocalDateTime now = LocalDateTime.now();
-		return scheduleSeatRepository.releaseExpiredHolds(SeatStatus.HOLD, SeatStatus.AVAILABLE, now);
+
+		var expiredKeys = scheduleSeatRepository.findExpiredHoldKeys(SeatStatus.HOLD, now);
+
+		int updated = scheduleSeatRepository.releaseExpiredHolds(SeatStatus.HOLD, SeatStatus.AVAILABLE, now);
+
+		for (Object[] row : expiredKeys) {
+			Long scheduleId = (Long)row[0];
+			Long seatId = (Long)row[1];
+			seatHoldTokenService.remove(scheduleId, seatId);
+		}
+
+		return updated;
 	}
 
 	// === 상태 변경 AVAILABLE → HOLD === //

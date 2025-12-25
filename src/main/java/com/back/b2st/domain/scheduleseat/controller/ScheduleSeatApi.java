@@ -31,7 +31,6 @@ public interface ScheduleSeatApi {
 	/* ==================================================
 	 * 회차별 좌석 조회 (전체 / 상태별)
 	 * ================================================== */
-
 	@Operation(
 		summary = "회차별 좌석 조회 (전체/상태별)",
 		description = """
@@ -58,31 +57,8 @@ public interface ScheduleSeatApi {
 	);
 
 	/* ==================================================
-	 * 티켓팅 화면 전용 (AVAILABLE만)
-	 * ================================================== */
-
-	@Operation(
-		summary = "티켓팅 전용 좌석 조회 (AVAILABLE)",
-		description = """
-			티켓팅 화면에서 사용되는 API입니다.
-			- AVAILABLE 상태 좌석만 조회합니다.
-			- 내부적으로 getSeatsByStatus(scheduleId, AVAILABLE) 호출
-			"""
-	)
-	@ApiResponses({
-		@ApiResponse(responseCode = "200", description = "좌석 조회 성공"),
-		@ApiResponse(responseCode = "404", description = "회차 정보 없음 (SCHEDULE_NOT_FOUND)")
-	})
-	@GetMapping("/ticketing/schedules/{scheduleId}/seats")
-	BaseResponse<List<ScheduleSeatViewRes>> getAvailableSeatsForTicketing(
-		@Parameter(description = "공연 회차 ID", example = "1")
-		@PathVariable Long scheduleId
-	);
-
-	/* ==================================================
 	 * 좌석 HOLD (AVAILABLE → HOLD)
 	 * ================================================== */
-
 	@Operation(
 		summary = "좌석 HOLD",
 		description = """

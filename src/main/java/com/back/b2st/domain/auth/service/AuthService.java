@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
@@ -20,6 +21,7 @@ import com.back.b2st.domain.auth.dto.request.KakaoLoginReq;
 import com.back.b2st.domain.auth.dto.request.LoginReq;
 import com.back.b2st.domain.auth.dto.request.RecoveryEmailReq;
 import com.back.b2st.domain.auth.dto.response.KakaoAuthorizeUrlRes;
+import com.back.b2st.domain.auth.dto.response.LoginEvent;
 import com.back.b2st.domain.auth.entity.OAuthNonce;
 import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.entity.WithdrawalRecoveryToken;
@@ -47,13 +49,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AuthService {
 
-	@Value("${oauth.kakao.client-id}")
-	private String kakaoClientId;
-	@Value("${oauth.kakao.redirect-uri}")
-	private String kakaoRedirectUri;
-	@Value("${oauth.kakao.default-nickname:카카오사용자}")
-	private String defaultKakaoNickname;
-
 	private final AuthenticationManagerBuilder authenticationManagerBuilder;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final RefreshTokenRepository refreshTokenRepository;
@@ -63,16 +58,62 @@ public class AuthService {
 	private final WithdrawalRecoveryRepository recoveryRepository;
 	private final KakaoApiClient kakaoApiClient;
 	private final OAuthNonceRepository nonceRepository;
+	private final LoginSecurityService loginSecurityService;
+	private final ApplicationEventPublisher eventPublisher;
+	@Value("${oauth.kakao.client-id}")
+	private String kakaoClientId;
+	@Value("${oauth.kakao.redirect-uri}")
+	private String kakaoRedirectUri;
+	@Value("${oauth.kakao.default-nickname:카카오사용자}")
+	private String defaultKakaoNickname;
 
-	// Spring Security 인증 + JWT 발급 + Redis 저장(Family/Generation)
+	/**
+	 * 로그인 처리
+	 * - Rate Limiting + 계정 잠금 검사
+	 * - Spring Security 인증
+	 * - JWT 발급
+	 *
+	 * @param request  로그인 요청
+	 * @param clientIp 클라이언트 IP (감사 로깅용)
+	 * @return JWT 토큰 정보
+	 */
 	@Transactional
-	public TokenInfo login(LoginReq request) {
-		Authentication authentication = authenticateWithEmailPassword(request);
-		Member member = extractMemberFromAuthentication(authentication);
-		return generateTokenForMember(member);
+	public TokenInfo login(LoginReq request, String clientIp) {
+		String email = request.email();
+
+		// 계정 잠금 확인
+		loginSecurityService.checkAccountLock(email);
+
+		try {
+			// 인증
+			Authentication authentication = authenticateWithEmailPassword(request);
+			Member member = extractMemberFromAuthentication(authentication);
+
+			// 로그인 성공 처리(시도 횟수 리셋)
+			loginSecurityService.onLoginSuccess(email, clientIp);
+			eventPublisher.publishEvent(LoginEvent.success(email, clientIp));
+
+			// JWT 발급
+			return generateTokenForMember(member);
+		} catch (BusinessException e) {
+			// 로그인 실패 처리(시도 횟수 증가)
+			loginSecurityService.recordFailedAttempt(email, clientIp);
+			eventPublisher.publishEvent(LoginEvent.failure(email, clientIp, e.getMessage(), e.getErrorCode()));
+			throw e;
+		} catch (Exception e) {
+			// 기타 예외 처리
+			loginSecurityService.recordFailedAttempt(email, clientIp);
+			eventPublisher.publishEvent(LoginEvent.failure(email, clientIp, e.getMessage(), null));
+			throw e;
+		}
 	}
 
-	// OIDC ID Token 파싱 + nonce 검증 + 자동 계정 연동 + 닉네임 정제
+	/**
+	 * 카카오 로그인 - OIDC ID Token 파싱 + nonce 검증 + 자동 계정 연동 + 닉네임 정제
+	 *
+	 * @param request 카카오 로그인 요청 (인가코드)
+	 * @return JWT 토큰 정보
+	 */
 	@Transactional
 	public TokenInfo kakaoLogin(KakaoLoginReq request) {
 		// OIDC 호출. 액세스 토큰 발급 + 정보 조회
@@ -95,7 +136,12 @@ public class AuthService {
 		return tokenInfo;
 	}
 
-	// 카카오 ID 조회 + 중복 연동 방지 + 회원 연동
+	/**
+	 * 카카오 계정 연동 - 카카오 ID 조회 + 중복 연동 방지 + 회원 연동
+	 *
+	 * @param memberId 회원 ID
+	 * @param request  카카오 로그인 요청 (인가코드)
+	 */
 	@Transactional
 	public void linkKakaoAccount(Long memberId, KakaoLoginReq request) {
 		// 카카오 정보 조회
@@ -112,7 +158,11 @@ public class AuthService {
 		log.info("[Kakao] 계정 연동 완료: MemberID={}, KakaoId={}", memberId, kakaoId);
 	}
 
-	// nonce/state 생성 + Redis 저장(TTL 5분) + URL 빌딩
+	/**
+	 * 카카오 로그인 URL 생성 - nonce/state 생성 + Redis 저장(TTL 5분) + URL 빌딩
+	 *
+	 * @return 카카오 로그인 URL 정보
+	 */
 	public KakaoAuthorizeUrlRes generateKakaoAuthorizeUrl() {
 		// 랜덤 생성
 		String nonce = UUID.randomUUID().toString();
@@ -123,19 +173,25 @@ public class AuthService {
 
 		// 카카오 로그인 URL 새성
 		String authrizeUrl = String.format(
-				"https://kauth.kakao.com/oauth/authorize" +
-						"?client_id=%s" +
-						"&redirect_uri=%s" +
-						"&response_type=code" +
-						"&scope=openid%%20profile_nickname%%20account_email" + // URL 인코딩
-						"&nonce=%s" +
-						"&state=%s",
-				kakaoClientId, kakaoRedirectUri, nonce, state);
+			"https://kauth.kakao.com/oauth/authorize" +
+				"?client_id=%s" +
+				"&redirect_uri=%s" +
+				"&response_type=code" +
+				"&scope=openid%%20profile_nickname%%20account_email" + // URL 인코딩
+				"&nonce=%s" +
+				"&state=%s",
+			kakaoClientId, kakaoRedirectUri, nonce, state);
 
 		return new KakaoAuthorizeUrlRes(authrizeUrl, state, nonce);
 	}
 
-	// Refresh Token Rotation + 탈취 감지(Family/Generation) + Redis 갱신
+	/**
+	 * 토큰 재발급 - Refresh Token Rotation + 탈취 감지(Family/Generation) + Redis 갱신
+	 *
+	 * @param accessToken  액세스 토큰
+	 * @param refreshToken 리프레시 토큰
+	 * @return 새 JWT 토큰 정보
+	 */
 	@Transactional
 	public TokenInfo reissue(String accessToken, String refreshToken) {
 		// 검증
@@ -155,18 +211,26 @@ public class AuthService {
 
 		// Redis 업데이트
 		saveRefreshToken(email, newToken.refreshToken(),
-				storedToken.getFamily(), storedToken.getGeneration() + 1);
+			storedToken.getFamily(), storedToken.getGeneration() + 1);
 
 		return newToken;
 	}
 
-	// Redis 토큰 삭제
+	/**
+	 * 로그아웃 - Redis 토큰 삭제
+	 *
+	 * @param principal 현재 로그인한 사용자 정보
+	 */
 	@Transactional
 	public void logout(UserPrincipal principal) {
 		refreshTokenRepository.deleteById(principal.getEmail());
 	}
 
-	// Rate Limiting + 복구 토큰(UUID) + Redis(TTL 24시간) + 비동기 발송
+	/**
+	 * 탈퇴 회원 복구 이메일 발송 - Rate Limiting + 복구 토큰(UUID) + Redis(TTL 24시간) + 비동기 발송
+	 *
+	 * @param request 복구 이메일 요청 정보
+	 */
 	@Transactional
 	public void sendRecoveryEmail(RecoveryEmailReq request) {
 		String email = request.email();
@@ -184,7 +248,11 @@ public class AuthService {
 		log.info("복구 이메일 발송: Email={}", maskEmail(email));
 	}
 
-	// 1회용 토큰 검증 + Soft Delete 해제
+	/**
+	 * 계정 복구 확인 - 1회용 토큰 검증 + Soft Delete 해제
+	 *
+	 * @param request 복구 확인 요청 정보
+	 */
 	@Transactional
 	public void confirmRecovery(ConfirmRecoveryReq request) {
 		WithdrawalRecoveryToken recoveryToken = findRecoveryToken(request.token());
@@ -246,10 +314,10 @@ public class AuthService {
 	// 다른 계정에 연동된 카카오 계정이 아닌지
 	private void validateKakaoNotLinkedToOther(String kakaoId, Long currentMemberId) {
 		memberRepository.findByProviderId(kakaoId)
-				.filter(linked -> !linked.getId().equals(currentMemberId))
-				.ifPresent(linked -> {
-					throw new BusinessException(AuthErrorCode.OAUTH_ALREADY_LINKED);
-				});
+			.filter(linked -> !linked.getId().equals(currentMemberId))
+			.ifPresent(linked -> {
+				throw new BusinessException(AuthErrorCode.OAUTH_ALREADY_LINKED);
+			});
 	}
 
 	private void validateNonce(String nonce) {
@@ -262,7 +330,8 @@ public class AuthService {
 		boolean exists = nonceRepository.existsById(nonce);
 
 		if (!exists) {
-			log.warn("[Kakao] 유효하지 않은 nonce: {}", nonce);
+			// 보안: nonce 값 노출 방지
+			log.warn("[Kakao] 유효하지 않은 nonce 감지");
 			throw new BusinessException(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
@@ -275,7 +344,7 @@ public class AuthService {
 	private void validateTokenNotReused(RefreshToken storedToken, String providedToken, String email) {
 		if (!storedToken.getToken().equals(providedToken)) {
 			refreshTokenRepository.deleteById(email);
-			log.warn("🚨 토큰 탈취 감지! (Token Reuse Detected) User: {}", email);
+			log.warn("🚨 토큰 탈취 감지! (Token Reuse Detected) User: {}", maskEmail(email));
 			throw new BusinessException(AuthErrorCode.TOKEN_REUSE_DETECTED);
 		}
 	}
@@ -286,22 +355,22 @@ public class AuthService {
 
 	private Member findMemberById(Long memberId) {
 		return memberRepository.findById(memberId)
-				.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 	}
 
 	private Member findMemberByEmail(String email) {
 		return memberRepository.findByEmail(email)
-				.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 	}
 
 	private RefreshToken findStoredRefreshToken(String email) {
 		return refreshTokenRepository.findById(email)
-				.orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_TOKEN));
+			.orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_TOKEN));
 	}
 
 	private WithdrawalRecoveryToken findRecoveryToken(String token) {
 		return recoveryRepository.findById(token)
-				.orElseThrow(() -> new BusinessException(AuthErrorCode.RECOVERY_TOKEN_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(AuthErrorCode.RECOVERY_TOKEN_NOT_FOUND));
 	}
 
 	private Optional<Member> findMemberByProviderId(String providerId) {
@@ -320,13 +389,13 @@ public class AuthService {
 	// 로그인 리퀘 인증
 	private Authentication authenticateWithEmailPassword(LoginReq request) {
 		UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(request.email(),
-				request.password());
+			request.password());
 		return authenticationManagerBuilder.getObject().authenticate(authToken);
 	}
 
 	// 인증 객체서 유저 엔티티 추출
 	private Member extractMemberFromAuthentication(Authentication authentication) {
-		CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+		CustomUserDetails userDetails = (CustomUserDetails)authentication.getPrincipal();
 		return userDetails.getMember();
 	}
 
@@ -355,8 +424,8 @@ public class AuthService {
 		}
 		// 이메일로 가입된 회원 확인
 		return memberRepository.findByEmail(email)
-				.map(existing -> linkKakaoToExistingMember(existing, kakaoId))
-				.orElseGet(() -> createNewKakaoMember(email, kakaoId, nickname));
+			.map(existing -> linkKakaoToExistingMember(existing, kakaoId))
+			.orElseGet(() -> createNewKakaoMember(email, kakaoId, nickname));
 	}
 
 	// 이메일 연동
@@ -379,17 +448,17 @@ public class AuthService {
 		String sanitizedNickname = NicknameUtils.sanitize(nickname, defaultKakaoNickname);
 
 		Member member = Member.builder()
-				.email(email)
-				.password(null)
-				.name(sanitizedNickname)
-				.phone(null)
-				.birth(null)
-				.role(Member.Role.MEMBER)
-				.provider(Member.Provider.KAKAO)
-				.providerId(kakaoId)
-				.isEmailVerified(true)
-				.isIdentityVerified(false)
-				.build();
+			.email(email)
+			.password(null)
+			.name(sanitizedNickname)
+			.phone(null)
+			.birth(null)
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.KAKAO)
+			.providerId(kakaoId)
+			.isEmailVerified(true)
+			.isIdentityVerified(false)
+			.build();
 		Member saved = memberRepository.save(member);
 		log.info("[Kakao] 신규 회원 생성: MemberID={}, KakaoID={}", saved.getId(), kakaoId);
 		return saved;
@@ -399,10 +468,10 @@ public class AuthService {
 	private TokenInfo generateTokenForMember(Member member) {
 		CustomUserDetails userDetails = new CustomUserDetails(member);
 		UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-				userDetails, null, userDetails.getAuthorities());
+			userDetails, null, userDetails.getAuthorities());
 		TokenInfo tokenInfo = jwtTokenProvider.generateToken(authToken);
 		saveRefreshToken(member.getEmail(), tokenInfo.refreshToken(),
-				UUID.randomUUID().toString(), 1L);
+			UUID.randomUUID().toString(), 1L);
 		return tokenInfo;
 	}
 
@@ -415,10 +484,10 @@ public class AuthService {
 	private String createRecoveryToken(String email, Long memberId) {
 		String token = UUID.randomUUID().toString();
 		WithdrawalRecoveryToken recoveryToken = WithdrawalRecoveryToken.builder()
-				.token(token)
-				.email(email)
-				.memberId(memberId)
-				.build();
+			.token(token)
+			.email(email)
+			.memberId(memberId)
+			.build();
 		recoveryRepository.save(recoveryToken);
 		return token;
 	}

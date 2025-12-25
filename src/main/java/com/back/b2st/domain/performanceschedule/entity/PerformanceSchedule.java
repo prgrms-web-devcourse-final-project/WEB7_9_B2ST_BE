@@ -2,6 +2,8 @@ package com.back.b2st.domain.performanceschedule.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
@@ -30,6 +32,9 @@ import lombok.NoArgsConstructor;
 	indexes = {
 		@Index(name = "idx_performance_schedule",
 			columnList = "performance_schedule_id, performance_id"
+		),
+		@Index(name = "idx_performance_booking_close_draw",
+			columnList = "booking_close_at, draw_completed"
 		)
 	}
 )
@@ -38,6 +43,7 @@ import lombok.NoArgsConstructor;
 	sequenceName = "performance_schedule_seq",
 	allocationSize = 50
 )
+@DynamicUpdate
 public class PerformanceSchedule extends BaseEntity {
 
 	@Id
@@ -66,6 +72,9 @@ public class PerformanceSchedule extends BaseEntity {
 	@Column(name = "booking_close_at")
 	private LocalDateTime bookingCloseAt;    // 예매 마감 시각
 
+	@Column(name = "draw_completed")
+	private boolean drawCompleted;             // 추첨 완료 여부
+
 	@Builder
 	public PerformanceSchedule(
 		Performance performance,
@@ -81,5 +90,6 @@ public class PerformanceSchedule extends BaseEntity {
 		this.bookingType = bookingType;
 		this.bookingOpenAt = bookingOpenAt;
 		this.bookingCloseAt = bookingCloseAt;
+		this.drawCompleted = false;
 	}
 }

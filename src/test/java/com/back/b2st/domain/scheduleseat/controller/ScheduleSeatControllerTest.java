@@ -155,16 +155,4 @@ class ScheduleSeatControllerTest {
 			.andExpect(jsonPath("$.data").isArray())
 			.andExpect(jsonPath("$.data[0].status").value("AVAILABLE"));
 	}
-
-	@DisplayName("티켓팅 전용 좌석 조회 API (AVAILABLE 고정)")
-	@Test
-	void getAvailableSeatsForTicketing() throws Exception {
-		mockMvc.perform(
-				get("/api/schedules/ticketing/schedules/{scheduleId}/seats", scheduleId)
-			)
-			.andDo(print())
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data").isArray())
-			.andExpect(jsonPath("$.data[0].status").value("AVAILABLE"));
-	}
 }

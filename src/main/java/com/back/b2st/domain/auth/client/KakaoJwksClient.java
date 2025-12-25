@@ -43,13 +43,13 @@ public class KakaoJwksClient {
 	private void initJwksSource() {
 		try {
 			jwksSource = JWKSourceBuilder
-					.create(new URL(jwksUri))
-					// TTL 24시간, 리프레시 타임아웃 1시간
-					// cache(lifespan, refreshTimeout) - lifespan이 더 길어야 함
-					.cache(TimeUnit.HOURS.toMillis(24), TimeUnit.HOURS.toMillis(1))
-					// 속도 제한 비활성화
-					.rateLimited(false)
-					.build();
+				.create(new URL(jwksUri))
+				// TTL 24시간, 리프레시 타임아웃 1시간
+				// cache(lifespan, refreshTimeout) - lifespan이 더 길어야 함
+				.cache(TimeUnit.HOURS.toMillis(24), TimeUnit.HOURS.toMillis(1))
+				// 속도 제한 비활성화
+				.rateLimited(false)
+				.build();
 
 			log.info("[Kakao JWKS] 초기화 완료: {}", jwksUri);
 		} catch (Exception e) {
@@ -69,8 +69,8 @@ public class KakaoJwksClient {
 		try {
 			// 검색조건. id가 'kid'인 키
 			JWKMatcher matcher = new JWKMatcher.Builder()
-					.keyID(kid)
-					.build();
+				.keyID(kid)
+				.build();
 
 			// 검색 실행
 			var keys = getJwksSource().get(new JWKSelector(matcher), null);

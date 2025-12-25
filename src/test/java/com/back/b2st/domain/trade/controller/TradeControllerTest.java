@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -189,6 +190,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 				.scheduleId(savedSchedule.getPerformanceScheduleId())
 				.memberId(testMemberId)
 				.seatId(savedSeat.getId())
+				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 			Reservation savedReservation = reservationRepository.save(reservation);
 

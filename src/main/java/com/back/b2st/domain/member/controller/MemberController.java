@@ -19,7 +19,12 @@ public class MemberController {
 
 	private final MemberService memberService;
 
-	// Bean Validation(정규표현식) + BCrypt 암호화 + 이메일 중복 검사 + 기본 Role 설정
+	/**
+	 * 회원가입 처리 - Bean Validation(정규표현식) + BCrypt 암호화 + 이메일 중복 검사 + 기본 Role 설정
+	 *
+	 * @param request 회원가입 요청 정보
+	 * @return 생성된 회원 ID
+	 */
 	@PostMapping("/signup")
 	public BaseResponse<Long> signup(@Valid @RequestBody SignupReq request) {
 		Long memberId = memberService.signup(request);

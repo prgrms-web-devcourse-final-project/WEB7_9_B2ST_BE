@@ -25,7 +25,7 @@ public class PaymentConfirmService {
 		Payment payment = paymentRepository.findByOrderId(request.orderId())
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.NOT_FOUND));
 
-		validateOwner(payment, memberId);
+		payment.validateOwner(memberId);
 		payment.validateAmount(request.amount());
 
 		if (payment.getStatus() == PaymentStatus.DONE) {
@@ -44,15 +44,9 @@ public class PaymentConfirmService {
 
 		return paymentRepository.findByOrderId(request.orderId())
 			.map(confirmed -> {
-				validateOwner(confirmed, memberId);
+				confirmed.validateOwner(memberId);
 				return confirmed;
 			})
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.NOT_FOUND));
-	}
-
-	private void validateOwner(Payment payment, Long memberId) {
-		if (!payment.getMemberId().equals(memberId)) {
-			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
-		}
 	}
 }

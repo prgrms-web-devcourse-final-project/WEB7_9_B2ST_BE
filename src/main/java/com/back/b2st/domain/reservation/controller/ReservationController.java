@@ -10,9 +10,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.back.b2st.domain.payment.dto.response.PaymentConfirmRes;
+import com.back.b2st.domain.payment.service.PaymentViewService;
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
+import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
-import com.back.b2st.domain.reservation.dto.response.ReservationRes;
+import com.back.b2st.domain.reservation.dto.response.ReservationDetailWithPaymentRes;
 import com.back.b2st.domain.reservation.service.ReservationService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
@@ -26,10 +29,11 @@ import lombok.RequiredArgsConstructor;
 public class ReservationController implements ReservationApi {
 
 	private final ReservationService reservationService;
+	private final PaymentViewService paymentViewService;
 
 	/** === 예매 생성 === */
 	@PostMapping
-	public BaseResponse<ReservationDetailRes> createReservation(
+	public BaseResponse<ReservationCreateRes> createReservation(
 		@CurrentUser UserPrincipal user,
 		@RequestBody ReservationReq request
 	) {
@@ -49,44 +53,20 @@ public class ReservationController implements ReservationApi {
 		return BaseResponse.success();
 	}
 
-	/** === 예매 확정(결제 완료) === */
-	@PostMapping("/{reservationId}/complete")
-	public BaseResponse<Void> completeReservation(
-		@PathVariable Long reservationId
-	) {
-		reservationService.completeReservation(reservationId);
-		return BaseResponse.success();
-	}
-
-	/** === 예매 단건 조회 (심플) === */
-	@GetMapping("/{reservationId}/simple")
-	public BaseResponse<ReservationRes> getReservation(
-		@PathVariable Long reservationId,
-		@CurrentUser UserPrincipal user
-	) {
-		Long memberId = user.getId();
-		ReservationRes response = reservationService.getReservation(reservationId, memberId);
-		return BaseResponse.success(response);
-	}
-
-	/** === 전체 예매 조회 (심플) === */
-	@GetMapping("/me/simple")
-	public BaseResponse<List<ReservationRes>> getMyReservations(
-		@CurrentUser UserPrincipal user
-	) {
-		Long memberId = user.getId();
-		List<ReservationRes> reservations = reservationService.getMyReservations(memberId);
-		return BaseResponse.success(reservations);
-	}
-
-	/** === 예매 조회 === */
+	/** === 예매 상세 조회 === */
 	@GetMapping("/{reservationId}")
-	public BaseResponse<ReservationDetailRes> getReservationDetail(
+	public BaseResponse<ReservationDetailWithPaymentRes> getReservationDetail(
 		@PathVariable Long reservationId,
 		@CurrentUser UserPrincipal user
 	) {
+		ReservationDetailRes reservation =
+			reservationService.getReservationDetail(reservationId, user.getId());
+
+		PaymentConfirmRes payment =
+			paymentViewService.getByReservationId(reservationId, user.getId());
+
 		return BaseResponse.success(
-			reservationService.getReservationDetail(reservationId, user.getId())
+			new ReservationDetailWithPaymentRes(reservation, payment)
 		);
 	}
 

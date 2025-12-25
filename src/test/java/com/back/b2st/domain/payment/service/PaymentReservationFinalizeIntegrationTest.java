@@ -73,6 +73,7 @@ class PaymentReservationFinalizeIntegrationTest {
 			.scheduleId(scheduleId)
 			.memberId(memberId)
 			.seatId(seatId)
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation savedReservation = reservationRepository.save(reservation);
 
@@ -102,4 +103,3 @@ class PaymentReservationFinalizeIntegrationTest {
 		assertThat(ticketRepository.findAll()).hasSize(1);
 	}
 }
-

@@ -25,7 +25,7 @@ public abstract class BaseEntity {
 
 	@Column(name = "created_by")
 	@CreatedBy
-	private long createdBy;
+	private Long createdBy;
 
 	@Column(name = "modified_at")
 	@LastModifiedDate
@@ -33,6 +33,6 @@ public abstract class BaseEntity {
 
 	@Column(name = "modified_by")
 	@LastModifiedBy
-	private long modifiedBy;
+	private Long modifiedBy;
 
 }

@@ -8,15 +8,15 @@ import java.time.temporal.ChronoUnit;
 public record WithdrawnMemberRes(
 	boolean isWithdrawn,
 	int remainingDays,
-	String maskedEmail
-) {
+	String maskedEmail) {
 
 	public static WithdrawnMemberRes from(String email, LocalDateTime deletedAt) {
-		LocalDateTime expiryDate = LocalDateTime.now().plusDays(30);
-		int remaing = (int)ChronoUnit.DAYS.between(LocalDateTime.now(), expiryDate);
+		// deletedAt 기준으로 30일 후 만료
+		LocalDateTime expiryDate = deletedAt.plusDays(30);
+		int remaining = (int)ChronoUnit.DAYS.between(LocalDateTime.now(), expiryDate);
 
 		String masked = maskEmail(email);
 
-		return new WithdrawnMemberRes(true, Math.max(0, remaing), masked);
+		return new WithdrawnMemberRes(true, Math.max(0, remaining), masked);
 	}
 }

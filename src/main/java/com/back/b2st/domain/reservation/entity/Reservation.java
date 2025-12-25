@@ -54,6 +54,9 @@ public class Reservation extends BaseEntity {
 	@Column(name = "completed_at")
 	private LocalDateTime completedAt;
 
+	@Column(name = "expires_at", nullable = false)
+	private LocalDateTime expiresAt;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
 	private ReservationStatus status;
@@ -62,12 +65,14 @@ public class Reservation extends BaseEntity {
 	public Reservation(
 		Long scheduleId,
 		Long memberId,
-		Long seatId
+		Long seatId,
+		LocalDateTime expiresAt
 	) {
 		this.scheduleId = scheduleId;
 		this.memberId = memberId;
 		this.seatId = seatId;
-		this.status = ReservationStatus.CREATED;
+		this.expiresAt = expiresAt;
+		this.status = ReservationStatus.PENDING;
 	}
 
 	/** === 상태 변경 === */
@@ -85,6 +90,10 @@ public class Reservation extends BaseEntity {
 		this.status = ReservationStatus.EXPIRED;
 	}
 
+	public void fail() {
+		this.status = ReservationStatus.FAILED;
+	}
+
 	/** === 임시 호환 코드 === */
 	@Deprecated
 	public static class ReservationBuilder {
@@ -93,18 +102,5 @@ public class Reservation extends BaseEntity {
 			this.scheduleId = performanceId;
 			return this;
 		}
-	}
-
-	@Deprecated
-	public Long getPerformanceId() {
-		return scheduleId;
-	}
-
-	public void cancel() {
-		cancel(LocalDateTime.now());
-	}
-
-	public void complete() {
-		complete(LocalDateTime.now());
 	}
 }

@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -258,6 +259,7 @@ class TradeRequestControllerTest {
 			.scheduleId(scheduleId)
 			.memberId(memberId)
 			.seatId(seat.getId())
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build());
 		Ticket ticket = ticketRepository.save(Ticket.builder()
 			.reservationId(reservation.getId())

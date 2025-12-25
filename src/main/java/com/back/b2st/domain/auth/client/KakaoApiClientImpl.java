@@ -163,14 +163,15 @@ public class KakaoApiClientImpl implements KakaoApiClient {
 				claims.getSubject(), // 카카오 회원번호
 				claims.getIssueTime() != null ? claims.getIssueTime().getTime() / 1000 : null,
 				claims.getExpirationTime() != null ? claims.getExpirationTime().getTime() / 1000 : null,
-				claims.getDateClaim("auth_time") != null ?
-					claims.getDateClaim("auth_time").getTime() / 1000 : null,
+				claims.getDateClaim("auth_time") != null ? claims.getDateClaim("auth_time").getTime() / 1000 : null,
 				claims.getStringClaim("nonce"),
 				claims.getStringClaim("nickname"),
 				claims.getStringClaim("picture"),
-				claims.getStringClaim("email")
-			);
+				claims.getStringClaim("email"));
 
+		} catch (BusinessException e) {
+			// 이미 적절한 BusinessException은 그대로 전파
+			throw e;
 		} catch (Exception e) {
 			log.error("[Kakao] ID Token 파싱 실패: {}", e.getMessage());
 			throw new BusinessException(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
@@ -184,7 +185,7 @@ public class KakaoApiClientImpl implements KakaoApiClient {
 	// // Content-Type: application/x-www-form-urlencoded
 	// @Override
 	// public KakaoTokenRes getToken(String code) {
-	// 	getTokenWithOpenId(code);
+	// getTokenWithOpenId(code);
 	// }
 	//
 	// // 카카오 userInfo api 호출
@@ -192,25 +193,26 @@ public class KakaoApiClientImpl implements KakaoApiClient {
 	// // Authorization: Bearer {accessToken}
 	// @Override
 	// public KakaoUserInfo getUserInfo(String accessToken) {
-	// 	// 헤더 설정
-	// 	HttpHeaders headers = new HttpHeaders();
-	// 	headers.setBearerAuth(accessToken);
-	// 	headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+	// // 헤더 설정
+	// HttpHeaders headers = new HttpHeaders();
+	// headers.setBearerAuth(accessToken);
+	// headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 	//
-	// 	HttpEntity<Void> request = new HttpEntity<>(headers);
+	// HttpEntity<Void> request = new HttpEntity<>(headers);
 	//
-	// 	try {
-	// 		ResponseEntity<KakaoUserInfo> response = restTemplate.exchange(userInfoUri, HttpMethod.GET, request,
-	// 			KakaoUserInfo.class);
+	// try {
+	// ResponseEntity<KakaoUserInfo> response = restTemplate.exchange(userInfoUri,
+	// HttpMethod.GET, request,
+	// KakaoUserInfo.class);
 	//
-	// 		if (response.getBody() == null) {
-	// 			throw new BusinessException(AuthErrorCode.OAUTH_USER_INFO_FAILED);
-	// 		}
-	// 		log.info("[Kakao] 사용자 정보 조회 성공: kakaoId={}", response.getBody().id());
-	// 		return response.getBody();
-	// 	} catch (RestClientException e) {
-	// 		log.error("[Kakao] 사용자 정보 조회 실패: {}", e.getMessage());
-	// 		throw new BusinessException(AuthErrorCode.OAUTH_USER_INFO_FAILED);
-	// 	}
+	// if (response.getBody() == null) {
+	// throw new BusinessException(AuthErrorCode.OAUTH_USER_INFO_FAILED);
+	// }
+	// log.info("[Kakao] 사용자 정보 조회 성공: kakaoId={}", response.getBody().id());
+	// return response.getBody();
+	// } catch (RestClientException e) {
+	// log.error("[Kakao] 사용자 정보 조회 실패: {}", e.getMessage());
+	// throw new BusinessException(AuthErrorCode.OAUTH_USER_INFO_FAILED);
+	// }
 	// }
 }

@@ -34,6 +34,11 @@ class RefundAccountServiceTest {
 	@Mock
 	private MemberRepository memberRepository;
 
+	// 헬퍼 메서드
+	private RefundAccountReq buildRefundAccountReq() {
+		return new RefundAccountReq(BankCode.SHINHAN, "5678901", "홍길동");
+	}
+
 	@Nested
 	@DisplayName("계좌 등록/수정")
 	class SaveAccountTest {
@@ -60,11 +65,11 @@ class RefundAccountServiceTest {
 			RefundAccountReq request = buildRefundAccountReq();
 			Member member = Member.builder().build();
 			RefundAccount existingAccount = RefundAccount.builder()
-					.member(member)
-					.bankCode(BankCode.KB)
-					.accountNumber("1234567")
-					.holderName("홍길동")
-					.build();
+				.member(member)
+				.bankCode(BankCode.KB)
+				.accountNumber("1234567")
+				.holderName("홍길동")
+				.build();
 
 			given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
 			given(refundAccountRepository.findByMember(member)).willReturn(Optional.of(existingAccount));
@@ -86,11 +91,11 @@ class RefundAccountServiceTest {
 			Long memberId = 1L;
 			Member member = Member.builder().build();
 			RefundAccount account = RefundAccount.builder()
-					.member(member)
-					.bankCode(BankCode.KB)
-					.accountNumber("1234567")
-					.holderName("홍길동")
-					.build();
+				.member(member)
+				.bankCode(BankCode.KB)
+				.accountNumber("1234567")
+				.holderName("홍길동")
+				.build();
 
 			given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
 			given(refundAccountRepository.findByMember(member)).willReturn(Optional.of(account));
@@ -100,10 +105,5 @@ class RefundAccountServiceTest {
 			assertThat(response).isNotNull();
 			assertThat(response.accountNumber()).isEqualTo(account.getAccountNumber());
 		}
-	}
-
-	// 헬퍼 메서드
-	private RefundAccountReq buildRefundAccountReq() {
-		return new RefundAccountReq(BankCode.SHINHAN, "5678901", "홍길동");
 	}
 }

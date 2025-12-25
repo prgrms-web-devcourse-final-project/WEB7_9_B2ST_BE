@@ -24,48 +24,52 @@ public class RefundAccountService {
 	private final RefundAccountRepository refundAccountRepository;
 	private final MemberRepository memberRepository;
 
-	// Upsert 패턴(ifPresentOrElse) + 계좌번호 마스킹 로그
+	/**
+	 * 환불 계좌 등록/수정 - Upsert 패턴(ifPresentOrElse) + 계좌번호 마스킹 로그
+	 *
+	 * @param memberId 회원 ID
+	 * @param request  환불 계좌 정보
+	 */
 	@Transactional
 	public void saveAccount(Long memberId, RefundAccountReq request) {
 		Member member = validateMember(memberId);
 
 		refundAccountRepository.findByMember(member).ifPresentOrElse(
-				existingAccount -> existingAccount.updateAccount(
-						request.bankCode(),
-						request.accountNumber(),
-						request.holderName()),
-				() -> {
-					RefundAccount newAccount = RefundAccount.builder()
-							.member(member)
-							.bankCode(request.bankCode())
-							.accountNumber(request.accountNumber())
-							.holderName(request.holderName())
-							.build();
-					refundAccountRepository.save(newAccount);
-				});
+			existingAccount -> existingAccount.updateAccount(
+				request.bankCode(),
+				request.accountNumber(),
+				request.holderName()),
+			() -> {
+				RefundAccount newAccount = RefundAccount.builder()
+					.member(member)
+					.bankCode(request.bankCode())
+					.accountNumber(request.accountNumber())
+					.holderName(request.holderName())
+					.build();
+				refundAccountRepository.save(newAccount);
+			});
 		log.info("환불 계좌 등록/수정: MemberID={}, BankCode={}, AccountNum={}", memberId, request.bankCode(),
-				MaskingUtil.maskAccountNumber(request.accountNumber()));
+			MaskingUtil.maskAccountNumber(request.accountNumber()));
 	}
 
-	// 회원 검증 + DTO 변환(from 팩토리) + 예외 로깅
+	/**
+	 * 환불 계좌 조회 - 회원 검증 + DTO 변환(from 팩토리)
+	 *
+	 * @param memberId 회원 ID
+	 * @return 환불 계좌 정보
+	 */
 	@Transactional(readOnly = true)
 	public RefundAccountRes getAccount(Long memberId) {
+		Member member = validateMember(memberId);
 
-		try {
-			Member member = validateMember(memberId);
-
-			return refundAccountRepository.findByMember(member)
-					.map(RefundAccountRes::from)
-					.orElseThrow(() -> new BusinessException(MemberErrorCode.REFUND_ACCOUNT_NOT_FOUND));
-		} catch (Exception e) {
-			log.error("환불 계좌 조회 중 오류 발생: MemberID={}", memberId, e);
-			throw e;
-		}
+		return refundAccountRepository.findByMember(member)
+			.map(RefundAccountRes::from)
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.REFUND_ACCOUNT_NOT_FOUND));
 	}
 
 	// 밑으로 validate 모음
 	private Member validateMember(Long memberId) {
 		return memberRepository.findById(memberId)
-				.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 	}
 }

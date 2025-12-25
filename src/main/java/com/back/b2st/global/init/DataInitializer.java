@@ -1,7 +1,11 @@
 package com.back.b2st.global.init;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
 import org.springframework.boot.CommandLineRunner;
@@ -13,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
+import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.payment.entity.DomainType;
@@ -64,12 +70,14 @@ public class DataInitializer implements CommandLineRunner {
 	private final ReservationRepository reservationRepository;
 	private final PaymentRepository paymentRepository;
 	private final TicketRepository ticketRepository;
+	private final LotteryEntryRepository lotteryEntryRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
 		// 서버 재시작시 중복 생성 방지 차
 		initMemberData();
 		initConnectedSet();
+		lottery();
 	}
 
 	private void initMemberData() {
@@ -296,6 +304,7 @@ public class DataInitializer implements CommandLineRunner {
 				.scheduleId(performanceSchedule.getPerformanceScheduleId())
 				.memberId(user1.getId())
 				.seatId(reservedSeat.getId())
+				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 
 			reservation.complete(LocalDateTime.now());
@@ -353,6 +362,7 @@ public class DataInitializer implements CommandLineRunner {
 			.scheduleId(performanceSchedule.getPerformanceScheduleId())
 			.memberId(user1.getId())
 			.seatId(paidSeat.getId())
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 
 		Reservation savedPaidReservation = reservationRepository.save(paidReservation);
@@ -380,6 +390,7 @@ public class DataInitializer implements CommandLineRunner {
 				.scheduleId(performanceSchedule.getPerformanceScheduleId())
 				.memberId(user3.getId())
 				.seatId(reservedSeat.getId())
+				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 
 			reservation.complete(LocalDateTime.now());
@@ -419,4 +430,227 @@ public class DataInitializer implements CommandLineRunner {
 			}
 		}
 	}
+
+	// 추첨 데이터
+	private void lottery() {
+
+		List<Member> members1 = createMembers(10, memberRepository, passwordEncoder);
+		List<Member> members2 = createMembers(10, memberRepository, passwordEncoder);
+		List<Member> members3 = createMembers(10, memberRepository, passwordEncoder);
+
+		Venue venue = createVenue("추첨공연장", venueRepository);
+		List<Section> sections = createSections(venue.getVenueId(), sectionRepository, "A", "B", "C");
+		List<Seat> seats = createSeats(venue.getVenueId(), sections, 3, 5, seatRepository);
+
+		Performance performance = createPerformance(venue, performanceRepository);
+		List<PerformanceSchedule> schedules = createSchedules(performance, 3, BookingType.LOTTERY,
+			performanceScheduleRepository);
+		createSeatGrades(performance, seats, seatGradeRepository);
+
+		createLotteryEntry(members1, performance, schedules.getFirst(), SeatGradeType.STANDARD, lotteryEntryRepository);
+		createLotteryEntry(members2, performance, schedules.getFirst(), SeatGradeType.VIP, lotteryEntryRepository);
+		createLotteryEntry(members3, performance, schedules.getFirst(), SeatGradeType.ROYAL, lotteryEntryRepository);
+
+		createLotteryEntry(members1, performance, schedules.get(1), SeatGradeType.STANDARD, lotteryEntryRepository);
+		createLotteryEntry(members2, performance, schedules.get(1), SeatGradeType.VIP, lotteryEntryRepository);
+		createLotteryEntry(members3, performance, schedules.get(1), SeatGradeType.ROYAL, lotteryEntryRepository);
+
+		createLotteryEntry(members1, performance, schedules.get(2), SeatGradeType.STANDARD, lotteryEntryRepository);
+		createLotteryEntry(members2, performance, schedules.get(2), SeatGradeType.VIP, lotteryEntryRepository);
+		createLotteryEntry(members3, performance, schedules.get(2), SeatGradeType.ROYAL, lotteryEntryRepository);
+	}
+
+	/**
+	 * 멤버 생성
+	 * createMembers(10, memberRepo, encoder);
+	 */
+	public static List<Member> createMembers(
+		int count,
+		MemberRepository memberRepository,
+		PasswordEncoder passwordEncoder
+	) {
+		int row = (int)(memberRepository.count() + 1);
+		return IntStream.rangeClosed(row, row + count - 1)
+			.mapToObj(i -> Member.builder()
+				.email("user" + i + "@test.com")
+				.password(passwordEncoder.encode("1234567a!"))
+				.name("테스트유저" + i)
+				.role(Member.Role.MEMBER)
+				.provider(Member.Provider.EMAIL)
+				.isEmailVerified(true)
+				.isIdentityVerified(true)
+				.build()
+			)
+			.map(memberRepository::save)
+			.toList();
+	}
+
+	/**
+	 * 공연장 생성
+	 * createVenue("잠실실내체육관", venueRepo);
+	 */
+	public static Venue createVenue(
+		String name,
+		VenueRepository venueRepository
+	) {
+		return venueRepository.save(
+			Venue.builder()
+				.name(name)
+				.build()
+		);
+	}
+
+	/**
+	 * 공연 생성
+	 * createPerformance(venue, performanceRepo);
+	 */
+	public static Performance createPerformance(
+		Venue venue,
+		PerformanceRepository repo
+	) {
+		return repo.save(
+			Performance.builder()
+				.venue(venue)
+				.title("테스트 공연")
+				.category("콘서트")
+				.posterUrl("")
+				.startDate(LocalDateTime.now())
+				.endDate(LocalDateTime.now().plusDays(7))
+				.status(PerformanceStatus.ON_SALE)
+				.build()
+		);
+	}
+
+	/**
+	 * 공연 회차 생성
+	 * createSchedules(performance, 5, BookingType.LOTTERY, scheduleRepo);
+	 */
+	public static List<PerformanceSchedule> createSchedules(
+		Performance performance,
+		int count,
+		BookingType bookingType,
+		PerformanceScheduleRepository repo
+	) {
+		return repo.saveAll(
+			IntStream.rangeClosed(1, count)
+				.mapToObj(i -> PerformanceSchedule.builder()
+					.performance(performance)
+					.roundNo(i)
+					.startAt(LocalDateTime.now().plusDays(i))
+					.bookingType(bookingType)
+					.bookingOpenAt(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIDNIGHT))
+					.bookingCloseAt(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.of(12, 0)))
+					.build()
+				)
+				.toList()
+		);
+	}
+
+	/**
+	 * 구역 생성
+	 * createSections(venueId, sectionRepo, "A", "B", "C");
+	 */
+	public static List<Section> createSections(
+		Long venueId,
+		SectionRepository repo,
+		String... names
+	) {
+		return repo.saveAll(
+			Arrays.stream(names)
+				.map(name -> Section.builder()
+					.venueId(venueId)
+					.sectionName(name)
+					.build()
+				)
+				.toList()
+		);
+	}
+
+	/**
+	 * 좌석 생성
+	 * createSeats(venue.getVenueId(), sections, 3, 5, seatRepo);
+	 */
+	public static List<Seat> createSeats(
+		Long venueId,
+		List<Section> sections,
+		int rows,
+		int cols,
+		SeatRepository repo
+	) {
+		return repo.saveAll(
+			sections.stream()
+				.flatMap(section ->
+					IntStream.rangeClosed(1, rows).boxed()
+						.flatMap(r ->
+							IntStream.rangeClosed(1, cols)
+								.mapToObj(c -> Seat.builder()
+									.venueId(venueId)
+									.sectionId(section.getId())
+									.sectionName(section.getSectionName())
+									.rowLabel(String.valueOf(r))
+									.seatNumber(c)
+									.build()
+								)
+						)
+				)
+				.toList()
+		);
+	}
+
+	/**
+	 * 좌석 등급 생성 (VIP, ROYAL, STANDARD)
+	 * createSeatGrades(performance, seats, seatGradeRepo);
+	 */
+	public static void createSeatGrades(
+		Performance performance,
+		List<Seat> seats,
+		SeatGradeRepository repo
+	) {
+		List<SeatGrade> grades = IntStream.range(0, seats.size())
+			.mapToObj(i -> {
+				int group = (i % 15) / 5;
+				return SeatGrade.builder()
+					.performanceId(performance.getPerformanceId())
+					.seatId(seats.get(i).getId())
+					.grade(SeatGradeType.values()[
+						ThreadLocalRandom.current().nextInt(SeatGradeType.values().length)
+						])
+					.price(switch (group) {
+						case 0 -> 30000;
+						case 1 -> 20000;
+						default -> 10000;
+					})
+					.build();
+			})
+				.
+
+			toList();
+
+		repo.saveAll(grades);
+	}
+
+	/**
+	 * 추첨 응모 생성
+	 */
+	public static List<LotteryEntry> createLotteryEntry(
+		List<Member> members,
+		Performance performance,
+		PerformanceSchedule performanceSchedule,
+		SeatGradeType seatGradeType,
+		LotteryEntryRepository repo
+	) {
+		List<LotteryEntry> lotteryEntries = IntStream.range(0, members.size())
+			.mapToObj(i -> {
+				return LotteryEntry.builder()
+					.memberId(members.get(i).getId())
+					.performanceId(performance.getPerformanceId())
+					.scheduleId(performanceSchedule.getPerformanceScheduleId())
+					.grade(seatGradeType)
+					.quantity((ThreadLocalRandom.current().nextInt(4) + 1))
+					.build();
+			}).toList();
+
+		return repo.saveAll(lotteryEntries);
+	}
+
 }

@@ -20,6 +20,8 @@ import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
@@ -223,6 +225,26 @@ public class TestFixture {
 			}).toList();
 
 		return repo.saveAll(lotteryEntries);
+	}
+
+	/**
+	 * ScheduleSeat 생성
+	 * createScheduleSeats(scheduleId, seats, scheduleSeatRepo);
+	 */
+	public static List<ScheduleSeat> createScheduleSeats(
+		Long scheduleId,
+		List<Seat> seats,
+		ScheduleSeatRepository repo
+	) {
+		return repo.saveAll(
+			seats.stream()
+				.map(seat -> ScheduleSeat.builder()
+					.scheduleId(scheduleId)
+					.seatId(seat.getId())
+					.build()
+				)
+				.toList()
+		);
 	}
 
 }

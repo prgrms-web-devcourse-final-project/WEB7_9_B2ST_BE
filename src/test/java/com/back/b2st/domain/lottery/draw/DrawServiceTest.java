@@ -19,10 +19,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo;
 import com.back.b2st.domain.lottery.draw.service.DrawService;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.entity.LotteryStatus;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
+import com.back.b2st.domain.lottery.result.dto.LotteryPaymentInfo;
 import com.back.b2st.domain.lottery.result.entity.LotteryResult;
 import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.member.entity.Member;
@@ -461,5 +463,26 @@ class DrawServiceTest {
 			.findById(performanceSchedule.getPerformanceScheduleId()).orElseThrow();
 
 		assertThat(result.isDrawCompleted()).isTrue();
+	}
+
+	@Test
+	@DisplayName("결과 조회 - uuid")
+	void findBy() {
+		// given
+		drawService.executeDraws();
+
+		List<LotteryResult> result = lotteryResultRepository.findAll();
+		assertThat(result.size()).isNotZero();
+
+		LotteryResult info = result.getFirst();
+
+		// when
+		LotteryPaymentInfo find = lotteryResultRepository.findPaymentInfoByid(info.getUuid(), info.getMemberId());
+		LotteryApplicantInfo entry = lotteryEntryRepository.findAppliedInfoByid(info.getLotteryEntryId()).get();
+
+		// then
+		assertThat(find.memberId()).isEqualTo(entry.memberId());
+		assertThat(find.seatGrade()).isEqualTo(entry.grade());
+		assertThat(find.quantity()).isEqualTo(entry.quantity());
 	}
 }

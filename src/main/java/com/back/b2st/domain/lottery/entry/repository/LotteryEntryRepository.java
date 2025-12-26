@@ -2,6 +2,7 @@ package com.back.b2st.domain.lottery.entry.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -49,6 +50,20 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 		where le.scheduleId = :scheduleId
 		""")
 	List<LotteryApplicantInfo> findAppliedInfoByScheduleId(@Param("scheduleId") Long performanceScheduleId);
+
+	/**
+	 * 신청 정보 단 건 조회 - id
+	 * @param id
+	 * @return
+	 */
+	@Query("""
+		select new com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo(
+				le.id, le.memberId, le.grade, le.quantity
+		)
+		from LotteryEntry le
+		where le.id = :id 
+		""")
+	Optional<LotteryApplicantInfo> findAppliedInfoByid(@Param("id") Long id);
 
 	/**
 	 * 당첨, 낙첨 추첨 결과 업데이트

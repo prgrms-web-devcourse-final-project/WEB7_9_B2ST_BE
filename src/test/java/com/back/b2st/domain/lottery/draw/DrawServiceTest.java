@@ -23,6 +23,7 @@ import com.back.b2st.domain.lottery.draw.service.DrawService;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.entity.LotteryStatus;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
+import com.back.b2st.domain.lottery.result.dto.LotteryPaymentInfo;
 import com.back.b2st.domain.lottery.result.entity.LotteryResult;
 import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.member.entity.Member;
@@ -461,5 +462,30 @@ class DrawServiceTest {
 			.findById(performanceSchedule.getPerformanceScheduleId()).orElseThrow();
 
 		assertThat(result.isDrawCompleted()).isTrue();
+	}
+
+	@Test
+	@DisplayName("결과 조회 - uuid")
+	void findBy() {
+		// given
+		drawService.executeDraws();
+
+		List<LotteryResult> results = lotteryResultRepository.findAll();
+		assertThat(results.size()).isNotZero();
+
+		// 저장 결과
+		LotteryResult result = results.getFirst();
+
+		// when
+		// 추첨 응모
+		LotteryEntry entry = lotteryEntryRepository.findById(result.getLotteryEntryId()).get();
+		// 결과 테이블에서 정보 조회
+		LotteryPaymentInfo info = lotteryResultRepository.findPaymentInfoByid(entry.getUuid());
+
+		// then
+		assertThat(result.getId()).isEqualTo(info.id());
+		assertThat(info.memberId()).isEqualTo(entry.getMemberId());
+		assertThat(info.seatGrade()).isEqualTo(entry.getGrade());
+		assertThat(info.quantity()).isEqualTo(entry.getQuantity());
 	}
 }

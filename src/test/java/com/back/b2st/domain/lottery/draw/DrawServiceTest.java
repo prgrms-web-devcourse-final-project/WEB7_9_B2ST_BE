@@ -19,7 +19,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.lottery.draw.dto.LotteryApplicantInfo;
 import com.back.b2st.domain.lottery.draw.service.DrawService;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.entity.LotteryStatus;
@@ -471,18 +470,22 @@ class DrawServiceTest {
 		// given
 		drawService.executeDraws();
 
-		List<LotteryResult> result = lotteryResultRepository.findAll();
-		assertThat(result.size()).isNotZero();
+		List<LotteryResult> results = lotteryResultRepository.findAll();
+		assertThat(results.size()).isNotZero();
 
-		LotteryResult info = result.getFirst();
+		// 저장 결과
+		LotteryResult result = results.getFirst();
 
 		// when
-		LotteryPaymentInfo find = lotteryResultRepository.findPaymentInfoByid(info.getUuid(), info.getMemberId());
-		LotteryApplicantInfo entry = lotteryEntryRepository.findAppliedInfoByid(info.getLotteryEntryId()).get();
+		// 추첨 응모
+		LotteryEntry entry = lotteryEntryRepository.findById(result.getLotteryEntryId()).get();
+		// 결과 테이블에서 정보 조회
+		LotteryPaymentInfo info = lotteryResultRepository.findPaymentInfoByid(entry.getUuid());
 
 		// then
-		assertThat(find.memberId()).isEqualTo(entry.memberId());
-		assertThat(find.seatGrade()).isEqualTo(entry.grade());
-		assertThat(find.quantity()).isEqualTo(entry.quantity());
+		assertThat(result.getId()).isEqualTo(info.id());
+		assertThat(info.memberId()).isEqualTo(entry.getMemberId());
+		assertThat(info.seatGrade()).isEqualTo(entry.getGrade());
+		assertThat(info.quantity()).isEqualTo(entry.getQuantity());
 	}
 }

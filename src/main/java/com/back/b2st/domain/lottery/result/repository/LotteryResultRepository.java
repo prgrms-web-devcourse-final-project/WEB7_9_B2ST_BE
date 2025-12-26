@@ -13,20 +13,17 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 
 	/**
 	 * 결제를 위한 응모 정보 조회
-	 * @param uuid
-	 * @param memberId
+	 * @param uuid    추첨 응모의 uuid
 	 * @return    응모자 id, 신청 등급, 신청 수
 	 */
 	@Query("""
 		select new com.back.b2st.domain.lottery.result.dto.LotteryPaymentInfo(
-				lr.memberId, le.grade, le.quantity
+				lr.id, lr.memberId, le.grade, le.quantity
 				)
 		FROM LotteryResult lr
 		JOIN LotteryEntry le ON lr.lotteryEntryId = le.id
-		WHERE lr.uuid = :uuid
-		  AND lr.memberId = :memberId
+		WHERE le.uuid = :uuid
 		""")
 	LotteryPaymentInfo findPaymentInfoByid(
-		@Param("uuid") UUID uuid,
-		@Param("memberId") Long memberId);
+		@Param("uuid") UUID uuid);
 }

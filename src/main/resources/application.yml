@@ -60,7 +60,7 @@ jwt:
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
 
 queue:
-  enabled: true  #로컬에서 테스트 가능하게 true로
+  enabled: false  # false로 변경! (CI/테스트 통과용)
   default:
     max-active-users: 200
     entry-ttl-minutes: 10

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 대기열 입장 상태
+ * API 응답에서는 WAITING 상태를 문자열로 표현
  */
 @RequiredArgsConstructor
 @Schema(description = "대기열 입장 상태")

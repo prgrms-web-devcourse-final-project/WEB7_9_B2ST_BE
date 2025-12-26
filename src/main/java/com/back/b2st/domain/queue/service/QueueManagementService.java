@@ -3,6 +3,7 @@ package com.back.b2st.domain.queue.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "queue.enabled", havingValue = "true", matchIfMissing = false)
 @Transactional(readOnly = true)
 public class QueueManagementService {
 

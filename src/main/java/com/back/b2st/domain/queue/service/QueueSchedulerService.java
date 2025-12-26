@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "queue.enabled", havingValue = "true", matchIfMissing = false)
 @Transactional(readOnly = true)
 public class QueueSchedulerService {
 
@@ -43,8 +45,6 @@ public class QueueSchedulerService {
 	 * 스케줄러에서 주기적으로 호출
 	 * 1. 입장 가능 인원 계산
 	 * 2. 상위 N명 입장 허용
-	 *
-	 * ⚠️ 분산 락: 멀티 인스턴스 환경에서 동시 실행 방지
 	 *
 	 * @param queueId 대기열 ID
 	 * @param batchSize 한 번에 처리할 인원 (기본: 10명)

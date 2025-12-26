@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "queue.enabled", havingValue = "true", matchIfMissing = false)
 @Transactional(readOnly = true)
 public class QueueService {
 
@@ -45,8 +47,6 @@ public class QueueService {
 	 * 1. 대기열 유효성 검증
 	 * 2. 중복 입장 체크
 	 * 3. Redis ZSET 추가 (실시간 순번 관리)
-	 *
-	 * ⚠️ WAITING 상태는 Redis에만 저장, DB에는 저장 안 함!
 	 *
 	 * @param queueId 대기열 ID
 	 * @param userId 사용자 ID
@@ -379,8 +379,8 @@ public class QueueService {
 		Optional<QueueEntry> existingEntry = queueEntryRepository.findByQueueIdAndUserId(queueId, userId);
 		if (existingEntry.isPresent()) {
 			QueueEntry entry = existingEntry.get();
-			if (entry.getStatus() == QueueEntryStatus.ENTERABLE ||
-				entry.getStatus() == QueueEntryStatus.COMPLETED) {
+			if (entry.getStatus() == QueueEntryStatus.ENTERABLE
+				|| entry.getStatus() == QueueEntryStatus.COMPLETED) {
 				throw new BusinessException(QueueErrorCode.ALREADY_IN_QUEUE);
 			}
 			// EXPIRED 상태는 재입장 가능 (체크하지 않음)

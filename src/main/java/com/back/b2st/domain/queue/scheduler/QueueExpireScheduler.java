@@ -33,8 +33,6 @@ import lombok.extern.slf4j.Slf4j;
  * 1. DB에서 만료 시간이 지난 ENTERABLE 항목 조회
  * 2. Redis에서도 제거되었는지 확인
  * 3. EXPIRED 상태로 변경 및 Redis 정리
- *
- * ⚠️ 주의사항
  * - @Profile("!test")로 테스트 환경에서는 비활성화 (수동 제어)
  */
 @Component

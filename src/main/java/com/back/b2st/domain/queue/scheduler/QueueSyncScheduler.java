@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * Redis와 DB 간의 데이터 정합성을 유지하기 위한 배치 작업
  *
- * ⚠️ 개발 초기 단계 - 대기열 기능 활성화 시에만 로드
+ * 개발 초기 단계 - 대기열 기능 활성화 시에만 로드
  * application.yml에서 `queue.enabled: true` 및 `queue.sync.enabled: true` 설정 필요
  */
 @Component
@@ -78,8 +78,7 @@ public class QueueSyncScheduler {
 	}
 
 	/**
-	 * Redis SET 정리 (보조 작업)
-	 *
+	 * Redis SET 정리 작업
 	 * 실행 주기: 1분마다
 	 * - ENTERABLE_SET에서 실제로는 만료된 userId 제거
 	 * - Redis 메모리 최적화

@@ -22,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Queue 관리 서비스
- *
  * Queue 엔티티 생성/조회/수정/삭제 담당
  */
 @Service
@@ -158,7 +157,6 @@ public class QueueManagementService {
 
 	/**
 	 * 대기열 삭제
-	 *
 	 * 주의: Redis 데이터도 함께 삭제
 	 *
 	 * @param queueId 대기열 ID

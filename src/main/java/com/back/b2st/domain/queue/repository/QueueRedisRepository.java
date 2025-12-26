@@ -6,6 +6,7 @@ import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -20,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 @Repository
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "queue.enabled", havingValue = "true", matchIfMissing = false)
 public class QueueRedisRepository {
 
 	private final RedisTemplate<String, Object> redisTemplate;

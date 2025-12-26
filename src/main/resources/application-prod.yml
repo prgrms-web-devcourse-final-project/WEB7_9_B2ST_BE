@@ -47,8 +47,8 @@ oauth:
     client-id: ${KAKAO_CLIENT_ID}
     client-secret: ${KAKAO_CLIENT_SECRET}
     redirect-uri: ${KAKAO_REDIRECT_URI}
-    token-uri: ${KAKAO_TOKEN_URI}         # 추가
-    user-info-uri: ${KAKAO_USER_INFO_URI} # 추가
+    token-uri: ${KAKAO_TOKEN_URI}
+    user-info-uri: ${KAKAO_USER_INFO_URI}
     issuer: ${KAKAO_ISSUER}
 
 jwt:
@@ -56,3 +56,14 @@ jwt:
   access-expiration: ${JWT_ACCESS_EXPIRATION}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION}
 
+# ueue 시스템 활성화
+queue:
+  enabled: true
+  default:
+    max-active-users: 200
+    entry-ttl-minutes: 10
+  sync:
+    enabled: true  # 프로덕션에서는 동기화 활성화
+  lua:
+    enabled: true
+    fallback-enabled: true

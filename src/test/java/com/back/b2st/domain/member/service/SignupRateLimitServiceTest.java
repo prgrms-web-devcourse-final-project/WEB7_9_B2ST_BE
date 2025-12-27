@@ -1,7 +1,12 @@
-package com.back.b2st.domain.auth.service;
+package com.back.b2st.domain.member.service;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -12,7 +17,6 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.RedisScript;
 
 import com.back.b2st.domain.member.error.MemberErrorCode;
-import com.back.b2st.domain.member.service.SignupRateLimitService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)

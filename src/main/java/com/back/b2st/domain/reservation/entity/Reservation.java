@@ -24,7 +24,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "reservation",
 	indexes = {
-		@Index(name = "idx_reservation_member", columnList = "member_id")
+		@Index(name = "idx_reservation_member", columnList = "member_id"),
+		@Index(name = "idx_reservation_schedule_seat_status", columnList = "schedule_id, seat_id, status"),
+		@Index(name = "idx_reservation_status_expires", columnList = "status, expires_at")
 	}
 )
 @SequenceGenerator(

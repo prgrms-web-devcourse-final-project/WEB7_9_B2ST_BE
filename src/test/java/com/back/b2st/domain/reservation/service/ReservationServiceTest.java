@@ -23,6 +23,7 @@ import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.scheduleseat.service.ScheduleSeatService;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -38,6 +39,9 @@ class ReservationServiceTest {
 
 	@Mock
 	private ScheduleSeatStateService scheduleSeatStateService;
+
+	@Mock
+	private ScheduleSeatService scheduleSeatService;
 
 	@InjectMocks
 	private ReservationService reservationService;
@@ -71,7 +75,7 @@ class ReservationServiceTest {
 			any(LocalDateTime.class)
 		)).thenReturn(false);
 
-		when(scheduleSeatStateService.getHoldExpiredAtOrThrow(SCHEDULE_ID, SEAT_ID))
+		when(scheduleSeatService.getHoldExpiredAtOrThrow(SCHEDULE_ID, SEAT_ID))
 			.thenReturn(expiresAt);
 
 		Reservation reservation = Reservation.builder()
@@ -92,8 +96,8 @@ class ReservationServiceTest {
 		assertThat(result).isNotNull();
 
 		verify(seatHoldTokenService).validateOwnership(SCHEDULE_ID, SEAT_ID, MEMBER_ID);
-		verify(scheduleSeatStateService).validateHoldState(SCHEDULE_ID, SEAT_ID);
-		verify(scheduleSeatStateService).getHoldExpiredAtOrThrow(SCHEDULE_ID, SEAT_ID);
+		verify(scheduleSeatService).validateHoldState(SCHEDULE_ID, SEAT_ID);
+		verify(scheduleSeatService).getHoldExpiredAtOrThrow(SCHEDULE_ID, SEAT_ID);
 		verify(reservationRepository).save(reservation);
 	}
 

@@ -14,6 +14,7 @@ import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.scheduleseat.service.ScheduleSeatService;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -28,6 +29,7 @@ public class ReservationService {
 
 	private final SeatHoldTokenService seatHoldTokenService;
 	private final ScheduleSeatStateService scheduleSeatStateService;
+	private final ScheduleSeatService scheduleSeatService;
 
 	/** === 예매 생성(결제 시작) === */
 	@Transactional
@@ -61,10 +63,10 @@ public class ReservationService {
 		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
 
 		// 3) DB 좌석 상태 검증 (HOLD + 만료)
-		scheduleSeatStateService.validateHoldState(scheduleId, seatId);
+		scheduleSeatService.validateHoldState(scheduleId, seatId);
 
 		// 4) 예매 만료시각(expiresAt)은 좌석 holdExpiredAt과 동일하게(불일치 방지)
-		LocalDateTime expiresAt = scheduleSeatStateService.getHoldExpiredAtOrThrow(scheduleId, seatId);
+		LocalDateTime expiresAt = scheduleSeatService.getHoldExpiredAtOrThrow(scheduleId, seatId);
 
 		// 4) Reservation(PENDING) 생성
 		Reservation reservation = request.toEntity(memberId, expiresAt);
@@ -128,7 +130,7 @@ public class ReservationService {
 		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
 	}
 
-	/** === 예매 만료 === */
+	/** === 예매 만료 (일단 안 씀) === */
 	@Transactional
 	public void expireReservation(Long reservationId) {
 
@@ -173,7 +175,7 @@ public class ReservationService {
 		return reservationRepository.findMyReservationDetails(memberId);
 	}
 
-	/** === PENDING 만료 배치 처리(스케줄러는 이 메서드만 호출) === */
+	/** === PENDING 만료 배치 처리(스케줄러) === */
 	@Transactional
 	public int expirePendingReservationsBatch() {
 		LocalDateTime now = LocalDateTime.now();

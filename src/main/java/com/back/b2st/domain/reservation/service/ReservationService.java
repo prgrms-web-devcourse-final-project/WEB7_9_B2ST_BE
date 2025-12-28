@@ -101,12 +101,10 @@ public class ReservationService {
 		reservation.fail();
 
 		// 좌석 복구 (HOLD → AVAILABLE)
-		scheduleSeatStateService.changeToAvailable(
+		scheduleSeatStateService.releaseHold(
 			reservation.getScheduleId(),
 			reservation.getSeatId()
 		);
-
-		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
 	}
 
 	/** === 예매 취소 (일단 결제 완료 시 취소 불가) === */
@@ -122,12 +120,10 @@ public class ReservationService {
 		reservation.cancel(LocalDateTime.now());
 
 		// 좌석 상태 복구 (HOLD → AVAILABLE) TODO: 일단 HOLD만 가능
-		scheduleSeatStateService.changeToAvailable(
+		scheduleSeatStateService.releaseHold(
 			reservation.getScheduleId(),
 			reservation.getSeatId()
 		);
-
-		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
 	}
 
 	/** === 예매 만료 (일단 안 씀) === */
@@ -147,12 +143,10 @@ public class ReservationService {
 		reservation.expire();
 
 		// 좌석 상태 복구 (HOLD → AVAILABLE)
-		scheduleSeatStateService.changeToAvailable(
+		scheduleSeatStateService.releaseHold(
 			reservation.getScheduleId(),
 			reservation.getSeatId()
 		);
-
-		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
 	}
 
 	/** === 예매 조회 === */
@@ -175,7 +169,7 @@ public class ReservationService {
 		return reservationRepository.findMyReservationDetails(memberId);
 	}
 
-	/** === PENDING 만료 배치 처리(스케줄러) === */
+	/** === PENDING 만료 배치 처리 (스케줄러) === */
 	@Transactional
 	public int expirePendingReservationsBatch() {
 		LocalDateTime now = LocalDateTime.now();
@@ -210,15 +204,13 @@ public class ReservationService {
 		reservation.complete(LocalDateTime.now());
 
 		// 좌석 상태 변경 (HOLD → SOLD)
-		scheduleSeatStateService.changeToSold(
+		scheduleSeatStateService.confirmHold(
 			reservation.getScheduleId(),
 			reservation.getSeatId()
 		);
-
-		seatHoldTokenService.remove(reservation.getScheduleId(), reservation.getSeatId());
 	}
 
-	// === 공통 유틸 === //
+	// === 공통 유틸 (락) === //
 	private Reservation getReservationWithLock(Long reservationId) {
 		return reservationRepository.findByIdWithLock(reservationId)
 			.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));

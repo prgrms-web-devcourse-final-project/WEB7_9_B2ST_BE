@@ -96,6 +96,12 @@ public class ScheduleSeatStateService {
 		seat.release();
 	}
 
+	@Transactional
+	public void releaseHold(Long scheduleId, Long seatId) {
+		changeToAvailable(scheduleId, seatId);
+		seatHoldTokenService.remove(scheduleId, seatId);
+	}
+
 	// === 상태 변경 HOLD → SOLD === //
 	@Transactional
 	public void changeToSold(Long scheduleId, Long seatId) {
@@ -110,6 +116,12 @@ public class ScheduleSeatStateService {
 		}
 
 		seat.sold();
+	}
+
+	@Transactional
+	public void confirmHold(Long scheduleId, Long seatId) {
+		changeToSold(scheduleId, seatId);
+		seatHoldTokenService.remove(scheduleId, seatId);
 	}
 
 	// === 좌석 조회 공통 로직 (락) === //

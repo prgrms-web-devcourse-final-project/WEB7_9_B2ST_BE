@@ -1,4 +1,4 @@
-package com.back.b2st.domain.seatapplication.error;
+package com.back.b2st.domain.prereservation.error;
 
 import org.springframework.http.HttpStatus;
 
@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum SeatSectionApplicationErrorCode implements ErrorCode {
+public enum PrereservationErrorCode implements ErrorCode {
 
 	SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SSA001", "공연 회차를 찾을 수 없습니다."),
 	BOOKING_TYPE_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "SSA002", "해당 회차는 신청 예매 대상이 아닙니다."),

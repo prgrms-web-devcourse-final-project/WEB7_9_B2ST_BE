@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.seatapplication.service.SeatBookingAccessService;
+import com.back.b2st.domain.prereservation.service.PrereservationService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
@@ -20,7 +20,7 @@ public class ScheduleSeatStateService {
 
 	private final ScheduleSeatLockService scheduleSeatLockService;
 	private final SeatHoldTokenService seatHoldTokenService;
-	private final SeatBookingAccessService seatBookingAccessService;
+	private final PrereservationService prereservationService;
 
 	private final ScheduleSeatRepository scheduleSeatRepository;
 
@@ -28,7 +28,7 @@ public class ScheduleSeatStateService {
 	@Transactional
 	public void holdSeat(Long memberId, Long scheduleId, Long seatId) {
 
-		seatBookingAccessService.validateSeatHoldAllowed(memberId, scheduleId, seatId);
+		prereservationService.validateSeatHoldAllowed(memberId, scheduleId, seatId);
 
 		// 1. 좌석 락 획득
 		String lockValue = scheduleSeatLockService.tryLock(scheduleId, seatId, memberId);

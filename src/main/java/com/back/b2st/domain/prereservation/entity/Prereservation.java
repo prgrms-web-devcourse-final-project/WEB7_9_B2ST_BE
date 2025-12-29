@@ -1,4 +1,4 @@
-package com.back.b2st.domain.seatapplication.entity;
+package com.back.b2st.domain.prereservation.entity;
 
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
@@ -32,7 +32,7 @@ import lombok.NoArgsConstructor;
 	sequenceName = "seat_section_applications_seq",
 	allocationSize = 50
 )
-public class SeatSectionApplication extends BaseEntity {
+public class Prereservation extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seat_section_applications_id_gen")
@@ -49,7 +49,7 @@ public class SeatSectionApplication extends BaseEntity {
 	private Long sectionId;
 
 	@Builder
-	public SeatSectionApplication(Long performanceScheduleId, Long memberId, Long sectionId) {
+	public Prereservation(Long performanceScheduleId, Long memberId, Long sectionId) {
 		this.performanceScheduleId = performanceScheduleId;
 		this.memberId = memberId;
 		this.sectionId = sectionId;

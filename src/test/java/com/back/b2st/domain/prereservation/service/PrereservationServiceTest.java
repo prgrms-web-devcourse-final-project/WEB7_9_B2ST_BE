@@ -1,4 +1,4 @@
-package com.back.b2st.domain.seatapplication.service;
+package com.back.b2st.domain.prereservation.service;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -16,15 +16,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
-import com.back.b2st.domain.seatapplication.error.SeatSectionApplicationErrorCode;
-import com.back.b2st.domain.seatapplication.repository.SeatSectionApplicationRepository;
+import com.back.b2st.domain.prereservation.error.PrereservationErrorCode;
+import com.back.b2st.domain.prereservation.repository.PrereservationRepository;
+import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
-import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
-class SeatBookingAccessServiceTest {
+class PrereservationServiceTest {
 
 	@Mock
 	private PerformanceScheduleRepository performanceScheduleRepository;
@@ -33,10 +33,10 @@ class SeatBookingAccessServiceTest {
 	private SeatRepository seatRepository;
 
 	@Mock
-	private SeatSectionApplicationRepository seatSectionApplicationRepository;
+	private PrereservationRepository prereservationRepository;
 
 	@InjectMocks
-	private SeatBookingAccessService seatBookingAccessService;
+	private PrereservationService prereservationService;
 
 	private static final Long MEMBER_ID = 1L;
 	private static final Long SCHEDULE_ID = 10L;
@@ -52,10 +52,10 @@ class SeatBookingAccessServiceTest {
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
 		// when & then
-		assertThatCode(() -> seatBookingAccessService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
+		assertThatCode(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
 			.doesNotThrowAnyException();
 		then(seatRepository).shouldHaveNoInteractions();
-		then(seatSectionApplicationRepository).shouldHaveNoInteractions();
+		then(prereservationRepository).shouldHaveNoInteractions();
 	}
 
 	@Test
@@ -68,9 +68,9 @@ class SeatBookingAccessServiceTest {
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
 		// when & then
-		assertThatThrownBy(() -> seatBookingAccessService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
+		assertThatThrownBy(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(SeatSectionApplicationErrorCode.BOOKING_NOT_OPEN.getMessage());
+			.hasMessageContaining(PrereservationErrorCode.BOOKING_NOT_OPEN.getMessage());
 	}
 
 	@Test
@@ -84,9 +84,9 @@ class SeatBookingAccessServiceTest {
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
 		// when & then
-		assertThatThrownBy(() -> seatBookingAccessService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
+		assertThatThrownBy(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(SeatSectionApplicationErrorCode.BOOKING_CLOSED.getMessage());
+			.hasMessageContaining(PrereservationErrorCode.BOOKING_CLOSED.getMessage());
 	}
 
 	@Test
@@ -101,7 +101,7 @@ class SeatBookingAccessServiceTest {
 		given(seatRepository.findById(SEAT_ID)).willReturn(Optional.empty());
 
 		// when & then
-		assertThatThrownBy(() -> seatBookingAccessService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
+		assertThatThrownBy(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
 			.isInstanceOf(BusinessException.class)
 			.hasMessageContaining(ScheduleSeatErrorCode.SEAT_NOT_FOUND.getMessage());
 	}
@@ -120,14 +120,14 @@ class SeatBookingAccessServiceTest {
 		given(seat.getSectionId()).willReturn(SECTION_ID);
 		given(seatRepository.findById(SEAT_ID)).willReturn(Optional.of(seat));
 
-		given(seatSectionApplicationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
+		given(prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
 			SCHEDULE_ID, MEMBER_ID, SECTION_ID
 		)).willReturn(false);
 
 		// when & then
-		assertThatThrownBy(() -> seatBookingAccessService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
+		assertThatThrownBy(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(SeatSectionApplicationErrorCode.SECTION_NOT_ACTIVATED.getMessage());
+			.hasMessageContaining(PrereservationErrorCode.SECTION_NOT_ACTIVATED.getMessage());
 	}
 
 	@Test
@@ -144,12 +144,12 @@ class SeatBookingAccessServiceTest {
 		given(seat.getSectionId()).willReturn(SECTION_ID);
 		given(seatRepository.findById(SEAT_ID)).willReturn(Optional.of(seat));
 
-		given(seatSectionApplicationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
+		given(prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
 			SCHEDULE_ID, MEMBER_ID, SECTION_ID
 		)).willReturn(true);
 
 		// when & then
-		assertThatCode(() -> seatBookingAccessService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
+		assertThatCode(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
 			.doesNotThrowAnyException();
 	}
 }

@@ -48,10 +48,28 @@ spring:
           starttls:
             enable: false
 
+app:
+  mail:
+    from-address: test@example.com
+    from-name: Test Service
+    verification:
+      expire-minutes: 5
+      code-length: 6
+
 jwt:
   secret: "testSecretKeyForUnitTestingMustBeLongEnoughToSatisfyHS256BitRequirement"
   access-expiration: 3600000
   refresh-expiration: 86400000
+
+oauth:
+  kakao:
+    client-id: test-client-id
+    client-secret: test-client-secret
+    redirect-uri: http://localhost:8080/api/auth/kakao/callback
+    token-uri: https://kauth.kakao.com/oauth/token
+    user-info-uri: https://kapi.kakao.com/v2/user/me
+    issuer: https://kauth.kakao.com
+    jwks-uri: https://kauth.kakao.com/.well-known/jwks.json
 
 queue:
   enabled: false

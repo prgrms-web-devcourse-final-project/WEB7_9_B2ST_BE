@@ -2,6 +2,9 @@ spring:
   profiles:
     active: dev # 나중에 배포할 때는 수정해야 할 부분
 
+  application:
+    name: b2st
+
   datasource:
     url: jdbc:postgresql://localhost:5432/tt_db
     username: ${POSTGRES_USER}   # .env 값 참조
@@ -56,6 +59,17 @@ jwt:
   access-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
 
+queue:
+  enabled: false  # false로 변경! (CI/테스트 통과용)
+  default:
+    max-active-users: 200
+    entry-ttl-minutes: 10
+  sync:
+    enabled: false  # 로컬 테스트에서는 비활성화
+  lua:
+    enabled: true
+    fallback-enabled: true
+
 logging:
   level:
     org.hibernate.SQL: debug
@@ -63,3 +77,4 @@ logging:
     org.hibernate.orm.jdbc.bind: TRACE
     org.springframework.mail: DEBUG
     com.sun.mail: DEBUG
+    com.back.b2st.domain.queue: INFO

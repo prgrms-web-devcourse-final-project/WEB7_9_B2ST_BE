@@ -36,7 +36,9 @@ import lombok.NoArgsConstructor;
 			@Index(name = "idx_queue_entries_user_queue", columnList = "user_id, queue_id"),
 			@Index(name = "idx_queue_entries_queue_status", columnList = "queue_id, status"),
 			@Index(name = "idx_queue_entries_queue_status_expires", columnList = "queue_id, status, expires_at"),
-			@Index(name = "idx_queue_entries_token", columnList = "entry_token")
+			@Index(name = "idx_queue_entries_token", columnList = "entry_token"),
+			@Index(name = "idx_queue_entries_status_expires", columnList = "status, expires_at"),
+			@Index(name = "idx_queue_entries_user_status", columnList = "user_id, status")
 		},
 		uniqueConstraints = {
 			@UniqueConstraint(

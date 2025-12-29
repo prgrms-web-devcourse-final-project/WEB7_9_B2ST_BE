@@ -55,8 +55,8 @@ class PrereservationServiceTest {
 	private static final Long SECTION_ID = 7L;
 
 	@Test
-	@DisplayName("validateSeatHoldAllowed(): BookingType이 SEAT이 아니면 검증을 스킵한다")
-	void validateSeatHoldAllowed_skipsWhenNotSeatBooking() {
+	@DisplayName("validateSeatHoldAllowed(): BookingType이 PRERESERVE가 아니면 검증을 스킵한다")
+	void validateHold_skipNonPrereserve() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
 		given(schedule.getBookingType()).willReturn(BookingType.FIRST_COME);
@@ -71,10 +71,10 @@ class PrereservationServiceTest {
 
 	@Test
 	@DisplayName("validateSeatHoldAllowed(): 예매 오픈 전이면 BOOKING_NOT_OPEN 예외")
-	void validateSeatHoldAllowed_throwsWhenBeforeOpen() {
+	void validateHold_beforeOpen() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
@@ -86,10 +86,10 @@ class PrereservationServiceTest {
 
 	@Test
 	@DisplayName("validateSeatHoldAllowed(): 예매 마감 이후면 BOOKING_CLOSED 예외")
-	void validateSeatHoldAllowed_throwsWhenAfterClose() {
+	void validateHold_afterClose() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(10));
 		given(schedule.getBookingCloseAt()).willReturn(LocalDateTime.now().minusMinutes(1));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
@@ -102,10 +102,10 @@ class PrereservationServiceTest {
 
 	@Test
 	@DisplayName("validateSeatHoldAllowed(): 좌석이 없으면 SEAT_NOT_FOUND 예외")
-	void validateSeatHoldAllowed_throwsWhenSeatNotFound() {
+	void validateHold_seatNotFound() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(1));
 		given(schedule.getBookingCloseAt()).willReturn(LocalDateTime.now().plusMinutes(10));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
@@ -119,10 +119,10 @@ class PrereservationServiceTest {
 
 	@Test
 	@DisplayName("validateSeatHoldAllowed(): 신청하지 않은 구역이면 SECTION_NOT_ACTIVATED 예외")
-	void validateSeatHoldAllowed_throwsWhenNotApplied() {
+	void validateHold_notApplied() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(1));
 		given(schedule.getBookingCloseAt()).willReturn(LocalDateTime.now().plusMinutes(10));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
@@ -143,10 +143,10 @@ class PrereservationServiceTest {
 
 	@Test
 	@DisplayName("validateSeatHoldAllowed(): 신청한 구역이면 예외 없이 통과한다")
-	void validateSeatHoldAllowed_allowsWhenApplied() {
+	void validateHold_success() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(1));
 		given(schedule.getBookingCloseAt()).willReturn(LocalDateTime.now().plusMinutes(10));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
@@ -177,8 +177,8 @@ class PrereservationServiceTest {
 	}
 
 	@Test
-	@DisplayName("apply(): BookingType이 SEAT이 아니면 BOOKING_TYPE_NOT_SUPPORTED 예외")
-	void apply_notSeatBookingType_throw() {
+	@DisplayName("apply(): BookingType이 PRERESERVE가 아니면 BOOKING_TYPE_NOT_SUPPORTED 예외")
+	void apply_wrongType() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
 		given(schedule.getBookingType()).willReturn(BookingType.FIRST_COME);
@@ -195,7 +195,7 @@ class PrereservationServiceTest {
 	void apply_afterBookingOpen_throw() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(1));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
@@ -210,7 +210,7 @@ class PrereservationServiceTest {
 	void apply_sectionNotFound_throw() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.empty());
@@ -233,7 +233,7 @@ class PrereservationServiceTest {
 		Venue venue = mock(Venue.class);
 		Section section = mock(Section.class);
 
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
 		given(schedule.getPerformance()).willReturn(performance);
 		given(performance.getVenue()).willReturn(venue);
@@ -261,7 +261,7 @@ class PrereservationServiceTest {
 		Venue venue = mock(Venue.class);
 		Section section = mock(Section.class);
 
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
 		given(schedule.getPerformance()).willReturn(performance);
 		given(performance.getVenue()).willReturn(venue);
@@ -292,7 +292,7 @@ class PrereservationServiceTest {
 		Venue venue = mock(Venue.class);
 		Section section = mock(Section.class);
 
-		given(schedule.getBookingType()).willReturn(BookingType.SEAT);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
 		given(schedule.getPerformance()).willReturn(performance);
 		given(performance.getVenue()).willReturn(venue);

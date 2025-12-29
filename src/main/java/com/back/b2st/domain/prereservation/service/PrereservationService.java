@@ -36,7 +36,7 @@ public class PrereservationService {
 		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
 			.orElseThrow(() -> new BusinessException(PrereservationErrorCode.SCHEDULE_NOT_FOUND));
 
-		if (schedule.getBookingType() != BookingType.SEAT) {
+		if (schedule.getBookingType() != BookingType.PRERESERVE) {
 			throw new BusinessException(PrereservationErrorCode.BOOKING_TYPE_NOT_SUPPORTED);
 		}
 
@@ -84,7 +84,7 @@ public class PrereservationService {
 		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
 			.orElseThrow(() -> new BusinessException(PrereservationErrorCode.SCHEDULE_NOT_FOUND));
 
-		if (schedule.getBookingType() != BookingType.SEAT) {
+		if (schedule.getBookingType() != BookingType.PRERESERVE) {
 			return;
 		}
 

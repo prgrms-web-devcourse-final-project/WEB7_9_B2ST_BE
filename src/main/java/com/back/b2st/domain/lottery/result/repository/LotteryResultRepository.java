@@ -1,5 +1,6 @@
 package com.back.b2st.domain.lottery.result.repository;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -7,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.back.b2st.domain.lottery.result.dto.LotteryPaymentInfo;
+import com.back.b2st.domain.lottery.result.dto.LotteryReservationInfo;
 import com.back.b2st.domain.lottery.result.entity.LotteryResult;
 
 public interface LotteryResultRepository extends JpaRepository<LotteryResult, Long> {
@@ -26,4 +28,17 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		""")
 	LotteryPaymentInfo findPaymentInfoByid(
 		@Param("uuid") UUID uuid);
+
+	/**
+	 * 좌석 분배를 위한 예매에 필요한 정보 조회
+	 */
+	@Query("""
+		select new com.back.b2st.domain.lottery.result.dto.LotteryReservationInfo(
+				lr.id, lr.memberId, le.scheduleId, le.grade, le.quantity
+				)
+		FROM LotteryResult lr
+		JOIN LotteryEntry le ON lr.lotteryEntryId = le.id
+		WHERE lr.paid = true
+		""")
+	List<LotteryReservationInfo> findReservationInfoByPaidIsTrue();
 }

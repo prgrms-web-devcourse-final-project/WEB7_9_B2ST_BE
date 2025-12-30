@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 
 import jakarta.persistence.LockModeType;
 
@@ -50,5 +51,21 @@ public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long
 	Optional<ScheduleSeat> findByScheduleIdAndSeatIdWithLock(
 		@Param("scheduleId") Long scheduleId,
 		@Param("seatId") Long seatId
+	);
+
+	/**
+	 * 특정 회차의 특정 등급 AVAILABLE 좌석 조회
+	 */
+	@Query("""
+		SELECT s
+		FROM ScheduleSeat s
+		JOIN SeatGrade sg ON s.seatId = sg.seatId
+		WHERE s.scheduleId = :scheduleId
+		  AND s.status = 'AVAILABLE'
+		  AND sg.grade = :grade
+		""")
+	List<ScheduleSeat> findAvailableSeatsByGrade(
+		@Param("scheduleId") Long scheduleId,
+		@Param("grade") SeatGradeType grade
 	);
 }

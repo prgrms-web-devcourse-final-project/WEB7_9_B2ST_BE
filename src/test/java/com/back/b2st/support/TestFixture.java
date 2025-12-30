@@ -20,6 +20,8 @@ import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
@@ -201,6 +203,28 @@ public class TestFixture {
 		repo.saveAll(grades);
 	}
 
+	public static void createSeatGrades(
+		Performance performance,
+		List<Seat> seats,
+		SeatGradeType gradeType,
+		Integer price,
+		SeatGradeRepository repo
+	) {
+		List<SeatGrade> grades = IntStream.range(0, seats.size())
+			.mapToObj(i -> {
+				int group = (i % 15) / 5;
+				return SeatGrade.builder()
+					.performanceId(performance.getPerformanceId())
+					.seatId(seats.get(i).getId())
+					.grade(gradeType)
+					.price(price)
+					.build();
+			})
+			.toList();
+
+		repo.saveAll(grades);
+	}
+
 	/**
 	 * 추첨 응모 생성
 	 */
@@ -223,6 +247,48 @@ public class TestFixture {
 			}).toList();
 
 		return repo.saveAll(lotteryEntries);
+	}
+
+	public static List<LotteryEntry> createLotteryEntry(
+		List<Member> members,
+		Performance performance,
+		PerformanceSchedule performanceSchedule,
+		SeatGradeType seatGradeType,
+		Integer quantity,
+		LotteryEntryRepository repo
+	) {
+		List<LotteryEntry> lotteryEntries = IntStream.range(0, members.size())
+			.mapToObj(i -> {
+				return LotteryEntry.builder()
+					.memberId(members.get(i).getId())
+					.performanceId(performance.getPerformanceId())
+					.scheduleId(performanceSchedule.getPerformanceScheduleId())
+					.grade(seatGradeType)
+					.quantity(quantity)
+					.build();
+			}).toList();
+
+		return repo.saveAll(lotteryEntries);
+	}
+
+	/**
+	 * ScheduleSeat 생성
+	 * createScheduleSeats(scheduleId, seats, scheduleSeatRepository);
+	 */
+	public static List<ScheduleSeat> createScheduleSeats(
+		Long scheduleId,
+		List<Seat> seats,
+		ScheduleSeatRepository repo
+	) {
+		return repo.saveAll(
+			seats.stream()
+				.map(seat -> ScheduleSeat.builder()
+					.scheduleId(scheduleId)
+					.seatId(seat.getId())
+					.build()
+				)
+				.toList()
+		);
 	}
 
 }

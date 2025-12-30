@@ -3,20 +3,16 @@ package com.back.b2st.domain.reservation.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
-import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatService;
-import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
-import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -27,8 +23,7 @@ public class ReservationService {
 
 	private final ReservationRepository reservationRepository;
 
-	private final SeatHoldTokenService seatHoldTokenService;
-	private final ScheduleSeatStateService scheduleSeatStateService;
+	private final ReservationSeatManager reservationSeatManager;
 	private final ScheduleSeatService scheduleSeatService;
 
 	/** === 예매 생성(결제 시작) === */
@@ -36,47 +31,33 @@ public class ReservationService {
 	public ReservationCreateRes createReservation(Long memberId, ReservationReq request) {
 
 		Long scheduleId = request.scheduleId();
-		Long seatId = request.seatId();
+		List<Long> seatIds = request.seatIds();
 
-		LocalDateTime now = LocalDateTime.now();
-
-		// COMPLETED는 무조건 중복 방지
-		if (reservationRepository.existsByScheduleIdAndSeatIdAndStatus(
-			scheduleId,
-			seatId,
-			ReservationStatus.COMPLETED
-		)) {
-			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
+		// 1. 좌석은 1자리씩 예매 가능
+		if (seatIds.size() != 1) {
+			throw new BusinessException(ReservationErrorCode.INVALID_SEAT_COUNT);
 		}
 
-		// PENDING은 "활성(PENDING && expiresAt > now)"만 중복 방지
-		if (reservationRepository.existsByScheduleIdAndSeatIdAndStatusAndExpiresAtAfter(
-			scheduleId,
-			seatId,
-			ReservationStatus.PENDING,
-			now
-		)) {
-			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
-		}
+		Long seatId = seatIds.getFirst();
 
-		// 2) HOLD 소유권 검증 (Redis)
-		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
+		// TODO: 중복 방지 COMPLETED, PENDING은 "활성(PENDING && expiresAt > now)"만
 
-		// 3) DB 좌석 상태 검증 (HOLD + 만료)
-		scheduleSeatService.validateHoldState(scheduleId, seatId);
-
-		// 4) 예매 만료시각(expiresAt)은 좌석 holdExpiredAt과 동일하게(불일치 방지)
+		// 2. 예매 만료시각(expiresAt)은 좌석 holdExpiredAt과 동일하게(불일치 방지)
 		LocalDateTime expiresAt = scheduleSeatService.getHoldExpiredAtOrThrow(scheduleId, seatId);
 
-		// 4) Reservation(PENDING) 생성
+		// 3. Reservation(PENDING) 생성
 		Reservation reservation = request.toEntity(memberId, expiresAt);
+		reservationRepository.save(reservation);
 
-		try {
-			return ReservationCreateRes.from(reservationRepository.save(reservation));
-		} catch (DataIntegrityViolationException e) {
-			// TODO: 추후 DB partial unique?
-			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
-		}
+		// 4. 저장
+		reservationSeatManager.attachSeatsForReservation(
+			reservation.getId(),
+			scheduleId,
+			seatIds,
+			memberId
+		);
+
+		return ReservationCreateRes.from(reservation);
 	}
 
 	/** === 결제 실패 (결제에서 호출되어야 함) === */
@@ -100,11 +81,8 @@ public class ReservationService {
 		// PENDING -> FAILED
 		reservation.fail();
 
-		// 좌석 복구 (HOLD → AVAILABLE)
-		scheduleSeatStateService.releaseHold(
-			reservation.getScheduleId(),
-			reservation.getSeatId()
-		);
+		// 좌석 상태 복구 (HOLD → AVAILABLE)
+		reservationSeatManager.releaseAllSeats(reservationId);
 	}
 
 	/** === 예매 취소 (일단 결제 완료 시 취소 불가) === */
@@ -120,10 +98,7 @@ public class ReservationService {
 		reservation.cancel(LocalDateTime.now());
 
 		// 좌석 상태 복구 (HOLD → AVAILABLE) TODO: 일단 HOLD만 가능
-		scheduleSeatStateService.releaseHold(
-			reservation.getScheduleId(),
-			reservation.getSeatId()
-		);
+		reservationSeatManager.releaseAllSeats(reservationId);
 	}
 
 	/** === 예매 만료 (일단 안 씀) === */
@@ -143,30 +118,7 @@ public class ReservationService {
 		reservation.expire();
 
 		// 좌석 상태 복구 (HOLD → AVAILABLE)
-		scheduleSeatStateService.releaseHold(
-			reservation.getScheduleId(),
-			reservation.getSeatId()
-		);
-	}
-
-	/** === 예매 조회 === */
-	@Transactional(readOnly = true)
-	public ReservationDetailRes getReservationDetail(Long reservationId, Long memberId) {
-
-		ReservationDetailRes result =
-			reservationRepository.findReservationDetail(reservationId, memberId);
-
-		if (result == null) {
-			throw new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND);
-		}
-
-		return result;
-	}
-
-	/** === 예매 다건 조회 === */
-	@Transactional(readOnly = true)
-	public List<ReservationDetailRes> getMyReservationsDetail(Long memberId) {
-		return reservationRepository.findMyReservationDetails(memberId);
+		reservationSeatManager.releaseAllSeats(reservationId);
 	}
 
 	/** === PENDING 만료 배치 처리 (스케줄러) === */
@@ -204,10 +156,7 @@ public class ReservationService {
 		reservation.complete(LocalDateTime.now());
 
 		// 좌석 상태 변경 (HOLD → SOLD)
-		scheduleSeatStateService.confirmHold(
-			reservation.getScheduleId(),
-			reservation.getSeatId()
-		);
+		reservationSeatManager.confirmAllSeats(reservationId);
 	}
 
 	// === 공통 유틸 (락) === //

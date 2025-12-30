@@ -3,6 +3,7 @@ spring:
     activate:
       on-profile: test
 
+  ## AWS S3 자동 설정을 제외하여 테스트 시 인증 정보 에러 방지
   autoconfigure:
     exclude: io.awspring.cloud.autoconfigure.s3.S3AutoConfiguration
 
@@ -10,12 +11,15 @@ spring:
     url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
     username: sa
-    password: ""
+    password:
 
   h2:
     console:
       enabled: true
       path: /h2-console
+      settings:
+        web-allow-others: true
+        trace: false
 
   jpa:
     hibernate:
@@ -25,15 +29,16 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.H2Dialect
 
+    # show-sql: true  <- 이것도 아래 logging 설정
+
   data:
     redis:
       mode: single
       host: localhost
       port: 6379
-      password: tt_redis_pass
-      # 추가: 메인 설정에서 요구하는 클러스터 노드 변수 에러 방지용
-      cluster:
-        nodes: localhost:7000
+      password: ""
+      timeout: 3000ms
+      # cluster 설정 제거 (test 환경에서는 single mode 사용)
 
   mail:
     host: localhost
@@ -73,18 +78,10 @@ oauth:
 queue:
   enabled: false
 
-# .env 파일의 값들
-POSTGRES_USER: sa
-POSTGRES_PASSWORD: ""
-REDIS_MODE: single
-REDIS_PASSWORD: ""
-REDIS_CLUSTER_NODES: localhost:7000
-MAIL_HOST: localhost
-MAIL_PORT: 3025
-MAIL_USERNAME: test
-MAIL_PASSWORD: test
-MAIL_FROM_ADDRESS: test@example.com
-MAIL_FROM_NAME: test
-KAKAO_CLIENT_ID: test
-KAKAO_CLIENT_SECRET: test
-JWT_SECRET: "testSecretKeyForUnitTestingMustBeLongEnoughToSatisfyHS256BitRequirement"
+logging:
+  level:
+    com.back.b2st: debug
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.springframework.mail: DEBUG
+    com.sun.mail: DEBUG

@@ -1,4 +1,3 @@
-# version 필드는 Docker Compose v2에서 더 이상 필요하지 않습니다
 
 services:
   # Redis Cluster Node 1 (Master)

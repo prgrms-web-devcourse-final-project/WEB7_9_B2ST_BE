@@ -44,13 +44,17 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 	List<QueueEntry> findByQueueIdAndStatus(Long queueId, QueueEntryStatus status);
 
 	/**
-	 * 대기열의 특정 상태 입장 기록 조회 (페이징)
+	 * 특정 상태의 모든 입장 기록 조회 (정합성 보정용)
+	 */
+	List<QueueEntry> findAllByStatus(QueueEntryStatus status);
+
+	/**
+	 * 대기열의 특정 상태 입장 기록 조회
 	 */
 	Page<QueueEntry> findByQueueIdAndStatus(Long queueId, QueueEntryStatus status, Pageable pageable);
 
 	/**
 	 * 대기열의 활성(ENTERABLE) 입장 수
-	 * 실시간 체크는 Redis ZCARD 사용, 이 메서드는 통계/분석용
 	 */
 	@Query("""
 		SELECT COUNT(qe) FROM QueueEntry qe
@@ -191,3 +195,4 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 	@Query("DELETE FROM QueueEntry qe WHERE qe.queueId = :queueId")
 	int deleteByQueueId(@Param("queueId") Long queueId);
 }
+

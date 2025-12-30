@@ -16,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.back.b2st.domain.prereservation.service.PrereservationService;
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
@@ -38,6 +39,9 @@ class ReservationServiceTest {
 
 	@Mock
 	private ScheduleSeatStateService scheduleSeatStateService;
+
+	@Mock
+	private PrereservationService prereservationService;
 
 	@InjectMocks
 	private ReservationService reservationService;
@@ -288,5 +292,48 @@ class ReservationServiceTest {
 			reservationService.getReservationDetail(RESERVATION_ID, MEMBER_ID);
 
 		assertThat(result).isSameAs(detail);
+	}
+
+	// === Prereservation 검증 통합 테스트 === //
+
+	@Test
+	@DisplayName("createReservation(): prereservation 검증이 HOLD 검증보다 먼저 호출")
+	void createReservation_prereservationValidationFirst() {
+		// given
+		ReservationReq request = mock(ReservationReq.class);
+		LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(5);
+
+		when(request.scheduleId()).thenReturn(SCHEDULE_ID);
+		when(request.seatId()).thenReturn(SEAT_ID);
+
+		when(reservationRepository.existsByScheduleIdAndSeatIdAndStatus(
+			eq(SCHEDULE_ID), eq(SEAT_ID), eq(ReservationStatus.COMPLETED)
+		)).thenReturn(false);
+
+		when(reservationRepository.existsByScheduleIdAndSeatIdAndStatusAndExpiresAtAfter(
+			eq(SCHEDULE_ID), eq(SEAT_ID), eq(ReservationStatus.PENDING), any(LocalDateTime.class)
+		)).thenReturn(false);
+
+		when(scheduleSeatStateService.getHoldExpiredAtOrThrow(SCHEDULE_ID, SEAT_ID))
+			.thenReturn(expiresAt);
+
+		Reservation reservation = Reservation.builder()
+			.memberId(MEMBER_ID)
+			.scheduleId(SCHEDULE_ID)
+			.seatId(SEAT_ID)
+			.expiresAt(expiresAt)
+			.build();
+
+		when(request.toEntity(MEMBER_ID, expiresAt)).thenReturn(reservation);
+		when(reservationRepository.save(reservation)).thenReturn(reservation);
+
+		// when
+		reservationService.createReservation(MEMBER_ID, request);
+
+		// then - prereservation 검증이 HOLD 검증보다 먼저 호출되어야 함
+		InOrder inOrder = inOrder(prereservationService, seatHoldTokenService, scheduleSeatStateService);
+		inOrder.verify(prereservationService).validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID);
+		inOrder.verify(seatHoldTokenService).validateOwnership(SCHEDULE_ID, SEAT_ID, MEMBER_ID);
+		inOrder.verify(scheduleSeatStateService).validateHoldState(SCHEDULE_ID, SEAT_ID);
 	}
 }

@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -49,6 +51,7 @@ import lombok.NoArgsConstructor;
 	sequenceName = "lottery_result_seq",
 	allocationSize = 50
 )
+@DynamicUpdate
 public class LotteryResult extends BaseEntity {
 
 	public static final int PAYMENT_DEADLINE_DAYS = 2;    // TODO : 생성일 + 2일(임시)
@@ -90,5 +93,9 @@ public class LotteryResult extends BaseEntity {
 		this.paymentDeadline = LocalDateTime.now()
 			.plusDays(PAYMENT_DEADLINE_DAYS).with(LocalTime.MAX);
 		this.paid = false;
+	}
+
+	public void confirmPayment() {
+		this.paid = true;
 	}
 }

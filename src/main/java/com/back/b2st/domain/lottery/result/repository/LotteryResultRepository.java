@@ -30,6 +30,21 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		@Param("uuid") UUID uuid);
 
 	/**
+	 * 회차의 미결제자 응모 정보 조회
+	 */
+	@Query("""
+		select new com.back.b2st.domain.lottery.result.dto.LotteryPaymentInfo(
+				lr.id, lr.memberId, le.grade, le.quantity
+				)
+		FROM LotteryResult lr
+		JOIN LotteryEntry le ON lr.lotteryEntryId = le.id
+		WHERE le.scheduleId = :scheduleId
+		  AND lr.paid = false
+		""")
+	List<LotteryPaymentInfo> findPaymentInfoByScheduleId(
+		@Param("scheduleId") Long scheduleId);
+
+	/**
 	 * 좌석 분배를 위한 예매에 필요한 정보 조회
 	 */
 	@Query("""

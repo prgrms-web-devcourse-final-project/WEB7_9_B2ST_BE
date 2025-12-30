@@ -2,11 +2,13 @@ package com.back.b2st.domain.member.service;
 
 import static com.back.b2st.global.util.MaskingUtil.*;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
+import com.back.b2st.domain.member.dto.event.SignupEvent;
 import com.back.b2st.domain.member.dto.request.PasswordChangeReq;
 import com.back.b2st.domain.member.dto.request.SignupReq;
 import com.back.b2st.domain.member.dto.request.WithdrawReq;
@@ -29,15 +31,18 @@ public class MemberService {
 	private final PasswordEncoder passwordEncoder;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final RefundAccountRepository refundAccountRepository;
+	private final SignupRateLimitService signupRateLimitService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	/**
-	 * 회원가입 처리 - 이메일 중복 검사 + BCrypt 암호화 + 기본 Role 설정 + 개인정보 마스킹 로그
+	 * 회원가입 처리 - 이메일 중복 검사 + BCrypt 암호화 + 기본 Role 설정 + 개인정보 마스킹 로그 + 감사 로그
 	 *
 	 * @param request 회원가입 요청 정보
 	 * @return 생성된 회원 ID
 	 */
 	@Transactional
-	public Long signup(SignupReq request) {
+	public Long signup(SignupReq request, String clientIp) {
+		signupRateLimitService.checkSignupLimit(clientIp);
 		validateEmail(request);
 
 		Member member = Member.builder()
@@ -52,9 +57,14 @@ public class MemberService {
 			.isIdentityVerified(false)
 			.build();
 
-		log.info("새로운 회원 가입: ID={}, Email={}", member.getId(), maskEmail(member.getEmail()));
+		Member saved = memberRepository.save(member);
 
-		return memberRepository.save(member).getId();
+		// async 저장
+		eventPublisher.publishEvent(SignupEvent.of(saved.getEmail(), clientIp));
+
+		log.info("새로운 회원 가입: ID={}, Email={}, IP={}", member.getId(), maskEmail(member.getEmail()), clientIp);
+
+		return saved.getId();
 	}
 
 	/**

@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.back.b2st.domain.prereservation.service.PrereservationService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
@@ -31,6 +32,9 @@ class ScheduleSeatStateServiceTest {
 
 	@Mock
 	private SeatHoldTokenService seatHoldTokenService;
+
+	@Mock
+	private PrereservationService prereservationService;
 
 	@Mock
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -84,6 +88,7 @@ class ScheduleSeatStateServiceTest {
 			spy(new ScheduleSeatStateService(
 				scheduleSeatLockService,
 				seatHoldTokenService,
+				prereservationService,
 				scheduleSeatRepository
 			));
 
@@ -226,5 +231,47 @@ class ScheduleSeatStateServiceTest {
 			.isThrownBy(() -> scheduleSeatStateService.changeToSold(SCHEDULE_ID, SEAT_ID));
 
 		verify(seat).sold();
+	}
+
+	// === Prereservation 검증 통합 테스트 === //
+
+	@Test
+	@DisplayName("holdSeat(): prereservation 검증이 가장 먼저 호출되어야 한다")
+	void holdSeat_prereservationValidationFirst() {
+		// given
+		String lockValue = "lock-value";
+		ScheduleSeat seat = mock(ScheduleSeat.class);
+
+		when(scheduleSeatLockService.tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID)).thenReturn(lockValue);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID))
+			.thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.AVAILABLE);
+
+		// when
+		scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID);
+
+		// then - prereservation 검증이 가장 먼저 호출되어야 함
+		InOrder inOrder = inOrder(prereservationService, scheduleSeatLockService, scheduleSeatRepository);
+		inOrder.verify(prereservationService).validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID);
+		inOrder.verify(scheduleSeatLockService).tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID);
+		inOrder.verify(scheduleSeatRepository).findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID);
+	}
+
+	@Test
+	@DisplayName("holdSeat(): prereservation 검증 실패 시 락 획득조차 하지 않는다")
+	void holdSeat_prereservationFailed_noLock() {
+		// given - 신청하지 않은 구역
+		doThrow(new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND))
+			.when(prereservationService).validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID);
+
+		// when & then
+		assertThrows(BusinessException.class,
+			() -> scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID));
+
+		// 검증 실패 시 락 획득도 시도하지 않아야 함
+		verify(scheduleSeatLockService, never()).tryLock(anyLong(), anyLong(), anyLong());
+		verify(scheduleSeatRepository, never()).findByScheduleIdAndSeatId(anyLong(), anyLong());
+		verify(seatHoldTokenService, never()).save(anyLong(), anyLong(), anyLong());
+		verify(scheduleSeatLockService, never()).unlock(anyLong(), anyLong(), anyString());
 	}
 }

@@ -7,6 +7,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.prereservation.service.PrereservationService;
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
@@ -28,6 +29,7 @@ public class ReservationService {
 
 	private final SeatHoldTokenService seatHoldTokenService;
 	private final ScheduleSeatStateService scheduleSeatStateService;
+	private final PrereservationService prereservationService;
 
 	/** === 예매 생성(결제 시작) === */
 	@Transactional
@@ -57,10 +59,13 @@ public class ReservationService {
 			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_EXISTS);
 		}
 
-		// 2) HOLD 소유권 검증 (Redis)
+		// 2) 신청예매 구역 검증 (방어적 프로그래밍: HOLD 시점에 이미 검증했지만 재확인)
+		prereservationService.validateSeatHoldAllowed(memberId, scheduleId, seatId);
+
+		// 3) HOLD 소유권 검증 (Redis)
 		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
 
-		// 3) DB 좌석 상태 검증 (HOLD + 만료)
+		// 4) DB 좌석 상태 검증 (HOLD + 만료)
 		scheduleSeatStateService.validateHoldState(scheduleId, seatId);
 
 		// 4) 예매 만료시각(expiresAt)은 좌석 holdExpiredAt과 동일하게(불일치 방지)

@@ -24,14 +24,11 @@ import lombok.extern.slf4j.Slf4j;
  * Queue 자동 처리 서비스 (스케줄러용)
  *
  * 자동 입장 처리, 만료 정리 등
- *
- * ⚠️ 분산 락 적용: 멀티 인스턴스 환경에서 중복 실행 방지
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 @ConditionalOnProperty(name = "queue.enabled", havingValue = "true", matchIfMissing = false)
-@Transactional(readOnly = true)
 public class QueueSchedulerService {
 
 	private final QueueRepository queueRepository;
@@ -40,65 +37,46 @@ public class QueueSchedulerService {
 	private final RedissonClient redissonClient;
 
 	/**
-	 * 대기열 자동 입장 처리 (분산 락 적용)
-	 *
-	 * 스케줄러에서 주기적으로 호출
-	 * 1. 입장 가능 인원 계산
-	 * 2. 상위 N명 입장 허용
+	 * 대기열 자동 입장 처리
 	 *
 	 * @param queueId 대기열 ID
 	 * @param batchSize 한 번에 처리할 인원 (기본: 10명)
 	 */
-	@Transactional
 	public void processNextEntries(Long queueId, int batchSize) {
-		String lockKey = "queue:lock:process:" + queueId;
-		RLock lock = redissonClient.getLock(lockKey);
-
-		try {
-			// 락 획득 시도 (최대 3초 대기, 10초 후 자동 해제)
-			boolean acquired = lock.tryLock(3, 10, TimeUnit.SECONDS);
-
-			if (!acquired) {
-				log.warn("분산 락 획득 실패 (다른 서버에서 실행 중) - queueId: {}", queueId);
-				return;
-			}
-
-			log.debug("분산 락 획득 성공 - queueId: {}", queueId);
-
-			// 실제 처리 로직
-			processEntriesInternal(queueId, batchSize);
-
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			log.error("분산 락 획득 중 인터럽트 발생 - queueId: {}", queueId, e);
-		} catch (Exception e) {
-			log.error("자동 입장 처리 중 오류 발생 - queueId: {}", queueId, e);
-		} finally {
-			// 락 해제 (획득한 스레드만 해제 가능)
-			if (lock.isHeldByCurrentThread()) {
-				lock.unlock();
-				log.debug("분산 락 해제 - queueId: {}", queueId);
-			}
-		}
+		// 리더 락은 QueueEntryScheduler에서 처리하므로
+		// 여기서는 바로 처리 로직 실행
+		processEntriesInternal(queueId, batchSize);
 	}
 
 	/**
 	 * 실제 입장 처리 로직 (내부 메서드)
+	 *
+	 * - Redis 작업은 트랜잭션 밖에서 수행
+	 * - 각 사용자별 처리는 moveToEnterable 내부의 짧은 트랜잭션에서 처리
 	 */
 	private void processEntriesInternal(Long queueId, int batchSize) {
-		// 1. Queue 조회
+		// 1. Queue 조회 (트랜잭션 없이 단건 읽기)
 		Queue queue = queueRepository.findById(queueId)
 			.orElseThrow(() -> new BusinessException(QueueErrorCode.QUEUE_NOT_FOUND));
 
-		// 2. 대기 중인 인원 확인
-		Long totalWaiting = getTotalWaitingWithFallback(queueId);
+		// 2. 대기 중인 인원 확인 (Redis, 트랜잭션 밖)
+		Long totalWaiting = getTotalWaiting(queueId);
+		if (totalWaiting == null) {
+			log.error("Redis 대기 인원 조회 실패로 인한 중단 - queueId: {}", queueId);
+			return;
+		}
 		if (totalWaiting == 0) {
 			log.debug("대기 인원 없음 - queueId: {}", queueId);
 			return;
 		}
 
-		// 3. 입장 가능 인원 확인
-		Long currentEnterable = getEnterableCountWithFallback(queueId);
+		// 3. 입장 가능 인원 확인 (Redis, 트랜잭션 밖)
+		Long currentEnterable = getEnterableCount(queueId);
+		if (currentEnterable == null) {
+			log.error("Redis 조회 실패로 인한 중단 - queueId: {}", queueId);
+			return;
+		}
+
 		int availableSlots = queue.getMaxActiveUsers() - currentEnterable.intValue();
 
 		if (availableSlots <= 0) {
@@ -110,8 +88,15 @@ public class QueueSchedulerService {
 		// 4. 실제 입장시킬 인원 계산
 		int entryCount = Math.min(batchSize, Math.min(availableSlots, totalWaiting.intValue()));
 
-		// 5. 상위 N명 추출
-		Set<Object> topWaitingUsers = queueRedisRepository.getTopWaitingUsers(queueId, entryCount);
+		// 5. 상위 N명 추출 (Redis, 트랜잭션 밖)
+		Set<Object> topWaitingUsers;
+		try {
+			topWaitingUsers = queueRedisRepository.getTopWaitingUsers(queueId, entryCount);
+		} catch (Exception e) {
+			log.error("Redis 상위 N명 추출 실패 - queueId: {}, entryCount: {}", queueId, entryCount, e);
+			return;
+		}
+
 		if (topWaitingUsers.isEmpty()) {
 			return;
 		}
@@ -120,23 +105,22 @@ public class QueueSchedulerService {
 			.map(obj -> Long.parseLong(obj.toString()))
 			.collect(Collectors.toList());
 
-		// 6. 입장 처리
+		// 6. 입장 처리 (각 사용자별로 짧은 트랜잭션에서 처리)
 		processBatchEntries(queueId, userIds);
 
-		log.info("자동 입장 처리 완료 - queueId: {}, 처리 인원: {}명, 남은 대기: {}명",
-			queueId, userIds.size(), getTotalWaitingWithFallback(queueId));
+		log.info("자동 입장 처리 완료 - queueId: {}, 처리 인원: {}명", queueId, userIds.size());
 	}
 
 	/**
 	 * 배치 입장 처리
 	 */
-	@Transactional
 	public void processBatchEntries(Long queueId, List<Long> userIds) {
 		int successCount = 0;
 		int failCount = 0;
 
 		for (Long userId : userIds) {
 			try {
+				// moveToEnterable 내부에서 @Transactional 처리됨
 				queueService.moveToEnterable(queueId, userId);
 				successCount++;
 			} catch (Exception e) {
@@ -164,7 +148,11 @@ public class QueueSchedulerService {
 				return 0;
 			}
 
-			Long totalWaiting = getTotalWaitingWithFallback(queueId);
+			Long totalWaiting = getTotalWaiting(queueId);
+			if (totalWaiting == null) {
+				log.error("[TEST] Redis 대기 인원 조회 실패 - queueId: {}", queueId);
+				return 0;
+			}
 			if (totalWaiting == 0) {
 				return 0;
 			}
@@ -303,26 +291,31 @@ public class QueueSchedulerService {
 	}
 
 	/**
-	 * Redis 대기 인원 조회 (Fallback)
+	 * Redis 대기 인원 조회
 	 */
-	private Long getTotalWaitingWithFallback(Long queueId) {
+	private Long getTotalWaiting(Long queueId) {
 		try {
-			return queueRedisRepository.getTotalWaitingCount(queueId);
+			Long count = queueRedisRepository.getTotalWaitingCount(queueId);
+			return count != null ? count : 0L;
 		} catch (Exception e) {
-			log.warn("Redis 조회 실패, 0 반환 - queueId: {}", queueId, e);
-			return 0L;
+			log.error("Redis 대기 인원 조회 실패 - queueId: {}", queueId, e);
+			// null 반환하여 상위에서 실패 처리
+			return null;
 		}
 	}
 
 	/**
-	 * Redis 입장 가능 인원 조회 (Fallback)
+	 * Redis 입장 가능 인원 조회 (현재 수)
 	 */
-	private Long getEnterableCountWithFallback(Long queueId) {
+	private Long getEnterableCount(Long queueId) {
 		try {
-			return queueRedisRepository.getEnterableCount(queueId);
+			// ⚠️ 현재 enterable 수 사용 (누적이 아님)
+			Long count = queueRedisRepository.getTotalEnterableCount(queueId);
+			return count != null ? count : 0L;
 		} catch (Exception e) {
-			log.warn("Redis 조회 실패, 0 반환 - queueId: {}", queueId, e);
-			return 0L;
+			log.error("Redis 입장 가능 인원 조회 실패 - queueId: {}", queueId, e);
+			// null 반환하여 상위에서 실패 처리
+			return null;
 		}
 	}
 }

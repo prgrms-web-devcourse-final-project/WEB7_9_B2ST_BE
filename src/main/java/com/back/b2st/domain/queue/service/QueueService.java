@@ -87,7 +87,7 @@ public class QueueService {
 	 *
 	 * @param queueId 대기열 ID
 	 * @param userId 사용자 ID
-	 * @return 현재 상태 (순번, 앞사람 수, 상태)
+	 * @return 현재 상태
 	 */
 	public QueueStatusRes getMyStatus(Long queueId, Long userId) {
 		// 1. 대기열 유효성 검증
@@ -108,7 +108,7 @@ public class QueueService {
 			log.warn("Redis 조회 실패, DB Fallback - queueId: {}, userId: {}", queueId, userId, e);
 		}
 
-		// 3. DB 조회 (Redis 실패 or 없는 경우)
+		// 3. DB 조회
 		QueueEntry entry = queueEntryRepository.findByQueueIdAndUserId(queueId, userId)
 			.orElseThrow(() -> new BusinessException(QueueErrorCode.NOT_IN_QUEUE));
 
@@ -117,7 +117,7 @@ public class QueueService {
 	}
 
 	/**
-	 * WAITING 상태 응답 빌더 (Redis 기반)
+	 * WAITING 상태 응답 빌더
 	 */
 	private QueueStatusRes buildWaitingResponse(Long queueId, Long userId) {
 		try {
@@ -139,7 +139,7 @@ public class QueueService {
 	}
 
 	/**
-	 * DB 상태 기반 응답 빌더 (Switch 표현식)
+	 * DB 상태 기반 응답 빌더
 	 */
 	private QueueStatusRes buildResponseByStatus(Long queueId, Long userId, QueueEntry entry) {
 		return switch (entry.getStatus()) {
@@ -152,23 +152,22 @@ public class QueueService {
 	 * 대기 중인 사용자를 입장 가능 상태로 이동
 	 *
 	 * Scheduler 또는 Admin에서 호출
-	 * 1. Redis: WAITING → ENTERABLE (TTL 적용) - 먼저 실행 ⭐
-	 * 2. DB: 처음으로 ENTERABLE 상태로 저장 (expiresAt 설정) - 나중 실행
-	 *
-	 * ⚠️ DB에는 ENTERABLE부터 저장됨! (WAITING은 Redis에만 존재)
-	 * ⚠️ Redis → DB 순서로 실행하여 트랜잭션 안전성 보장
+	 * 1. Redis: WAITING → ENTERABLE (TTL 적용) -먼저실행
+	 * 2. DB: 처음으로 ENTERABLE 상태로 저장 (expiresAt 설정)
 	 *
 	 * @param queueId 대기열 ID
 	 * @param userId 사용자 ID
 	 */
 	@Transactional
 	public void moveToEnterable(Long queueId, Long userId) {
-		// 1. Queue 조회 (TTL 설정값 가져오기)
+		// 1. Queue 조회
 		Queue queue = validateQueue(queueId);
 
-		// 2. Redis 상태 이동 (WAITING → ENTERABLE) - 먼저 실행!
+		// 2. Redis 상태 이동
+		boolean redisSuccess = false;
 		try {
 			queueRedisRepository.moveToEnterable(queueId, userId, queue.getEntryTtlMinutes());
+			redisSuccess = true;
 		} catch (Exception e) {
 			log.error("Redis 이동 실패, 트랜잭션 롤백 - queueId: {}, userId: {}", queueId, userId, e);
 			throw new BusinessException(QueueErrorCode.REDIS_OPERATION_FAILED);
@@ -179,10 +178,9 @@ public class QueueService {
 			queueRedisRepository.incrementEnterableCount(queueId);
 		} catch (Exception e) {
 			log.warn("Redis 카운트 증가 실패 (비중요) - queueId: {}", queueId, e);
-			// 카운트는 실패해도 진행 (통계성 데이터)
 		}
 
-		// 4. DB에 ENTERABLE 상태로 처음 저장 - 나중 실행!
+		// 4. DB에 ENTERABLE 상태로 처음 저장
 		LocalDateTime now = LocalDateTime.now();
 		LocalDateTime expiresAt = now.plusMinutes(queue.getEntryTtlMinutes());
 
@@ -199,7 +197,19 @@ public class QueueService {
 			log.info("User moved to enterable (Redis→DB) - queueId: {}, userId: {}, expiresAt: {}",
 				queueId, userId, expiresAt);
 		} catch (DataAccessException e) {
-			log.error("DB 저장 실패, 트랜잭션 롤백 - queueId: {}, userId: {}", queueId, userId, e);
+			log.error("DB 저장 실패, Redis 롤백 시도 - queueId: {}, userId: {}", queueId, userId, e);
+
+			if (redisSuccess) {
+				try {
+					// Redis 롤백: ENTERABLE → WAITING
+					queueRedisRepository.rollbackToWaiting(queueId, userId);
+					log.info("Redis 롤백 완료 - queueId: {}, userId: {}", queueId, userId);
+				} catch (Exception rollbackException) {
+					log.error("Redis 롤백 실패 - queueId: {}, userId: {}", queueId, userId, rollbackException);
+					// 롤백 실패해도 예외는 DB 저장 실패 예외로 전달
+				}
+			}
+
 			throw new BusinessException(QueueErrorCode.QUEUE_INTERNAL_ERROR);
 		}
 	}
@@ -207,25 +217,36 @@ public class QueueService {
 	/**
 	 * 입장 완료 처리
 	 *
-	 * 사용자가 실제로 서비스(예매 등)를 완료했을 때 호출
-	 * 1. Redis에서 제거
-	 * 2. DB 상태를 COMPLETED로 변경 (ENTERABLE 상태여야 함)
-	 *
 	 * @param queueId 대기열 ID
 	 * @param userId 사용자 ID
 	 */
 	@Transactional
 	public void completeEntry(Long queueId, Long userId) {
-		// 1. 대기열 및 엔트리 검증 (DB에 ENTERABLE로 저장되어 있어야 함)
+		// 1. 대기열 검증
 		validateQueue(queueId);
+
+		// 2. Redis 토큰 검증 (Redis 토큰 우선)
+		if (!queueRedisRepository.isInEnterable(queueId, userId)) {
+			log.warn("Redis 토큰 없음으로 입장 완료 거부 - queueId: {}, userId: {}", queueId, userId);
+			throw new BusinessException(QueueErrorCode.INVALID_QUEUE_STATUS);
+		}
+
+		// 3. DB 엔트리 검증
 		QueueEntry entry = validateQueueEntry(queueId, userId);
 
-		// 2. 상태 검증
+		// 4. DB 상태 검증
 		if (entry.getStatus() != QueueEntryStatus.ENTERABLE) {
 			throw new BusinessException(QueueErrorCode.INVALID_QUEUE_STATUS);
 		}
 
-		// 3. DB 상태 업데이트
+		// 5. 만료 시간 확인 (추가 안전장치)
+		if (entry.getExpiresAt() != null && entry.getExpiresAt().isBefore(LocalDateTime.now())) {
+			log.warn("만료된 입장권으로 입장 완료 거부 - queueId: {}, userId: {}, expiresAt: {}",
+				queueId, userId, entry.getExpiresAt());
+			throw new BusinessException(QueueErrorCode.INVALID_QUEUE_STATUS);
+		}
+
+		// 6. DB 상태 업데이트
 		entry.updateToCompleted(LocalDateTime.now());
 
 		try {
@@ -234,14 +255,14 @@ public class QueueService {
 			throw new BusinessException(QueueErrorCode.QUEUE_INTERNAL_ERROR);
 		}
 
-		// 4. Redis에서 제거
+		// 7. Redis에서 제거
 		queueRedisRepository.removeFromEnterable(queueId, userId);
 
 		log.info("User completed entry - queueId: {}, userId: {}", queueId, userId);
 	}
 
 	/**
-	 * 대기열 나가기 (취소)
+	 * 대기열 나가기
 	 *
 	 * 사용자가 대기를 포기했을 때 호출
 	 * - WAITING 상태: Redis에서만 제거 (DB 기록 없음)
@@ -301,7 +322,7 @@ public class QueueService {
 
 		// 2. Redis 실시간 데이터
 		Long totalWaiting = queueRedisRepository.getTotalWaitingCount(queueId);
-		Long totalEnterable = queueRedisRepository.getEnterableCount(queueId);
+		Long totalEnterable = queueRedisRepository.getTotalEnterableCount(queueId);
 
 		// 3. 통계 반환
 		return QueueStatusRes.statistics(
@@ -321,7 +342,7 @@ public class QueueService {
 	public boolean canEnterMore(Long queueId) {
 		Queue queue = validateQueue(queueId);
 
-		Long currentEnterable = queueRedisRepository.getEnterableCount(queueId);
+		Long currentEnterable = queueRedisRepository.getTotalEnterableCount(queueId);
 		int current = currentEnterable != null ? currentEnterable.intValue() : 0;
 
 		return current < queue.getMaxActiveUsers();
@@ -336,7 +357,7 @@ public class QueueService {
 	public int getAvailableSlots(Long queueId) {
 		Queue queue = validateQueue(queueId);
 
-		Long currentEnterable = queueRedisRepository.getEnterableCount(queueId);
+		Long currentEnterable = queueRedisRepository.getTotalEnterableCount(queueId);
 		int current = currentEnterable != null ? currentEnterable.intValue() : 0;
 
 		return Math.max(0, queue.getMaxActiveUsers() - current);
@@ -379,12 +400,14 @@ public class QueueService {
 		Optional<QueueEntry> existingEntry = queueEntryRepository.findByQueueIdAndUserId(queueId, userId);
 		if (existingEntry.isPresent()) {
 			QueueEntry entry = existingEntry.get();
-			if (entry.getStatus() == QueueEntryStatus.ENTERABLE
-				|| entry.getStatus() == QueueEntryStatus.COMPLETED) {
+			if (entry.getStatus() == QueueEntryStatus.ENTERABLE ||
+				entry.getStatus() == QueueEntryStatus.COMPLETED) {
 				throw new BusinessException(QueueErrorCode.ALREADY_IN_QUEUE);
 			}
 			// EXPIRED 상태는 재입장 가능 (체크하지 않음)
 		}
 	}
 }
+
+
 

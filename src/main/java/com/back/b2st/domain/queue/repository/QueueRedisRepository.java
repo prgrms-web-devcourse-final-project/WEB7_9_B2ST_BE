@@ -3,7 +3,8 @@ package com.back.b2st.domain.queue.repository;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Set;
-
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -11,9 +12,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Repository;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * 대기열의 실시간 데이터를 Redis에 저장/조회/관리하는 Repository
@@ -26,14 +24,13 @@ public class QueueRedisRepository {
 
 	private final RedisTemplate<String, Object> redisTemplate;
 
-	// Lua Scripts (원자적 실행)
+	// Lua Scripts
 	@Autowired(required = false)
 	private RedisScript<Long> moveToEnterableScript;
 
 	@Autowired(required = false)
 	private RedisScript<Long> removeFromEnterableScript;
 
-	// 환경별 Key Prefix (대규모 트래픽 환경 - Namespace 분리)
 	@Value("${spring.application.name:b2st}")
 	private String appName;
 
@@ -41,10 +38,17 @@ public class QueueRedisRepository {
 	private String profile;
 
 	// Redis Key 패턴
+	// enterableIndex:{queueId} (ZSET, score=expiresAt): 인덱스용 ZSET (만료 시간 기반 정리)
+	// enterableToken:{queueId}:{userId} (STRING with TTL): 개별 토큰 (TTL로 자동 만료)
 	private static final String WAITING_KEY_PATTERN = "%s:%s:queue:%d:waiting";                      // ZSET: 대기 중
-	private static final String ENTERABLE_USER_KEY_PATTERN = "%s:%s:queue:%d:enterable:%d";         // STRING:개별 사용자 입장권
-	private static final String ENTERABLE_SET_KEY_PATTERN = "%s:%s:queue:%d:enterable";             // SET: 전체 입장 가능자 목록
+	private static final String ENTERABLE_TOKEN_KEY_PATTERN = "%s:%s:queue:%d:enterable:token:%d";  // STRING: 개별 사용자 입장권 토큰 (TTL)
+	private static final String ENTERABLE_INDEX_KEY_PATTERN = "%s:%s:queue:%d:enterable:index";     // ZSET: 전체 입장 가능자 인덱스 (score=expiresAt, 만료 시간 기반 정리)
 	private static final String ENTERABLE_COUNT_KEY_PATTERN = "%s:%s:queue:%d:enterable:count";     // STRING: 누적 카운트
+
+	@Deprecated
+	private static final String ENTERABLE_USER_KEY_PATTERN = "%s:%s:queue:%d:enterable:%d";         // 레거시: enterableToken으로 대체 예정
+	@Deprecated
+	private static final String ENTERABLE_SET_KEY_PATTERN = "%s:%s:queue:%d:enterable";             // 레거시: enterableIndex로 대체 예정
 
 	/**
 	 * Redis Key 생성 헬퍼 메서드
@@ -53,17 +57,36 @@ public class QueueRedisRepository {
 		return String.format(WAITING_KEY_PATTERN, appName, profile, queueId);
 	}
 
-	private String getEnterableUserKey(Long queueId, Long userId) {
-		return String.format(ENTERABLE_USER_KEY_PATTERN, appName, profile, queueId, userId);
+	/**
+	 * Enterable 토큰 키 생성
+	 */
+	private String getEnterableTokenKey(Long queueId, Long userId) {
+		return String.format(ENTERABLE_TOKEN_KEY_PATTERN, appName, profile, queueId, userId);
 	}
 
+	/**
+	 * Enterable 인덱스 키 생성
+	 */
+	private String getEnterableIndexKey(Long queueId) {
+		return String.format(ENTERABLE_INDEX_KEY_PATTERN, appName, profile, queueId);
+	}
+
+	@Deprecated
+	private String getEnterableUserKey(Long queueId, Long userId) {
+		return getEnterableTokenKey(queueId, userId);
+	}
+
+	@Deprecated
 	private String getEnterableSetKey(Long queueId) {
-		return String.format(ENTERABLE_SET_KEY_PATTERN, appName, profile, queueId);
+		return getEnterableIndexKey(queueId);
 	}
 
 	private String getEnterableCountKey(Long queueId) {
 		return String.format(ENTERABLE_COUNT_KEY_PATTERN, appName, profile, queueId);
 	}
+
+
+	/* ==================== 대기열(WAITING) 관련 ==================== */
 
 	/**
 	 * 대기열에 사용자 추가
@@ -145,35 +168,37 @@ public class QueueRedisRepository {
 		return score != null;
 	}
 
+
+	/* ==================== 입장 가능(ENTERABLE) 관련 ==================== */
+
 	/**
 	 * WAITING → ENTERABLE 이동 (Lua Script - 원자적 실행)
 	 *
-	 * 대규모 트래픽 환경에서 원자성 보장:
-	 * - 3개의 Redis 명령을 1번의 네트워크 호출로 실행
-	 * - 중간 실패 시 자동 롤백
-	 * - 성능 3배 향상 (RTT x3 → RTT x1)
-	 *
 	 * @param queueId 대기열 ID
 	 * @param userId 사용자 ID
-	 * @param ttlMinutes 입장권 유효 시간 (분)
+	 * @param ttlMinutes 입장권 유효 시간 (분) - Redis TTL로 자동 설정됨
 	 */
 	public void moveToEnterable(Long queueId, Long userId, int ttlMinutes) {
-		// Lua Script 사용 (원자적 실행)
+		// Lua Script 사용
 		if (moveToEnterableScript != null) {
 			String waitingKey = getWaitingKey(queueId);
-			String userKey = getEnterableUserKey(queueId, userId);
-			String setKey = getEnterableSetKey(queueId);
+			String tokenKey = getEnterableTokenKey(queueId, userId);
+			String indexKey = getEnterableIndexKey(queueId);
+
+			long expiresAtSeconds = System.currentTimeMillis() / 1000 + (ttlMinutes * 60);
 
 			redisTemplate.execute(
 				moveToEnterableScript,
-				Arrays.asList(waitingKey, userKey, setKey),
+				Arrays.asList(waitingKey, tokenKey, indexKey),
 				userId.toString(),
-				String.valueOf(ttlMinutes * 60) // 초 단위로 변환
+				String.valueOf(ttlMinutes * 60), // 초 단위 TTL
+				String.valueOf(expiresAtSeconds) // expiresAt timestamp (score)
 			);
 
-			log.info("Moved to enterable (Lua) - queueId: {}, userId: {}, ttl: {}min", queueId, userId, ttlMinutes);
+			log.info("Moved to enterable (Lua) - queueId: {}, userId: {}, ttl: {}min, expiresAt: {}",
+				queueId, userId, ttlMinutes, expiresAtSeconds);
 		} else {
-			// Fallback: Lua Script 없을 때 (개발 환경)
+			// Fallback: Lua Script 없을 때
 			moveToEnterableFallback(queueId, userId, ttlMinutes);
 		}
 	}
@@ -184,27 +209,28 @@ public class QueueRedisRepository {
 	private void moveToEnterableFallback(Long queueId, Long userId, int ttlMinutes) {
 		removeFromWaitingQueue(queueId, userId);
 
-		String userKey = getEnterableUserKey(queueId, userId);
-		redisTemplate.opsForValue().set(userKey, "1", Duration.ofMinutes(ttlMinutes));
+		String tokenKey = getEnterableTokenKey(queueId, userId);
+		redisTemplate.opsForValue().set(tokenKey, "1", Duration.ofMinutes(ttlMinutes));
 
-		String setKey = getEnterableSetKey(queueId);
-		redisTemplate.opsForSet().add(setKey, userId.toString());
+		String indexKey = getEnterableIndexKey(queueId);
+		long expiresAtSeconds = System.currentTimeMillis() / 1000 + (ttlMinutes * 60);
+		redisTemplate.opsForZSet().add(indexKey, userId.toString(), expiresAtSeconds);
 
-		log.warn("Moved to enterable (Fallback) - queueId: {}, userId: {}", queueId, userId);
+		log.warn("Moved to enterable (Fallback) - queueId: {}, userId: {}, expiresAt: {}",
+			queueId, userId, expiresAtSeconds);
 	}
 
 	/**
-	 * ENTERABLE에서 사용자 제거 (Lua Script)
+	 * ENTERABLE에서 사용자 제거 (Lua Script - 원자적 실행)
 	 */
 	public void removeFromEnterable(Long queueId, Long userId) {
-		// Lua Script 사용 (원자적 실행)
 		if (removeFromEnterableScript != null) {
-			String userKey = getEnterableUserKey(queueId, userId);
-			String setKey = getEnterableSetKey(queueId);
+			String tokenKey = getEnterableTokenKey(queueId, userId);
+			String indexKey = getEnterableIndexKey(queueId);
 
 			redisTemplate.execute(
 				removeFromEnterableScript,
-				Arrays.asList(userKey, setKey),
+				Arrays.asList(tokenKey, indexKey),
 				userId.toString()
 			);
 
@@ -219,11 +245,11 @@ public class QueueRedisRepository {
 	 * Fallback: Lua Script 없을 때 사용
 	 */
 	private void removeFromEnterableFallback(Long queueId, Long userId) {
-		String userKey = getEnterableUserKey(queueId, userId);
-		redisTemplate.delete(userKey);
+		String tokenKey = getEnterableTokenKey(queueId, userId);
+		redisTemplate.delete(tokenKey);
 
-		String setKey = getEnterableSetKey(queueId);
-		redisTemplate.opsForSet().remove(setKey, userId.toString());
+		String indexKey = getEnterableIndexKey(queueId);
+		redisTemplate.opsForZSet().remove(indexKey, userId.toString());
 
 		log.warn("Removed from enterable (Fallback) - queueId: {}, userId: {}", queueId, userId);
 	}
@@ -232,26 +258,86 @@ public class QueueRedisRepository {
 	 * ENTERABLE 상태인지 확인
 	 */
 	public boolean isInEnterable(Long queueId, Long userId) {
-		String userKey = getEnterableUserKey(queueId, userId);
-		return Boolean.TRUE.equals(redisTemplate.hasKey(userKey));
+		String tokenKey = getEnterableTokenKey(queueId, userId);
+		return Boolean.TRUE.equals(redisTemplate.hasKey(tokenKey));
+	}
+
+	/**
+	 * ENTERABLE → WAITING 롤백 (DB 저장 실패 시 사용)
+	 *
+	 * @param queueId 대기열 ID
+	 * @param userId 사용자 ID
+	 */
+	public void rollbackToWaiting(Long queueId, Long userId) {
+		try {
+			// 1. ENTERABLE에서 제거
+			removeFromEnterable(queueId, userId);
+
+			// 2. WAITING에 다시 추가 (현재 시간으로)
+			long timestamp = System.currentTimeMillis();
+			addToWaitingQueue(queueId, userId, timestamp);
+
+			log.info("Redis 롤백 완료 (ENTERABLE → WAITING, 뒤로 보냄) - queueId: {}, userId: {}", queueId, userId);
+		} catch (Exception e) {
+			log.error("Redis 롤백 실패 - queueId: {}, userId: {}", queueId, userId, e);
+			throw e;
+		}
 	}
 
 	/**
 	 * 현재 ENTERABLE 상태인 사람 수
+	 *
+	 * @param queueId 대기열 ID
+	 * @return 유효한 ENTERABLE 사용자 수
 	 */
 	public Long getTotalEnterableCount(Long queueId) {
-		String setKey = getEnterableSetKey(queueId);
-		Long size = redisTemplate.opsForSet().size(setKey);
+		String indexKey = getEnterableIndexKey(queueId);
+		long nowSeconds = System.currentTimeMillis() / 1000;
 
-		return size != null ? size : 0L;
+		Long count = redisTemplate.opsForZSet().count(indexKey, nowSeconds, Double.POSITIVE_INFINITY);
+		return count != null ? count : 0L;
 	}
 
 	/**
-	 * ENTERABLE 사용자 전체 목록 조회
+	 * ENTERABLE 사용자 전체 목록 조회 (ZSET 기반)
+	 *
+	 * @param queueId 대기열 ID
+	 * @return 유효한 ENTERABLE 사용자 ID 목록
 	 */
 	public Set<Object> getAllEnterableUsers(Long queueId) {
-		String setKey = getEnterableSetKey(queueId);
-		return redisTemplate.opsForSet().members(setKey);
+		String indexKey = getEnterableIndexKey(queueId);
+		long nowSeconds = System.currentTimeMillis() / 1000;
+
+		Set<Object> validUsers = redisTemplate.opsForZSet().rangeByScore(
+			indexKey,
+			nowSeconds,
+			Double.POSITIVE_INFINITY
+		);
+
+		return validUsers != null ? validUsers : java.util.Collections.emptySet();
+	}
+
+	/**
+	 * 인덱스에서 만료된 사용자 제거 (ZSET 기반)
+	 *
+	 * @param queueId 대기열 ID
+	 * @return 제거된 항목 수
+	 */
+	public Long cleanupExpiredFromIndex(Long queueId) {
+		String indexKey = getEnterableIndexKey(queueId);
+		long nowSeconds = System.currentTimeMillis() / 1000;
+
+		Long removed = redisTemplate.opsForZSet().removeRangeByScore(
+			indexKey,
+			Double.NEGATIVE_INFINITY,
+			nowSeconds - 1 // 현재 시간 이전 (1초 여유)
+		);
+
+		if (removed != null && removed > 0) {
+			log.debug("ZSET 정리: 만료된 토큰 {}건 제거 - queueId: {}", removed, queueId);
+		}
+
+		return removed != null ? removed : 0L;
 	}
 
 	/**
@@ -260,15 +346,15 @@ public class QueueRedisRepository {
 	 * @return 남은 시간(초), 없으면 null
 	 */
 	public Long getEnterableTtl(Long queueId, Long userId) {
-		String userKey = getEnterableUserKey(queueId, userId);
-		return redisTemplate.getExpire(userKey);
+		String tokenKey = getEnterableTokenKey(queueId, userId);
+		return redisTemplate.getExpire(tokenKey);
 	}
 
 
 	/* ==================== 카운터 관련 ==================== */
 
 	/**
-	 * ENTERABLE 누적 카운트 증가
+	 * ENTERABLE 누적 카운트 증가 (지표/모니터링용)
 	 *
 	 * @return 증가된 후의 값
 	 */
@@ -278,7 +364,7 @@ public class QueueRedisRepository {
 	}
 
 	/**
-	 * ENTERABLE 누적 카운트 조회
+	 * ENTERABLE 누적 카운트 조회 (지표/모니터링용)
 	 */
 	public Long getEnterableCount(Long queueId) {
 		String key = getEnterableCountKey(queueId);
@@ -306,26 +392,35 @@ public class QueueRedisRepository {
 		redisTemplate.opsForValue().set(key, count);
 	}
 
+
+	/* ==================== 유틸리티 ==================== */
+
 	/**
-	 * 특정 대기열의 모든 Redis 데이터 삭제 (테스트/초기화용)
+	 * 특정 대기열의 모든 Redis 데이터 삭제 (테스트 전용)
+	 *
+	 * @param queueId 대기열 ID
 	 */
+	@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+		name = "queue.test.enabled",
+		havingValue = "true",
+		matchIfMissing = false
+	)
 	public void clearAll(Long queueId) {
 		String waitingKey = getWaitingKey(queueId);
-		String enterableSetKey = getEnterableSetKey(queueId);
+		String enterableIndexKey = getEnterableIndexKey(queueId);
 		String countKey = getEnterableCountKey(queueId);
 
 		redisTemplate.delete(waitingKey);
-		redisTemplate.delete(enterableSetKey);
+		redisTemplate.delete(enterableIndexKey);
 		redisTemplate.delete(countKey);
 
-		// ENTERABLE 개별 키들도 삭제 (패턴 매칭)
 		String pattern = String.format("%s:%s:queue:%d:enterable:*", appName, profile, queueId);
 		Set<String> keys = redisTemplate.keys(pattern);
 		if (keys != null && !keys.isEmpty()) {
 			redisTemplate.delete(keys);
 		}
 
-		log.info("Cleared all queue data - queueId: {}", queueId);
+		log.info("Cleared all queue data (TEST ONLY) - queueId: {}", queueId);
 	}
 
 	/**
@@ -336,3 +431,4 @@ public class QueueRedisRepository {
 		return Boolean.TRUE.equals(redisTemplate.hasKey(key));
 	}
 }
+

@@ -1,0 +1,17 @@
+package com.back.b2st.domain.reservation.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.back.b2st.domain.reservation.dto.response.ReservationSeatInfo;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
+
+@Repository
+public interface ReservationSeatRepository extends JpaRepository<ReservationSeat, Long> {
+
+	List<ReservationSeatInfo> findSeatInfos(Long reservationId);
+
+	List<ReservationSeat> findByReservationId(Long reservationId);
+}

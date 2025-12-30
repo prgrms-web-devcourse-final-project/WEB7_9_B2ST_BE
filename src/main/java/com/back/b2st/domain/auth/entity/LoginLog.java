@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "login_logs", indexes = {
 	@Index(name = "idx_login_log_email", columnList = "email"),
 	@Index(name = "idx_login_log_client_ip", columnList = "clientIp"),

@@ -32,7 +32,9 @@ import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
@@ -68,6 +70,7 @@ public class DataInitializer implements CommandLineRunner {
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final SeatGradeRepository seatGradeRepository;
 	private final ReservationRepository reservationRepository;
+	private final ReservationSeatRepository reservationSeatRepository;
 	private final PaymentRepository paymentRepository;
 	private final TicketRepository ticketRepository;
 	private final LotteryEntryRepository lotteryEntryRepository;
@@ -303,12 +306,20 @@ public class DataInitializer implements CommandLineRunner {
 			Reservation reservation = Reservation.builder()
 				.scheduleId(performanceSchedule.getPerformanceScheduleId())
 				.memberId(user1.getId())
-				.seatId(reservedSeat.getId())
 				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 
-			reservation.complete(LocalDateTime.now());
 			Reservation savedReservation = reservationRepository.save(reservation);
+
+			// Reservation ↔ ScheduleSeat 연결
+			reservationSeatRepository.save(
+				ReservationSeat.builder()
+					.reservationId(savedReservation.getId())
+					.scheduleSeatId(reservedScheduleSeat.getId())
+					.build()
+			);
+
+			reservation.complete(LocalDateTime.now());
 
 			// 결제 생성 (DONE 상태)
 			Payment payment = Payment.builder()
@@ -361,11 +372,18 @@ public class DataInitializer implements CommandLineRunner {
 		Reservation paidReservation = Reservation.builder()
 			.scheduleId(performanceSchedule.getPerformanceScheduleId())
 			.memberId(user1.getId())
-			.seatId(paidSeat.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 
 		Reservation savedPaidReservation = reservationRepository.save(paidReservation);
+
+		// Reservation ↔ ScheduleSeat 연결
+		reservationSeatRepository.save(
+			ReservationSeat.builder()
+				.reservationId(savedPaidReservation.getId())
+				.scheduleSeatId(paidScheduleSeat.getId())
+				.build()
+		);
 
 		// codeisneverodd@gmail.com에 2개의 티켓 생성
 		Member user3 = memberRepository.findByEmail("codeisneverodd@gmail.com")
@@ -389,12 +407,19 @@ public class DataInitializer implements CommandLineRunner {
 			Reservation reservation = Reservation.builder()
 				.scheduleId(performanceSchedule.getPerformanceScheduleId())
 				.memberId(user3.getId())
-				.seatId(reservedSeat.getId())
 				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 
-			reservation.complete(LocalDateTime.now());
 			Reservation savedReservation = reservationRepository.save(reservation);
+
+			reservationSeatRepository.save(
+				ReservationSeat.builder()
+					.reservationId(savedReservation.getId())
+					.scheduleSeatId(reservedScheduleSeat.getId())
+					.build()
+			);
+
+			reservation.complete(LocalDateTime.now());
 
 			// 결제 생성 (DONE 상태)
 			Payment payment = Payment.builder()

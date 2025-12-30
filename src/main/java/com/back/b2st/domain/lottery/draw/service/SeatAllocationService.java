@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.lottery.result.dto.LotteryReservationInfo;
+import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
@@ -23,10 +24,14 @@ public class SeatAllocationService {
 
 	private final ScheduleSeatRepository scheduleSeatRepository;
 	private final ReservationRepository reservationRepository;
+	private final LotteryResultRepository lotteryResultRepository;
+
+	public List<LotteryReservationInfo> findReservationInfos() {
+		return lotteryResultRepository.findReservationInfoByPaidIsTrue();
+	}
 
 	@Transactional
-	public List<Reservation> allocateSeatsForLottery(LotteryReservationInfo info) {
-
+	public List<ScheduleSeat> allocateSeatsForLottery(LotteryReservationInfo info) {
 		// AVAILABLE 좌석 조회
 		List<ScheduleSeat> availableSeats = scheduleSeatRepository.findAvailableSeatsByGrade(
 			info.scheduleId(),
@@ -49,8 +54,20 @@ public class SeatAllocationService {
 
 		allocatedSeats.forEach(ScheduleSeat::sold);
 
-		// 예매 생성
-		List<Reservation> reservations = allocatedSeats.stream()
+		log.info("좌석 배정 완료 - resultId: {}, memberId: {}, 배정 좌석 수: {}",
+			info.resultId(), info.memberId(), allocatedSeats.size());
+
+		return allocatedSeats;
+
+	}
+
+	/**
+	 * 예매 생성
+	 */
+	private List<Reservation> createReservation(
+		LotteryReservationInfo info, List<ScheduleSeat> seats
+	) {
+		List<Reservation> reservations = seats.stream()
 			.map(seat -> createReservation(info, seat))
 			.toList();
 

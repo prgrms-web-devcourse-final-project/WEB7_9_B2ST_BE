@@ -203,6 +203,28 @@ public class TestFixture {
 		repo.saveAll(grades);
 	}
 
+	public static void createSeatGrades(
+		Performance performance,
+		List<Seat> seats,
+		SeatGradeType gradeType,
+		Integer price,
+		SeatGradeRepository repo
+	) {
+		List<SeatGrade> grades = IntStream.range(0, seats.size())
+			.mapToObj(i -> {
+				int group = (i % 15) / 5;
+				return SeatGrade.builder()
+					.performanceId(performance.getPerformanceId())
+					.seatId(seats.get(i).getId())
+					.grade(gradeType)
+					.price(price)
+					.build();
+			})
+			.toList();
+
+		repo.saveAll(grades);
+	}
+
 	/**
 	 * 추첨 응모 생성
 	 */
@@ -227,9 +249,31 @@ public class TestFixture {
 		return repo.saveAll(lotteryEntries);
 	}
 
+	public static List<LotteryEntry> createLotteryEntry(
+		List<Member> members,
+		Performance performance,
+		PerformanceSchedule performanceSchedule,
+		SeatGradeType seatGradeType,
+		Integer quantity,
+		LotteryEntryRepository repo
+	) {
+		List<LotteryEntry> lotteryEntries = IntStream.range(0, members.size())
+			.mapToObj(i -> {
+				return LotteryEntry.builder()
+					.memberId(members.get(i).getId())
+					.performanceId(performance.getPerformanceId())
+					.scheduleId(performanceSchedule.getPerformanceScheduleId())
+					.grade(seatGradeType)
+					.quantity(quantity)
+					.build();
+			}).toList();
+
+		return repo.saveAll(lotteryEntries);
+	}
+
 	/**
 	 * ScheduleSeat 생성
-	 * createScheduleSeats(scheduleId, seats, scheduleSeatRepo);
+	 * createScheduleSeats(scheduleId, seats, scheduleSeatRepository);
 	 */
 	public static List<ScheduleSeat> createScheduleSeats(
 		Long scheduleId,

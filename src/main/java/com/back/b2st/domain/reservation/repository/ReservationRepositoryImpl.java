@@ -3,13 +3,13 @@ package com.back.b2st.domain.reservation.repository;
 import static com.back.b2st.domain.performance.entity.QPerformance.*;
 import static com.back.b2st.domain.performanceschedule.entity.QPerformanceSchedule.*;
 import static com.back.b2st.domain.reservation.entity.QReservation.*;
-import static com.back.b2st.domain.seat.seat.entity.QSeat.*;
 
 import java.util.List;
 
 import org.springframework.stereotype.Repository;
 
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
+import com.back.b2st.domain.reservation.dto.response.ReservationRes;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
@@ -37,14 +37,6 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 						performance.category,
 						performance.startDate,
 						performanceSchedule.startAt
-					),
-					Projections.constructor(
-						ReservationDetailRes.SeatInfo.class,
-						seat.id,
-						seat.sectionId,
-						seat.sectionName,
-						seat.rowLabel,
-						seat.seatNumber
 					)
 				)
 			)
@@ -53,8 +45,6 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 			.on(reservation.scheduleId.eq(performanceSchedule.performanceScheduleId))
 			.join(performance)
 			.on(performanceSchedule.performance.eq(performance))
-			.join(seat)
-			.on(reservation.seatId.eq(seat.id))
 			.where(
 				reservation.id.eq(reservationId),
 				reservation.memberId.eq(memberId)
@@ -63,29 +53,21 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 	}
 
 	@Override
-	public List<ReservationDetailRes> findMyReservationDetails(Long memberId) {
+	public List<ReservationRes> findMyReservations(Long memberId) {
 		return queryFactory
 			.select(
 				Projections.constructor(
-					ReservationDetailRes.class,
+					ReservationRes.class,
 					reservation.id,
 					reservation.status.stringValue(),
 					Projections.constructor(
-						ReservationDetailRes.PerformanceInfo.class,
+						ReservationRes.PerformanceInfo.class,
 						performance.performanceId,
 						performanceSchedule.performanceScheduleId,
 						performance.title,
 						performance.category,
 						performance.startDate,
 						performanceSchedule.startAt
-					),
-					Projections.constructor(
-						ReservationDetailRes.SeatInfo.class,
-						seat.id,
-						seat.sectionId,
-						seat.sectionName,
-						seat.rowLabel,
-						seat.seatNumber
 					)
 				)
 			)
@@ -94,8 +76,6 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 			.on(reservation.scheduleId.eq(performanceSchedule.performanceScheduleId))
 			.join(performance)
 			.on(performanceSchedule.performance.eq(performance))
-			.join(seat)
-			.on(reservation.seatId.eq(seat.id))
 			.where(reservation.memberId.eq(memberId))
 			.orderBy(reservation.createdAt.desc())
 			.fetch();

@@ -77,6 +77,13 @@ public class RedissonConfig {
 	public RedissonClient redissonClient() {
 		Config config = new Config();
 
+		// Redisson 4.0: Config 레벨에서 password, TCP 설정
+		if (StringUtils.hasText(redisPassword)) {
+			config.setPassword(redisPassword);
+		}
+		config.setTcpKeepAlive(true);
+		config.setTcpNoDelay(true);
+
 		switch (redisMode.toLowerCase()) {
 			case "sentinel" -> {
 				log.info("Redis Sentinel 모드로 Redisson 클라이언트 구성");
@@ -117,7 +124,6 @@ public class RedissonConfig {
 		config.useSentinelServers()
 			.setMasterName(sentinelMaster)
 			.addSentinelAddress(sentinelAddresses)
-			.setPassword(StringUtils.hasText(redisPassword) ? redisPassword : null)
 			.setDatabase(0)
 			// Master 연결 풀 설정
 			.setMasterConnectionPoolSize(10)
@@ -164,7 +170,6 @@ public class RedissonConfig {
 
 		config.useClusterServers()
 			.addNodeAddress(nodeAddresses)
-			.setPassword(StringUtils.hasText(redisPassword) ? redisPassword : null)
 			// 클러스터 노드 스캔 간격 (밀리초) - 대규모 트래픽에서는 더 자주 스캔
 			.setScanInterval(clusterScanInterval)
 			// Master 연결 풀 설정 (대규모 트래픽: 64개)
@@ -186,8 +191,9 @@ public class RedissonConfig {
 			// 대규모 트래픽 최적화
 			.setIdleConnectionTimeout(10000)
 			.setPingConnectionInterval(30000)
-			.setKeepAlive(true)
-			.setTcpNoDelay(true);
+			// Redisson 4.0+에서 모든 슬롯이 커버되지 않아도 연결 시도
+			// (클러스터 초기화 중이거나 cluster-announce-ip 설정이 전파되는 동안 발생할 수 있음)
+			.setCheckSlotsCoverage(false);
 
 		log.info("Cluster 구성 완료 (대규모 트래픽 최적화) - Nodes: {}, " +
 				"Master Pool: {}, Slave Pool: {}, Timeout: {}ms",
@@ -205,7 +211,6 @@ public class RedissonConfig {
 
 		config.useSingleServer()
 			.setAddress(address)
-			.setPassword(StringUtils.hasText(redisPassword) ? redisPassword : null)
 			.setConnectionPoolSize(10)
 			.setConnectionMinimumIdleSize(2)
 			.setRetryAttempts(3)

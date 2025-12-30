@@ -15,6 +15,11 @@ import org.springframework.util.StringUtils;
  * Redisson 설정
  *
  * 분산 락(Distributed Lock)을 위한 Redisson Client 설정
+ *
+ * 지원 모드:
+ * - single: 단일 Redis 서버
+ * - sentinel: Redis Sentinel
+ * - cluster: Redis Cluster
  */
 @Configuration
 @ConditionalOnProperty(name = "queue.enabled", havingValue = "true", matchIfMissing = false)
@@ -92,8 +97,6 @@ public class RedissonConfig {
 
 	/**
 	 * Sentinel 모드 설정
-	 *
-	 * Master-Slave 자동 전환 지원
 	 */
 	private void configureSentinel(Config config) {
 		if (!StringUtils.hasText(sentinelNodes)) {
@@ -119,7 +122,7 @@ public class RedissonConfig {
 			// Master 연결 풀 설정
 			.setMasterConnectionPoolSize(10)
 			.setMasterConnectionMinimumIdleSize(2)
-			// Slave 연결 풀 설정
+			// Slave 연결 풀 설정 (읽기 부하 분산)
 			.setSlaveConnectionPoolSize(10)
 			.setSlaveConnectionMinimumIdleSize(2)
 			// 재시도 설정
@@ -133,7 +136,15 @@ public class RedissonConfig {
 	}
 
 	/**
-	 * Cluster 모드 설정
+	 * Cluster 모드 설정 (대규모 트래픽 최적화)
+	 *
+	 * 수평 확장 지원 (샤딩)
+	 * 최소 6개 노드 권장 (3 Master + 3 Slave)
+	 *
+	 * 대규모 트래픽 최적화:
+	 * - Connection Pool 크기 증가 (64개)
+	 * - 타임아웃 최적화
+	 * - 읽기 부하 분산 (Slave에서 읽기)
 	 */
 	private void configureCluster(Config config) {
 		if (!StringUtils.hasText(clusterNodes)) {
@@ -154,22 +165,25 @@ public class RedissonConfig {
 		config.useClusterServers()
 			.addNodeAddress(nodeAddresses)
 			.setPassword(StringUtils.hasText(redisPassword) ? redisPassword : null)
-			// 클러스터 노드 스캔 간격 (밀리초)
+			// 클러스터 노드 스캔 간격 (밀리초) - 대규모 트래픽에서는 더 자주 스캔
 			.setScanInterval(clusterScanInterval)
-			// Master 연결 풀 설정
+			// Master 연결 풀 설정 (대규모 트래픽: 64개)
 			.setMasterConnectionPoolSize(clusterMasterConnectionPoolSize)
 			.setMasterConnectionMinimumIdleSize(clusterMasterConnectionMinimumIdleSize)
-			// Slave 연결 풀 설정
+			// Slave 연결 풀 설정 (읽기 부하 분산)
 			.setSlaveConnectionPoolSize(clusterSlaveConnectionPoolSize)
 			.setSlaveConnectionMinimumIdleSize(clusterSlaveConnectionMinimumIdleSize)
-			// 읽기 모드: Master에서만 읽기
-			.setReadMode(org.redisson.config.ReadMode.SLAVE) // Slave에서 읽기로 부하 분산
+			// 읽기 모드: Master에서만 읽기 (일관성) 또는 Slave에서 읽기 (성능)
+			// 일반 읽기는 SLAVE에서 읽어도 되지만, 락은 MASTER 필수
+			// 현재는 SLAVE로 설정하되, 락은 별도로 MASTER 연결 사용 (Redisson이 자동 처리)
+			.setReadMode(org.redisson.config.ReadMode.SLAVE) // 일반 읽기: Slave에서 읽기로 부하 분산
 			// 재시도 설정
 			.setRetryAttempts(3)
 			.setRetryInterval(1500)
-			// 타임아웃 설정
+			// 타임아웃 설정 (대규모 트래픽: 더 긴 타임아웃)
 			.setTimeout(clusterTimeout)
 			.setConnectTimeout(clusterConnectTimeout)
+			// 대규모 트래픽 최적화
 			.setIdleConnectionTimeout(10000)
 			.setPingConnectionInterval(30000)
 			.setKeepAlive(true)

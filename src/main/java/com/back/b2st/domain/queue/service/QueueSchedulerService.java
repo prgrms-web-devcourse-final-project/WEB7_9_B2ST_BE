@@ -79,7 +79,14 @@ public class QueueSchedulerService {
 
 		int availableSlots = queue.getMaxActiveUsers() - currentEnterable.intValue();
 
-		if (availableSlots <= 0) {
+		// 과대/과소평가 방지
+		if (availableSlots < 0) {
+			log.warn("availableSlots 음수 감지 (정합성 이슈 가능) - queueId: {}, current: {}, max: {}",
+				queueId, currentEnterable, queue.getMaxActiveUsers());
+			return;
+		}
+
+		if (availableSlots == 0) {
 			log.debug("입장 가능 인원 없음 - queueId: {}, current: {}, max: {}",
 				queueId, currentEnterable, queue.getMaxActiveUsers());
 			return;
@@ -185,7 +192,7 @@ public class QueueSchedulerService {
 	}
 
 	/**
-	 * 테스트용: 내 앞 사람들 모두 입장 처리 (분산 락 적용)
+	 * 테스트용: 내 앞 사람들 모두 입장 처리
 	 */
 	@Transactional
 	public int processUntilMeForTest(Long queueId, Long userId) {
@@ -309,7 +316,6 @@ public class QueueSchedulerService {
 	 */
 	private Long getEnterableCount(Long queueId) {
 		try {
-			// ⚠️ 현재 enterable 수 사용 (누적이 아님)
 			Long count = queueRedisRepository.getTotalEnterableCount(queueId);
 			return count != null ? count : 0L;
 		} catch (Exception e) {

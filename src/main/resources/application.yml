@@ -114,6 +114,12 @@ queue:
     fallback-enabled: true
   test:
     enabled: false  # clearAll() 메서드 활성화 (테스트 전용, 운영에서는 false)
+  cleanup:
+    expired:
+      fixedDelayMs: 60000  # 만료 정리 주기 (기본 60초)
+    stale:
+      fixedDelayMs: 60000  # stale 정리 주기 (기본 60초)
+      enabled: false  # 기본 false 권장 (Redis 안정성 확보 후 true)
 
 logging:
   level:

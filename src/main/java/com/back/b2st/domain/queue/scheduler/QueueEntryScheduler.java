@@ -51,26 +51,32 @@ public class QueueEntryScheduler {
 	 */
 	@Scheduled(fixedDelayString = "${queue.scheduler.fixed-delay:10000}")
 	public void autoProcessQueueEntries() {
-		// 단일 Redis면 락 불필요 (멘토 피드백)
+		//  락 조건: redisMode 기준
+		// - redisMode == "single": 단일 Redis → 락 없이 실행
+		// - redisMode == "cluster": Redis Cluster → 리더 락 사용
 		if ("single".equals(redisMode)) {
 			log.debug("단일 Redis 모드 - 리더 락 없이 실행");
 			processAllQueues();
 			return;
 		}
 
+		// Redis Cluster 모드: 리더 락 사용
 		String leaderLockKey = "queue:scheduler:leader";
 		RLock leaderLock = redissonClient.getLock(leaderLockKey);
 
 		try {
-			// 리더 락 획득 시도 (최대 3초 대기, 30초 후 자동 해제)
-			boolean acquired = leaderLock.tryLock(3, 30, TimeUnit.SECONDS);
+			// 리더 락 획득 시도
+			long waitTime = 3;
+			long leaseTime = 300; // 락 유지 시간
+
+			boolean acquired = leaderLock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
 
 			if (!acquired) {
 				log.debug("스케줄러 리더 락 획득 실패 (다른 서버에서 실행 중)");
 				return;
 			}
 
-			log.debug("스케줄러 리더 락 획득 성공 - 모든 대기열 처리 시작");
+			log.debug("스케줄러 리더 락 획득 성공 - 모든 대기열 처리 시작 (lease time: {}초)", leaseTime);
 
 			// 리더로 선출된 서버만 모든 대기열 처리
 			processAllQueues();
@@ -111,7 +117,6 @@ public class QueueEntryScheduler {
 					// queueId별 락은 제거하고 리더 락만 사용
 					queueSchedulerService.processNextEntries(queue.getId(), batchSize);
 				} catch (Exception e) {
-					// 특정 대기열 실패해도 다른 대기열 처리는 계속
 					log.error("대기열 자동 입장 처리 실패 - queueId: {}", queue.getId(), e);
 				}
 			}

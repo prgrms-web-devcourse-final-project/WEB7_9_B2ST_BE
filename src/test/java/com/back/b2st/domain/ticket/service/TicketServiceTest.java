@@ -133,7 +133,6 @@ class TicketServiceTest {
 		Reservation reservation = Reservation.builder()
 			.scheduleId(savedSchedule.getPerformanceScheduleId())
 			.memberId(savedMember.getId())
-			.seatId(savedSeat.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation savedReservation = reservationRepository.save(reservation);

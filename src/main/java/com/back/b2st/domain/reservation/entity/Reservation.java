@@ -25,7 +25,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "reservation",
 	indexes = {
 		@Index(name = "idx_reservation_member", columnList = "member_id"),
-		@Index(name = "idx_reservation_schedule_seat_status", columnList = "schedule_id, seat_id, status"),
 		@Index(name = "idx_reservation_status_expires", columnList = "status, expires_at")
 	}
 )
@@ -47,9 +46,6 @@ public class Reservation extends BaseEntity {
 	@Column(name = "member_id", nullable = false)
 	private Long memberId;    // 예매자 FK
 
-	@Column(name = "seat_id", nullable = false)
-	private Long seatId;    // 좌석 FK
-
 	@Column(name = "canceled_at")
 	private LocalDateTime canceledAt;
 
@@ -67,12 +63,10 @@ public class Reservation extends BaseEntity {
 	public Reservation(
 		Long scheduleId,
 		Long memberId,
-		Long seatId,
 		LocalDateTime expiresAt
 	) {
 		this.scheduleId = scheduleId;
 		this.memberId = memberId;
-		this.seatId = seatId;
 		this.expiresAt = expiresAt;
 		this.status = ReservationStatus.PENDING;
 	}
@@ -97,6 +91,11 @@ public class Reservation extends BaseEntity {
 	}
 
 	/** === 임시 호환 코드 === */
+	@Deprecated
+	@Column(name = "seat_id")
+	// TODO: ReservationSeat 전환 완료 후 제거 예정
+	private Long seatId;    // 좌석 FK
+
 	@Deprecated
 	public static class ReservationBuilder {
 

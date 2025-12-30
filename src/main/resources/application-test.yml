@@ -37,8 +37,6 @@ spring:
       host: localhost
       port: 6379
       password: ""
-      timeout: 3000ms
-      # cluster 설정 제거 (test 환경에서는 single mode 사용)
 
   mail:
     host: localhost

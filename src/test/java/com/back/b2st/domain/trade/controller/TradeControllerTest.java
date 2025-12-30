@@ -189,7 +189,6 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 			Reservation reservation = Reservation.builder()
 				.scheduleId(savedSchedule.getPerformanceScheduleId())
 				.memberId(testMemberId)
-				.seatId(savedSeat.getId())
 				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 			Reservation savedReservation = reservationRepository.save(reservation);

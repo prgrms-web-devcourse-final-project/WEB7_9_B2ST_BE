@@ -258,7 +258,6 @@ class TradeRequestControllerTest {
 		Reservation reservation = reservationRepository.save(Reservation.builder()
 			.scheduleId(scheduleId)
 			.memberId(memberId)
-			.seatId(seat.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build());
 		Ticket ticket = ticketRepository.save(Ticket.builder()

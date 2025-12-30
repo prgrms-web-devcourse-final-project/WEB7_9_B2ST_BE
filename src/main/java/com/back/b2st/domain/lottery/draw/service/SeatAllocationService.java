@@ -1,3 +1,4 @@
+/*
 package com.back.b2st.domain.lottery.draw.service;
 
 import java.time.LocalDateTime;
@@ -61,9 +62,11 @@ public class SeatAllocationService {
 
 	}
 
-	/**
-	 * 예매 생성
-	 */
+	*/
+/**
+ * 예매 생성
+ *//*
+
 	private List<Reservation> createReservation(
 		LotteryReservationInfo info, List<ScheduleSeat> seats
 	) {
@@ -92,3 +95,4 @@ public class SeatAllocationService {
 		return reservation;
 	}
 }
+*/

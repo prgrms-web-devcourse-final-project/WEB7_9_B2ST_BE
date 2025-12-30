@@ -90,7 +90,6 @@ class TradeServiceTest {
 		Reservation mockReservation = Reservation.builder()
 			.scheduleId(1L)
 			.memberId(memberId)
-			.seatId(1L)
 			.build();
 
 		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
@@ -157,7 +156,6 @@ class TradeServiceTest {
 		Reservation mockReservation = Reservation.builder()
 			.scheduleId(1L)
 			.memberId(memberId)
-			.seatId(1L)
 			.build();
 
 		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
@@ -279,7 +277,6 @@ class TradeServiceTest {
 		Reservation mockReservation = Reservation.builder()
 			.scheduleId(1L)
 			.memberId(memberId)
-			.seatId(1L)
 			.build();
 
 		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));

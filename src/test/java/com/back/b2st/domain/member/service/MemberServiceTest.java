@@ -12,13 +12,16 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
+import com.back.b2st.domain.member.dto.event.SignupEvent;
 import com.back.b2st.domain.member.dto.request.PasswordChangeReq;
 import com.back.b2st.domain.member.dto.request.SignupReq;
 import com.back.b2st.domain.member.dto.request.WithdrawReq;
@@ -49,6 +52,9 @@ class MemberServiceTest {
 
 	@Mock
 	private SignupRateLimitService signupRateLimitService;
+
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	// 테스트용 상수
 	private static final String TEST_CLIENT_IP = "192.168.1.100";
@@ -91,6 +97,14 @@ class MemberServiceTest {
 			// then
 			assertThat(memberId).isEqualTo(1L);
 			then(signupRateLimitService).should().checkSignupLimit(TEST_CLIENT_IP);
+
+			// 가입 이벤트 발행 검증
+			ArgumentCaptor<SignupEvent> eventCaptor = ArgumentCaptor.forClass(SignupEvent.class);
+			then(eventPublisher).should().publishEvent(eventCaptor.capture());
+
+			SignupEvent publishedEvent = eventCaptor.getValue();
+			assertThat(publishedEvent.email()).isEqualTo(request.email());
+			assertThat(publishedEvent.clientIp()).isEqualTo(TEST_CLIENT_IP);
 		}
 
 		@Test

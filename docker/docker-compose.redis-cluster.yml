@@ -6,12 +6,20 @@ services:
     image: redis:7-alpine
     command:
       - redis-server
+      - --port
+      - "7000"
       - --cluster-enabled
       - "yes"
       - --cluster-config-file
       - nodes-1.conf
       - --cluster-node-timeout
       - "5000"
+      - --cluster-announce-ip
+      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      - --cluster-announce-port
+      - "7000"
+      - --cluster-announce-bus-port
+      - "17000"
       - --appendonly
       - "yes"
       - --save
@@ -25,7 +33,8 @@ services:
       - --masterauth
       - ${REDIS_PASSWORD:-your-password}
     ports:
-      - "7000:6379"
+      - "7000:7000"
+      - "17000:17000"
     volumes:
       - redis-node-1-data:/data
     networks:
@@ -37,12 +46,20 @@ services:
     image: redis:7-alpine
     command:
       - redis-server
+      - --port
+      - "7001"
       - --cluster-enabled
       - "yes"
       - --cluster-config-file
       - nodes-2.conf
       - --cluster-node-timeout
       - "5000"
+      - --cluster-announce-ip
+      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      - --cluster-announce-port
+      - "7001"
+      - --cluster-announce-bus-port
+      - "17001"
       - --appendonly
       - "yes"
       - --save
@@ -56,7 +73,8 @@ services:
       - --masterauth
       - ${REDIS_PASSWORD:-your-password}
     ports:
-      - "7001:6379"
+      - "7001:7001"
+      - "17001:17001"
     volumes:
       - redis-node-2-data:/data
     networks:
@@ -68,12 +86,20 @@ services:
     image: redis:7-alpine
     command:
       - redis-server
+      - --port
+      - "7002"
       - --cluster-enabled
       - "yes"
       - --cluster-config-file
       - nodes-3.conf
       - --cluster-node-timeout
       - "5000"
+      - --cluster-announce-ip
+      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      - --cluster-announce-port
+      - "7002"
+      - --cluster-announce-bus-port
+      - "17002"
       - --appendonly
       - "yes"
       - --save
@@ -87,7 +113,8 @@ services:
       - --masterauth
       - ${REDIS_PASSWORD:-your-password}
     ports:
-      - "7002:6379"
+      - "7002:7002"
+      - "17002:17002"
     volumes:
       - redis-node-3-data:/data
     networks:
@@ -99,12 +126,20 @@ services:
     image: redis:7-alpine
     command:
       - redis-server
+      - --port
+      - "7003"
       - --cluster-enabled
       - "yes"
       - --cluster-config-file
       - nodes-4.conf
       - --cluster-node-timeout
       - "5000"
+      - --cluster-announce-ip
+      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      - --cluster-announce-port
+      - "7003"
+      - --cluster-announce-bus-port
+      - "17003"
       - --appendonly
       - "yes"
       - --save
@@ -118,7 +153,8 @@ services:
       - --masterauth
       - ${REDIS_PASSWORD:-your-password}
     ports:
-      - "7003:6379"
+      - "7003:7003"
+      - "17003:17003"
     volumes:
       - redis-node-4-data:/data
     networks:
@@ -130,12 +166,20 @@ services:
     image: redis:7-alpine
     command:
       - redis-server
+      - --port
+      - "7004"
       - --cluster-enabled
       - "yes"
       - --cluster-config-file
       - nodes-5.conf
       - --cluster-node-timeout
       - "5000"
+      - --cluster-announce-ip
+      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      - --cluster-announce-port
+      - "7004"
+      - --cluster-announce-bus-port
+      - "17004"
       - --appendonly
       - "yes"
       - --save
@@ -149,7 +193,8 @@ services:
       - --masterauth
       - ${REDIS_PASSWORD:-your-password}
     ports:
-      - "7004:6379"
+      - "7004:7004"
+      - "17004:17004"
     volumes:
       - redis-node-5-data:/data
     networks:
@@ -161,12 +206,20 @@ services:
     image: redis:7-alpine
     command:
       - redis-server
+      - --port
+      - "7005"
       - --cluster-enabled
       - "yes"
       - --cluster-config-file
       - nodes-6.conf
       - --cluster-node-timeout
       - "5000"
+      - --cluster-announce-ip
+      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      - --cluster-announce-port
+      - "7005"
+      - --cluster-announce-bus-port
+      - "17005"
       - --appendonly
       - "yes"
       - --save
@@ -180,7 +233,8 @@ services:
       - --masterauth
       - ${REDIS_PASSWORD:-your-password}
     ports:
-      - "7005:6379"
+      - "7005:7005"
+      - "17005:17005"
     volumes:
       - redis-node-6-data:/data
     networks:

@@ -18,11 +18,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
+import com.back.b2st.domain.reservation.dto.response.SeatReservationResult;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.scheduleseat.service.ScheduleSeatService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,9 +34,6 @@ class ReservationServiceTest {
 	@Mock
 	private ReservationSeatManager reservationSeatManager;
 
-	@Mock
-	private ScheduleSeatService scheduleSeatService;
-
 	@InjectMocks
 	private ReservationService reservationService;
 
@@ -45,9 +42,10 @@ class ReservationServiceTest {
 	private static final Long RESERVATION_ID = 10L;
 	private static final Long SCHEDULE_ID = 100L;
 	private static final Long SEAT_ID = 200L;
+	private static final Long SCHEDULE_SEAT_ID = 300L;
 
 	@Test
-	@DisplayName("createReservation(): 정상 생성 시 Reservation 저장 + 좌석 귀속 위임")
+	@DisplayName("createReservation(): 정상 생성 시 Reservation 저장 + 좌석 귀속")
 	void createReservation_success() {
 		// given
 		ReservationReq request = mock(ReservationReq.class);
@@ -56,8 +54,21 @@ class ReservationServiceTest {
 		when(request.scheduleId()).thenReturn(SCHEDULE_ID);
 		when(request.seatIds()).thenReturn(List.of(SEAT_ID));
 
-		when(scheduleSeatService.getHoldExpiredAtOrThrow(SCHEDULE_ID, SEAT_ID))
-			.thenReturn(expiresAt);
+		when(reservationSeatManager.prepareSeatReservation(
+			SCHEDULE_ID,
+			List.of(SEAT_ID),
+			MEMBER_ID
+		)).thenReturn(
+			new SeatReservationResult(List.of(SCHEDULE_SEAT_ID), expiresAt)
+		);
+
+		when(reservationRepository.existsCompletedByScheduleSeat(SCHEDULE_ID, SEAT_ID))
+			.thenReturn(false);
+		when(reservationRepository.existsActivePendingByScheduleSeat(
+			eq(SCHEDULE_ID),
+			eq(SEAT_ID),
+			any(LocalDateTime.class)
+		)).thenReturn(false);
 
 		Reservation reservation = Reservation.builder()
 			.memberId(MEMBER_ID)
@@ -76,20 +87,17 @@ class ReservationServiceTest {
 		assertThat(result).isNotNull();
 
 		verify(reservationRepository).save(reservation);
-		verify(reservationSeatManager).attachSeatsForReservation(
+		verify(reservationSeatManager).attachSeats(
 			reservation.getId(),
-			SCHEDULE_ID,
-			List.of(SEAT_ID),
-			MEMBER_ID
+			List.of(SCHEDULE_SEAT_ID)
 		);
 	}
 
 	@Test
-	@DisplayName("createReservation(): 좌석 1개 초과면 INVALID_SEAT_COUNT")
+	@DisplayName("createReservation(): 좌석이 1개가 아니면 INVALID_SEAT_COUNT")
 	void createReservation_invalidSeatCount_throw() {
 		// given
 		ReservationReq request = mock(ReservationReq.class);
-
 		when(request.seatIds()).thenReturn(List.of(1L, 2L));
 
 		// when & then
@@ -105,17 +113,33 @@ class ReservationServiceTest {
 	}
 
 	@Test
-	@DisplayName("cancelReservation(): 정상 취소 시 좌석 해제 위임")
+	@DisplayName("failReservation(): PENDING → FAILED + 좌석 해제")
+	void failReservation_success() {
+		// given
+		Reservation reservation = mock(Reservation.class);
+
+		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
+			.thenReturn(Optional.of(reservation));
+		when(reservation.getStatus()).thenReturn(ReservationStatus.PENDING);
+
+		// when
+		reservationService.failReservation(RESERVATION_ID);
+
+		// then
+		verify(reservation).fail();
+		verify(reservationSeatManager).releaseAllSeats(RESERVATION_ID);
+	}
+
+	@Test
+	@DisplayName("cancelReservation(): 정상 취소 시 좌석 해제")
 	void cancelReservation_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
-		ReservationStatus status = mock(ReservationStatus.class);
 
 		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
 			.thenReturn(Optional.of(reservation));
 		when(reservation.getMemberId()).thenReturn(MEMBER_ID);
-		when(reservation.getStatus()).thenReturn(status);
-		when(status.canCancel()).thenReturn(true);
+		when(reservation.getStatus()).thenReturn(ReservationStatus.PENDING);
 
 		// when
 		reservationService.cancelReservation(RESERVATION_ID, MEMBER_ID);
@@ -150,37 +174,16 @@ class ReservationServiceTest {
 	}
 
 	@Test
-	@DisplayName("failReservation(): PENDING → FAILED 전환 + 좌석 해제")
-	void failReservation_success() {
-		// given
-		Reservation reservation = mock(Reservation.class);
-		ReservationStatus status = mock(ReservationStatus.class);
-
-		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
-			.thenReturn(Optional.of(reservation));
-		when(reservation.getStatus()).thenReturn(status);
-		when(status.canFail()).thenReturn(true);
-
-		// when
-		reservationService.failReservation(RESERVATION_ID);
-
-		// then
-		verify(reservation).fail();
-		verify(reservationSeatManager).releaseAllSeats(RESERVATION_ID);
-	}
-
-	@Test
-	@DisplayName("expireReservation(): 만료 조건 충족 시 EXPIRE + 좌석 해제")
+	@DisplayName("expireReservation(): 만료 조건 충족 시 EXPIRED + 좌석 해제")
 	void expireReservation_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
-		ReservationStatus status = mock(ReservationStatus.class);
 
 		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
 			.thenReturn(Optional.of(reservation));
-		when(reservation.getStatus()).thenReturn(status);
-		when(status.canExpire()).thenReturn(true);
-		when(reservation.getExpiresAt()).thenReturn(LocalDateTime.now().minusSeconds(1));
+		when(reservation.getStatus()).thenReturn(ReservationStatus.PENDING);
+		when(reservation.getExpiresAt())
+			.thenReturn(LocalDateTime.now().minusSeconds(1));
 
 		// when
 		reservationService.expireReservation(RESERVATION_ID);
@@ -191,17 +194,16 @@ class ReservationServiceTest {
 	}
 
 	@Test
-	@DisplayName("expireReservation(): expiresAt 안 지났으면 아무 작업 안 함")
-	void expireReservation_notExpired_then_noop() {
+	@DisplayName("expireReservation(): 아직 만료되지 않으면 아무 작업도 하지 않는다")
+	void expireReservation_notExpired_noop() {
 		// given
 		Reservation reservation = mock(Reservation.class);
-		ReservationStatus status = mock(ReservationStatus.class);
 
 		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
 			.thenReturn(Optional.of(reservation));
-		when(reservation.getStatus()).thenReturn(status);
-		when(status.canExpire()).thenReturn(true);
-		when(reservation.getExpiresAt()).thenReturn(LocalDateTime.now().plusMinutes(1));
+		when(reservation.getStatus()).thenReturn(ReservationStatus.PENDING);
+		when(reservation.getExpiresAt())
+			.thenReturn(LocalDateTime.now().plusMinutes(1));
 
 		// when
 		reservationService.expireReservation(RESERVATION_ID);

@@ -1,11 +1,11 @@
 package com.back.b2st.domain.scheduleseat.service;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -46,44 +46,26 @@ class ScheduleSeatStateServiceTest {
 	private static final Long SEAT_ID = 100L;
 
 	@Test
-	@DisplayName("holdSeat(): prereservation 검증 실패 시 락을 시도하지 않는다")
-	void holdSeat_prereservationFailed_noLock() {
-		doThrow(new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND))
-			.when(prereservationService)
-			.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID);
-
-		assertThrows(
-			BusinessException.class,
-			() -> scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID)
-		);
-
-		verify(scheduleSeatLockService, never()).tryLock(anyLong(), anyLong(), anyLong());
-		verify(scheduleSeatRepository, never())
-			.findByScheduleIdAndSeatIdWithLock(anyLong(), anyLong());
-		verify(seatHoldTokenService, never()).save(anyLong(), anyLong(), anyLong());
-		verify(scheduleSeatLockService, never()).unlock(anyLong(), anyLong(), anyString());
-	}
-
-	@Test
-	@DisplayName("holdSeat(): 락 획득 실패 시 SEAT_LOCK_FAILED 예외")
+	@DisplayName("holdSeat(): 락 획득 실패 시 SEAT_LOCK_FAILED")
 	void holdSeat_lockFailed_throw() {
 		when(scheduleSeatLockService.tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID))
 			.thenReturn(null);
 
-		assertThrows(
-			BusinessException.class,
-			() -> scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID)
-		);
+		assertThatThrownBy(() ->
+			scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID)
+		)
+			.isInstanceOf(BusinessException.class)
+			.extracting(e -> ((BusinessException)e).getErrorCode())
+			.isEqualTo(ScheduleSeatErrorCode.SEAT_LOCK_FAILED);
 
 		verify(scheduleSeatRepository, never())
 			.findByScheduleIdAndSeatIdWithLock(anyLong(), anyLong());
 		verify(seatHoldTokenService, never()).save(anyLong(), anyLong(), anyLong());
-		verify(scheduleSeatLockService, never()).unlock(anyLong(), anyLong(), anyString());
 	}
 
 	@Test
-	@DisplayName("holdSeat(): 성공 시 validate → lock → hold → token → unlock 순서")
-	void holdSeat_success_flowOrder() {
+	@DisplayName("holdSeat(): 성공 시 lock → hold → token → unlock 순서")
+	void holdSeat_success_flow() {
 		String lockValue = "lock-value";
 		ScheduleSeat seat = mock(ScheduleSeat.class);
 
@@ -97,14 +79,11 @@ class ScheduleSeatStateServiceTest {
 			.isThrownBy(() -> scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID));
 
 		InOrder inOrder = inOrder(
-			prereservationService,
 			scheduleSeatLockService,
 			seat,
 			seatHoldTokenService
 		);
 
-		inOrder.verify(prereservationService)
-			.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID);
 		inOrder.verify(scheduleSeatLockService)
 			.tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID);
 		inOrder.verify(seat)
@@ -116,32 +95,76 @@ class ScheduleSeatStateServiceTest {
 	}
 
 	@Test
-	@DisplayName("holdSeat(): changeToHold에서 예외 발생해도 unlock은 반드시 수행된다")
-	void holdSeat_changeToHoldThrows_unlockAlways() {
+	@DisplayName("holdSeat(): HOLD 상태면 SEAT_ALREADY_HOLD")
+	void holdSeat_alreadyHold_throw() {
 		String lockValue = "lock-value";
-
-		ScheduleSeatStateService spyService =
-			spy(new ScheduleSeatStateService(
-				scheduleSeatLockService,
-				seatHoldTokenService,
-				prereservationService,
-				scheduleSeatRepository
-			));
+		ScheduleSeat seat = mock(ScheduleSeat.class);
 
 		when(scheduleSeatLockService.tryLock(SCHEDULE_ID, SEAT_ID, MEMBER_ID))
 			.thenReturn(lockValue);
+		when(scheduleSeatRepository.findByScheduleIdAndSeatIdWithLock(SCHEDULE_ID, SEAT_ID))
+			.thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.HOLD);
 
-		doThrow(new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD))
-			.when(spyService)
-			.changeToHold(SCHEDULE_ID, SEAT_ID);
+		assertThatThrownBy(() ->
+			scheduleSeatStateService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID)
+		)
+			.isInstanceOf(BusinessException.class)
+			.extracting(e -> ((BusinessException)e).getErrorCode())
+			.isEqualTo(ScheduleSeatErrorCode.SEAT_ALREADY_HOLD);
 
-		assertThrows(
-			BusinessException.class,
-			() -> spyService.holdSeat(MEMBER_ID, SCHEDULE_ID, SEAT_ID)
-		);
-
-		verify(seatHoldTokenService, never()).save(anyLong(), anyLong(), anyLong());
 		verify(scheduleSeatLockService)
-			.unlock(SCHEDULE_ID, SEAT_ID, lockValue);
+			.unlock(eq(SCHEDULE_ID), eq(SEAT_ID), anyString());
+		verify(seatHoldTokenService, never()).save(anyLong(), anyLong(), anyLong());
+	}
+
+	@Test
+	@DisplayName("releaseHold(): HOLD → AVAILABLE + token 제거")
+	void releaseHold_success() {
+		ScheduleSeat seat = mock(ScheduleSeat.class);
+
+		when(scheduleSeatRepository.findByScheduleIdAndSeatIdWithLock(SCHEDULE_ID, SEAT_ID))
+			.thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.HOLD);
+
+		scheduleSeatStateService.releaseHold(SCHEDULE_ID, SEAT_ID);
+
+		verify(seat).release();
+		verify(seatHoldTokenService).remove(SCHEDULE_ID, SEAT_ID);
+	}
+
+	@Test
+	@DisplayName("confirmHold(): HOLD → SOLD + token 제거")
+	void confirmHold_success() {
+		ScheduleSeat seat = mock(ScheduleSeat.class);
+
+		when(scheduleSeatRepository.findByScheduleIdAndSeatIdWithLock(SCHEDULE_ID, SEAT_ID))
+			.thenReturn(Optional.of(seat));
+		when(seat.getStatus()).thenReturn(SeatStatus.HOLD);
+
+		scheduleSeatStateService.confirmHold(SCHEDULE_ID, SEAT_ID);
+
+		verify(seat).sold();
+		verify(seatHoldTokenService).remove(SCHEDULE_ID, SEAT_ID);
+	}
+
+	@Test
+	@DisplayName("releaseExpiredHoldsBatch(): 만료된 HOLD 좌석을 복구하고 token 제거")
+	void releaseExpiredHoldsBatch_success() {
+		Object[] row = new Object[] {SCHEDULE_ID, SEAT_ID};
+
+		when(scheduleSeatRepository.findExpiredHoldKeys(eq(SeatStatus.HOLD), any(LocalDateTime.class)))
+			.thenReturn(Collections.singletonList(row));
+
+		when(scheduleSeatRepository.releaseExpiredHolds(
+			eq(SeatStatus.HOLD),
+			eq(SeatStatus.AVAILABLE),
+			any(LocalDateTime.class)
+		)).thenReturn(1);
+
+		int updated = scheduleSeatStateService.releaseExpiredHoldsBatch();
+
+		assertThat(updated).isEqualTo(1);
+		verify(seatHoldTokenService).remove(SCHEDULE_ID, SEAT_ID);
 	}
 }

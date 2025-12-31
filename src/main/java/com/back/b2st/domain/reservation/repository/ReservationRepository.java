@@ -19,25 +19,7 @@ import jakarta.persistence.LockModeType;
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long>, ReservationRepositoryCustom {
 
-	/** === 로그인 유저 예매 전체 조회 === */
-	List<Reservation> findAllByMemberId(Long memberId);
-
-	/** 활성 PENDING 존재 여부(만료된 PENDING은 제외) */
-	boolean existsByScheduleIdAndSeatIdAndStatusAndExpiresAtAfter(
-		Long scheduleId,
-		Long seatId,
-		ReservationStatus status,
-		LocalDateTime now
-	);
-
-	/** COMPLETED 존재 여부(완료는 언제나 중복 방지) */
-	boolean existsByScheduleIdAndSeatIdAndStatus(
-		Long scheduleId,
-		Long seatId,
-		ReservationStatus status
-	);
-
-	/** 상태 변경 경쟁(complete/fail/expire) 직렬화를 위한 락 조회 */
+	/** 락 조회 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT r FROM Reservation r WHERE r.id = :reservationId")
 	Optional<Reservation> findByIdWithLock(@Param("reservationId") Long reservationId);

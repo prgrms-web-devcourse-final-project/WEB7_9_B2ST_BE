@@ -28,7 +28,7 @@ public class ReservationViewService {
 
 	private final PaymentViewService paymentViewService;
 
-	/** === 예매 조회 === */
+	/** === 예매 상세 조회 === */
 	public ReservationDetailWithPaymentRes getReservationDetail(Long reservationId, Long memberId) {
 
 		ReservationDetailRes reservation =

@@ -23,6 +23,35 @@ public class ScheduleSeatService {
 
 	private final ScheduleSeatRepository scheduleSeatRepository;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
+	private final SeatHoldTokenService seatHoldTokenService;
+
+	/** === 좌석 상태 유효한지 검사 === */
+	@Transactional(readOnly = true)
+	public ScheduleSeat validateAndGetAttachableSeat(
+		Long scheduleId,
+		Long seatId,
+		Long memberId
+	) {
+		// 1. HOLD 소유권 (Redis)
+		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
+
+		// 2. ScheduleSeat 조회
+		ScheduleSeat scheduleSeat =
+			scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
+				.orElseThrow(() -> new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND));
+
+		if (scheduleSeat.getStatus() != SeatStatus.HOLD) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
+		}
+
+		// 3. 만료 시간 조회 및 null 체크
+		LocalDateTime expiredAt = scheduleSeat.getHoldExpiredAt();
+		if (expiredAt == null || expiredAt.isBefore(LocalDateTime.now())) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
+		}
+
+		return scheduleSeat;
+	}
 
 	/** === 특정 회차 전체 좌석 조회 === */
 	@Transactional(readOnly = true)
@@ -44,47 +73,6 @@ public class ScheduleSeatService {
 		}
 
 		return scheduleSeatRepository.findSeatsByStatus(scheduleId, status);
-	}
-
-	/** === Reservation 생성 직전에 DB 좌석이 유효한 HOLD 상태인지 검증 === */
-	@Transactional(readOnly = true)
-	public void validateHoldState(Long scheduleId, Long seatId) {
-		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
-
-		if (seat.getStatus() != SeatStatus.HOLD) {
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
-		}
-
-		LocalDateTime expiredAt = seat.getHoldExpiredAt();
-		LocalDateTime now = LocalDateTime.now();
-
-		if (expiredAt != null && expiredAt.isBefore(now)) {
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
-		}
-	}
-
-	/** === Reservation expiresAt 동기화를 위한 holdExpiredAt 반환 === */
-	@Transactional(readOnly = true)
-	public LocalDateTime getHoldExpiredAtOrThrow(Long scheduleId, Long seatId) {
-		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
-
-		if (seat.getStatus() != SeatStatus.HOLD) {
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
-		}
-
-		LocalDateTime expiredAt = seat.getHoldExpiredAt();
-		if (expiredAt == null) {
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
-		}
-
-		return expiredAt;
-	}
-
-	// === 좌석 조회 공통 로직 === //
-	private ScheduleSeat getScheduleSeat(Long scheduleId, Long seatId) {
-		return scheduleSeatRepository
-			.findByScheduleIdAndSeatId(scheduleId, seatId)
-			.orElseThrow(() -> new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND));
 	}
 
 }

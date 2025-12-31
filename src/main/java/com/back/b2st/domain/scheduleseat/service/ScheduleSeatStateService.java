@@ -22,9 +22,11 @@ public class ScheduleSeatStateService {
 
 	private final ScheduleSeatRepository scheduleSeatRepository;
 
-	/** === 상태 변경 AVAILABLE → HOLD === */
+	/** === 좌석 잡기 (HOLD) === */
 	@Transactional
 	public void holdSeat(Long memberId, Long scheduleId, Long seatId) {
+
+		// prereservationService.validateSeatHoldAllowed(memberId, scheduleId, seatId);
 
 		// 1. 좌석 락 획득
 		String lockValue = scheduleSeatLockService.tryLock(scheduleId, seatId, memberId);
@@ -63,6 +65,18 @@ public class ScheduleSeatStateService {
 		return updated;
 	}
 
+	@Transactional
+	public void releaseHold(Long scheduleId, Long seatId) {
+		changeToAvailable(scheduleId, seatId);
+		seatHoldTokenService.remove(scheduleId, seatId);
+	}
+
+	@Transactional
+	public void confirmHold(Long scheduleId, Long seatId) {
+		changeToSold(scheduleId, seatId);
+		seatHoldTokenService.remove(scheduleId, seatId);
+	}
+
 	// === 상태 변경 AVAILABLE → HOLD === //
 	@Transactional
 	public void changeToHold(Long scheduleId, Long seatId) {
@@ -96,12 +110,6 @@ public class ScheduleSeatStateService {
 		seat.release();
 	}
 
-	@Transactional
-	public void releaseHold(Long scheduleId, Long seatId) {
-		changeToAvailable(scheduleId, seatId);
-		seatHoldTokenService.remove(scheduleId, seatId);
-	}
-
 	// === 상태 변경 HOLD → SOLD === //
 	@Transactional
 	public void changeToSold(Long scheduleId, Long seatId) {
@@ -116,12 +124,6 @@ public class ScheduleSeatStateService {
 		}
 
 		seat.sold();
-	}
-
-	@Transactional
-	public void confirmHold(Long scheduleId, Long seatId) {
-		changeToSold(scheduleId, seatId);
-		seatHoldTokenService.remove(scheduleId, seatId);
 	}
 
 	// === 좌석 조회 공통 로직 (락) === //

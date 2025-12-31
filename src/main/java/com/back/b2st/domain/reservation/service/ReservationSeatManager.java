@@ -1,17 +1,19 @@
 package com.back.b2st.domain.reservation.service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.reservation.dto.response.SeatReservationResult;
 import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatService;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
-import com.back.b2st.domain.scheduleseat.service.SeatHoldTokenService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,36 +24,50 @@ public class ReservationSeatManager {
 	private final ReservationSeatRepository reservationSeatRepository;
 	private final ScheduleSeatRepository scheduleSeatRepository;
 
-	private final SeatHoldTokenService seatHoldTokenService;
 	private final ScheduleSeatService scheduleSeatService;
 	private final ScheduleSeatStateService scheduleSeatStateService;
 
-	/** === HOLD된 좌석을 예매에 귀속 === */
-	@Transactional
-	public void attachSeatsForReservation(
-		Long reservationId,
+	/** === 예매 전 좌석 검사 === */
+	@Transactional(readOnly = true)
+	public SeatReservationResult prepareSeatReservation(
 		Long scheduleId,
 		List<Long> seatIds,
 		Long memberId
 	) {
+		LocalDateTime expiresAt = null;
+		List<Long> scheduleSeatIds = new ArrayList<>();
+
 		for (Long seatId : seatIds) {
+			ScheduleSeat seat =
+				scheduleSeatService.validateAndGetAttachableSeat(
+					scheduleId, seatId, memberId
+				);
 
-			// 1. HOLD 소유권 검증 (Redis)
-			seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
+			scheduleSeatIds.add(seat.getId());
 
-			// 2. DB 좌석 상태 검증 (HOLD + 만료)
-			scheduleSeatService.validateHoldState(scheduleId, seatId);
+			// 만료 시각은 가장 빠른 HOLD 기준
+			if (expiresAt == null || seat.getHoldExpiredAt().isBefore(expiresAt)) {
+				expiresAt = seat.getHoldExpiredAt();
+			}
+		}
 
-			// 3. ScheduleSeat 조회
-			ScheduleSeat scheduleSeat =
-				scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
-					.orElseThrow();
+		return new SeatReservationResult(
+			scheduleSeatIds,
+			expiresAt
+		);
+	}
 
-			// 4. ReservationSeat 생성
+	/** === 예매용 좌석 저장 === */
+	@Transactional
+	public void attachSeats(
+		Long reservationId,
+		List<Long> scheduleSeatIds
+	) {
+		for (Long scheduleSeatId : scheduleSeatIds) {
 			reservationSeatRepository.save(
 				ReservationSeat.builder()
 					.reservationId(reservationId)
-					.scheduleSeatId(scheduleSeat.getId())
+					.scheduleSeatId(scheduleSeatId)
 					.build()
 			);
 		}

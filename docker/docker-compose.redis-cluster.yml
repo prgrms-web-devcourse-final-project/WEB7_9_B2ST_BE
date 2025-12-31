@@ -1,4 +1,3 @@
-
 services:
   # Redis Cluster Node 1 (Master)
   redis-node-1:
@@ -14,12 +13,12 @@ services:
       - nodes-1.conf
       - --cluster-node-timeout
       - "5000"
-      - --cluster-announce-ip
-      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
-      - --cluster-announce-port
-      - "7000"
-      - --cluster-announce-bus-port
-      - "17000"
+      #- --cluster-announce-ip
+      #- ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      #- --cluster-announce-port
+      #- "7001"
+      #- --cluster-announce-bus-port
+      #- "17001"
       - --appendonly
       - "yes"
       - --save
@@ -29,16 +28,16 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7000:7000"
       - "17000:17000"
     volumes:
       - redis-node-1-data:/data
     networks:
-      - redis-cluster
+      - common
 
   # Redis Cluster Node 2 (Master)
   redis-node-2:
@@ -54,12 +53,12 @@ services:
       - nodes-2.conf
       - --cluster-node-timeout
       - "5000"
-      - --cluster-announce-ip
-      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
-      - --cluster-announce-port
-      - "7001"
-      - --cluster-announce-bus-port
-      - "17001"
+      #- --cluster-announce-ip
+      #- ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      #- --cluster-announce-port
+      #- "7001"
+      #- --cluster-announce-bus-port
+      #- "17001"
       - --appendonly
       - "yes"
       - --save
@@ -69,16 +68,16 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7001:7001"
       - "17001:17001"
     volumes:
       - redis-node-2-data:/data
     networks:
-      - redis-cluster
+      - common
 
   # Redis Cluster Node 3 (Master)
   redis-node-3:
@@ -94,12 +93,12 @@ services:
       - nodes-3.conf
       - --cluster-node-timeout
       - "5000"
-      - --cluster-announce-ip
-      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
-      - --cluster-announce-port
-      - "7002"
-      - --cluster-announce-bus-port
-      - "17002"
+      #- --cluster-announce-ip
+      #- ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      #- --cluster-announce-port
+      #- "7001"
+      #- --cluster-announce-bus-port
+      #- "17001"
       - --appendonly
       - "yes"
       - --save
@@ -109,16 +108,16 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7002:7002"
       - "17002:17002"
     volumes:
       - redis-node-3-data:/data
     networks:
-      - redis-cluster
+      - common
 
   # Redis Cluster Node 4 (Slave)
   redis-node-4:
@@ -134,12 +133,12 @@ services:
       - nodes-4.conf
       - --cluster-node-timeout
       - "5000"
-      - --cluster-announce-ip
-      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
-      - --cluster-announce-port
-      - "7003"
-      - --cluster-announce-bus-port
-      - "17003"
+      #- --cluster-announce-ip
+      #- ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      #- --cluster-announce-port
+      #- "7001"
+      #- --cluster-announce-bus-port
+      #- "17001"
       - --appendonly
       - "yes"
       - --save
@@ -149,16 +148,16 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7003:7003"
       - "17003:17003"
     volumes:
       - redis-node-4-data:/data
     networks:
-      - redis-cluster
+      - common
 
   # Redis Cluster Node 5 (Slave)
   redis-node-5:
@@ -174,12 +173,12 @@ services:
       - nodes-5.conf
       - --cluster-node-timeout
       - "5000"
-      - --cluster-announce-ip
-      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
-      - --cluster-announce-port
-      - "7004"
-      - --cluster-announce-bus-port
-      - "17004"
+      #- --cluster-announce-ip
+      #- ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      #- --cluster-announce-port
+      #- "7001"
+      #- --cluster-announce-bus-port
+      #- "17001"
       - --appendonly
       - "yes"
       - --save
@@ -189,16 +188,16 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7004:7004"
       - "17004:17004"
     volumes:
       - redis-node-5-data:/data
     networks:
-      - redis-cluster
+      - common
 
   # Redis Cluster Node 6 (Slave)
   redis-node-6:
@@ -214,12 +213,12 @@ services:
       - nodes-6.conf
       - --cluster-node-timeout
       - "5000"
-      - --cluster-announce-ip
-      - ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
-      - --cluster-announce-port
-      - "7005"
-      - --cluster-announce-bus-port
-      - "17005"
+      #- --cluster-announce-ip
+      #- ${CLUSTER_ANNOUNCE_IP:-127.0.0.1}
+      #- --cluster-announce-port
+      #- "7001"
+      #- --cluster-announce-bus-port
+      #- "17001"
       - --appendonly
       - "yes"
       - --save
@@ -229,16 +228,16 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7005:7005"
       - "17005:17005"
     volumes:
       - redis-node-6-data:/data
     networks:
-      - redis-cluster
+      - common
 
 volumes:
   redis-node-1-data:
@@ -249,5 +248,5 @@ volumes:
   redis-node-6-data:
 
 networks:
-  redis-cluster:
+  common:
     driver: bridge

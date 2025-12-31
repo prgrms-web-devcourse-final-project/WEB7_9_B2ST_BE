@@ -1,150 +1,143 @@
 #!/bin/bash
+set -euo pipefail
 
-# Redis Cluster 초기화 스크립트
-# Docker Compose로 Redis Cluster를 시작한 후 실행
-# 사용법:
-#   - docker 폴더에서: ./init-redis-cluster.sh [password]
-#   - 프로젝트 루트에서: bash docker/init-redis-cluster.sh [password]
+# Redis Cluster 초기화 스크립트 (로컬/프로덕션 공용 - 안전 버전)
+#
+# 사용 예시:
+# 1) 로컬: 클러스터 초기화만 (권장)
+#    bash docker/init-redis-cluster.sh
+#
+# 2) 비밀번호 지정
+#    bash docker/init-redis-cluster.sh "tt_redis_pass"
+#
+# 3) 초기화 전에 완전 초기화(컨테이너+볼륨 삭제)까지 하고 싶을 때
+#    RESET=1 bash docker/init-redis-cluster.sh
+#
+# 4) 프로덕션에서 announce까지 설정하고 싶을 때 (외부 접근 설계가 확정된 경우에만)
+#    CLUSTER_ANNOUNCE_IP=10.0.0.12 APPLY_ANNOUNCE=1 bash docker/init-redis-cluster.sh
 
-# 비밀번호 설정 (첫 번째 인자 또는 기본값)
-REDIS_PASSWORD=${1:-"your-password"}
+# 비밀번호: 인자 > 환경변수 > 기본값
+REDIS_PASSWORD="${1:-${REDIS_PASSWORD:-tt_redis_pass}}"
 
-# cluster-announce-ip 설정 (환경 변수 또는 기본값: localhost)
-# 로컬 개발: localhost (기본값)
-# 프로덕션: 실제 서버 IP 또는 도메인 (환경 변수로 설정)
-# 예: CLUSTER_ANNOUNCE_IP=192.168.1.100 bash init-redis-cluster.sh [password]
-CLUSTER_ANNOUNCE_IP=${CLUSTER_ANNOUNCE_IP:-"localhost"}
+# 0이면 안전 모드(기본). 1이면 down -v 수행 (데이터/볼륨 삭제)
+RESET="${RESET:-0}"
 
-# 스크립트 위치 확인
+# announce 설정 적용 여부 (기본 0)
+APPLY_ANNOUNCE="${APPLY_ANNOUNCE:-0}"
+CLUSTER_ANNOUNCE_IP="${CLUSTER_ANNOUNCE_IP:-}"
+
+# 스크립트 위치
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# docker-compose 파일 경로 확인
-if [ -f "$PROJECT_ROOT/docker-compose.redis-cluster.yml" ]; then
-    # 프로젝트 루트에 있는 경우
-    COMPOSE_FILE="$PROJECT_ROOT/docker-compose.redis-cluster.yml"
-    cd "$PROJECT_ROOT"
+# compose 파일 자동 탐색 (우선순위: docker/ 아래 > 루트)
+if [ -f "$PROJECT_ROOT/docker/docker-compose.redis-cluster.yml" ]; then
+  COMPOSE_FILE="$PROJECT_ROOT/docker/docker-compose.redis-cluster.yml"
+elif [ -f "$PROJECT_ROOT/docker-compose.redis-cluster.yml" ]; then
+  COMPOSE_FILE="$PROJECT_ROOT/docker-compose.redis-cluster.yml"
 elif [ -f "$SCRIPT_DIR/docker-compose.redis-cluster.yml" ]; then
-    # docker 폴더 안에서 실행
-    COMPOSE_FILE="$SCRIPT_DIR/docker-compose.redis-cluster.yml"
-    cd "$SCRIPT_DIR"
-elif [ -f "$PROJECT_ROOT/docker/docker-compose.redis-cluster.yml" ]; then
-    # 프로젝트 루트/docker 폴더에 있는 경우
-    COMPOSE_FILE="$PROJECT_ROOT/docker/docker-compose.redis-cluster.yml"
-    cd "$PROJECT_ROOT"
+  COMPOSE_FILE="$SCRIPT_DIR/docker-compose.redis-cluster.yml"
 else
-    echo "❌ 오류: docker-compose.redis-cluster.yml 파일을 찾을 수 없습니다."
-    echo "   다음 위치를 확인하세요:"
-    echo "   - $PROJECT_ROOT/docker-compose.redis-cluster.yml"
-    echo "   - $SCRIPT_DIR/docker-compose.redis-cluster.yml"
-    echo "   - $PROJECT_ROOT/docker/docker-compose.redis-cluster.yml"
-    exit 1
+  echo "❌ 오류: docker-compose.redis-cluster.yml 파일을 찾을 수 없습니다."
+  echo "   확인 경로:"
+  echo "   - $PROJECT_ROOT/docker/docker-compose.redis-cluster.yml"
+  echo "   - $PROJECT_ROOT/docker-compose.redis-cluster.yml"
+  echo "   - $SCRIPT_DIR/docker-compose.redis-cluster.yml"
+  exit 1
 fi
+
+cd "$PROJECT_ROOT"
 
 echo "============================================"
-echo "Redis Cluster 초기화 시작"
+echo "Redis Cluster 초기화 (안전 버전)"
 echo "============================================"
-echo "비밀번호: ${REDIS_PASSWORD}"
-echo "cluster-announce-ip: ${CLUSTER_ANNOUNCE_IP} (로컬 개발: localhost, 프로덕션: 실제 IP/도메인)"
-echo "작업 디렉토리: $(pwd)"
-echo "Compose 파일: ${COMPOSE_FILE}"
+echo "Compose 파일: $COMPOSE_FILE"
+echo "RESET(볼륨삭제): $RESET"
+echo "APPLY_ANNOUNCE: $APPLY_ANNOUNCE"
+echo "CLUSTER_ANNOUNCE_IP: ${CLUSTER_ANNOUNCE_IP:-<empty>}"
 echo ""
 
-# 기존 컨테이너와 볼륨 정리 (재초기화 시)
-echo "0. 기존 컨테이너 및 볼륨 정리..."
-docker-compose -f "$COMPOSE_FILE" down -v 2>/dev/null || true
-echo "   기존 리소스 정리 완료"
-echo ""
+export REDIS_PASSWORD="$REDIS_PASSWORD"
 
-# Docker Compose로 Redis Cluster 시작
-echo "1. Docker Compose로 Redis Cluster 시작..."
-# 환경 변수 REDIS_PASSWORD를 설정하여 Docker Compose에 전달
-export REDIS_PASSWORD="${REDIS_PASSWORD}"
-docker-compose -f "$COMPOSE_FILE" up -d
+# RESET=1일 때만 파괴적 초기화 수행
+if [ "$RESET" = "1" ]; then
+  echo "[0] 기존 컨테이너/볼륨 정리 (RESET=1)..."
+  docker compose -f "$COMPOSE_FILE" down -v || true
+  echo "    정리 완료"
+  echo ""
+fi
 
-# 컨테이너가 준비될 때까지 대기
-echo ""
-echo "2. 컨테이너 준비 대기 (10초)..."
-sleep 10
+echo "[1] Redis 노드 기동..."
+docker compose -f "$COMPOSE_FILE" up -d
 
-# Redis Cluster 초기화 (내부 IP로 먼저 초기화)
-echo ""
-echo "3. Redis Cluster 초기화..."
-echo "   (이 작업은 몇 분 정도 걸릴 수 있습니다. 잠시만 기다려주세요...)"
-# Windows에서는 timeout 명령이 다르게 동작하므로 직접 실행
-CLUSTER_OUTPUT=$(echo 'yes' | docker exec -i redis-node-1 redis-cli --cluster create \
-  redis-node-1:7000 \
-  redis-node-2:7001 \
-  redis-node-3:7002 \
-  redis-node-4:7003 \
-  redis-node-5:7004 \
-  redis-node-6:7005 \
-  --cluster-replicas 1 \
-  -a ${REDIS_PASSWORD} 2>&1 || echo "CLUSTER_CREATE_ERROR")
-
-echo "$CLUSTER_OUTPUT"
-
-# 에러 체크
-if echo "$CLUSTER_OUTPUT" | grep -q "TIMEOUT_OR_ERROR\|\[ERR\]"; then
-    echo ""
-    echo "⚠️  경고: Cluster 초기화 중 오류가 발생했습니다."
-    echo "   기존 데이터가 있는 경우 다음 명령으로 완전히 삭제 후 재시도하세요:"
-    echo "   docker-compose -f \"$COMPOSE_FILE\" down -v"
-    echo "   그 후 이 스크립트를 다시 실행하세요."
+echo "[2] 노드 준비 대기..."
+# 노드 1이 PONG 응답할 때까지 대기
+for i in {1..40}; do
+  if docker exec -i redis-node-1 redis-cli -a "$REDIS_PASSWORD" -p 7000 ping >/dev/null 2>&1; then
+    echo "    redis-node-1 OK"
+    break
+  fi
+  sleep 1
+  if [ "$i" -eq 40 ]; then
+    echo "❌ redis-node-1이 준비되지 않았습니다. 로그 확인: docker logs redis-node-1"
     exit 1
-fi
-
-# 성공 확인
-if echo "$CLUSTER_OUTPUT" | grep -q "All nodes agree about slots configuration\|All 16384 slots covered"; then
-    echo ""
-    echo "✅ Cluster 초기화 성공!"
-else
-    echo ""
-    echo "⚠️  경고: Cluster 초기화 결과를 확인할 수 없습니다."
-    echo "   수동으로 확인해주세요: docker exec -it redis-node-1 redis-cli -a ${REDIS_PASSWORD} cluster info"
-fi
-
-# cluster-announce-ip 설정 (클러스터 초기화 후에 설정)
-# 클러스터 초기화는 내부 IP로 진행하고, 초기화 후에 cluster-announce-ip를 설정합니다.
+  fi
+done
 echo ""
-echo "5. cluster-announce-ip 설정 (클러스터 초기화 후) (현재: ${CLUSTER_ANNOUNCE_IP})..."
-if [ "${CLUSTER_ANNOUNCE_IP}" = "localhost" ]; then
-    echo "   !!로컬 개발 환경 모드: localhost 사용"
-    echo "   프로덕션 환경에서는 CLUSTER_ANNOUNCE_IP 환경 변수를 설정하세요."
-    echo "   예: CLUSTER_ANNOUNCE_IP=192.168.1.100 bash init-redis-cluster.sh [password]"
+
+echo "[3] 클러스터 상태 확인 (이미 구성되어 있으면 스킵)..."
+CLUSTER_INFO="$(docker exec -i redis-node-1 redis-cli -a "$REDIS_PASSWORD" -p 7000 cluster info 2>/dev/null || true)"
+
+if echo "$CLUSTER_INFO" | grep -q "cluster_state:ok"; then
+  echo "    ✅ 이미 cluster_state:ok 입니다. (create 스킵)"
 else
-    echo "   프로덕션 환경 모드: ${CLUSTER_ANNOUNCE_IP} 사용"
+  echo "    클러스터 create 수행..."
+  # 컨테이너 네트워크 DNS(hostname) 기반이 가장 안정적
+  echo yes | docker exec -i redis-node-1 redis-cli --cluster create \
+    redis-node-1:7000 redis-node-2:7001 redis-node-3:7002 \
+    redis-node-4:7003 redis-node-5:7004 redis-node-6:7005 \
+    --cluster-replicas 1 -a "$REDIS_PASSWORD"
+
+  echo "    create 완료 후 상태 확인..."
+  docker exec -i redis-node-1 redis-cli -a "$REDIS_PASSWORD" -p 7000 cluster info \
+    | grep -E "cluster_state|cluster_slots_assigned|cluster_known_nodes" || true
 fi
-for i in {1..6}; do
+echo ""
+
+# announce 설정은 기본적으로 하지 않음 (로컬에서 특히 위험)
+if [ "$APPLY_ANNOUNCE" = "1" ]; then
+  if [ -z "$CLUSTER_ANNOUNCE_IP" ]; then
+    echo "❌ APPLY_ANNOUNCE=1 인데 CLUSTER_ANNOUNCE_IP가 비어있습니다."
+    echo "   예) CLUSTER_ANNOUNCE_IP=10.0.0.12 APPLY_ANNOUNCE=1 bash docker/init-redis-cluster.sh"
+    exit 1
+  fi
+
+  echo "[4] cluster-announce 설정 적용 (프로덕션 용도)..."
+  for i in {1..6}; do
     PORT=$((7000 + i - 1))
     BUS_PORT=$((17000 + i - 1))
-    echo "   redis-node-${i} 설정 중 (포트: ${PORT}, Bus 포트: ${BUS_PORT})..."
-    docker exec -i redis-node-${i} redis-cli -a ${REDIS_PASSWORD} -p ${PORT} CONFIG SET cluster-announce-ip ${CLUSTER_ANNOUNCE_IP} 2>/dev/null || true
-    docker exec -i redis-node-${i} redis-cli -a ${REDIS_PASSWORD} -p ${PORT} CONFIG SET cluster-announce-port ${PORT} 2>/dev/null || true
-    docker exec -i redis-node-${i} redis-cli -a ${REDIS_PASSWORD} -p ${PORT} CONFIG SET cluster-announce-bus-port ${BUS_PORT} 2>/dev/null || true
-    # 설정을 영구적으로 저장 (config file이 없으면 오류가 나지만 무시)
-    docker exec -i redis-node-${i} redis-cli -a ${REDIS_PASSWORD} -p ${PORT} CONFIG REWRITE 2>&1 | grep -v "ERR The server is running without a config file" || true
-done
-echo "   cluster-announce-ip 설정 완료 (${CLUSTER_ANNOUNCE_IP})"
+    echo "    redis-node-$i (port=$PORT bus=$BUS_PORT) 설정 중..."
+    docker exec -i "redis-node-$i" redis-cli -a "$REDIS_PASSWORD" -p "$PORT" CONFIG SET cluster-announce-ip "$CLUSTER_ANNOUNCE_IP" >/dev/null || true
+    docker exec -i "redis-node-$i" redis-cli -a "$REDIS_PASSWORD" -p "$PORT" CONFIG SET cluster-announce-port "$PORT" >/dev/null || true
+    docker exec -i "redis-node-$i" redis-cli -a "$REDIS_PASSWORD" -p "$PORT" CONFIG SET cluster-announce-bus-port "$BUS_PORT" >/dev/null || true
+  done
 
-# 클러스터 노드를 재시작하여 cluster-announce-ip 설정이 클러스터 메타데이터에 반영되도록 함
-echo ""
-echo "6. 클러스터 노드 재시작 (cluster-announce-ip 설정 반영)..."
-for i in {1..6}; do
-    echo "   redis-node-${i} 재시작 중..."
-    docker restart redis-node-${i} >/dev/null 2>&1 || true
-done
-echo "   노드 재시작 완료. 클러스터 재연결 대기 (10초)..."
-sleep 10
+  echo "[5] 노드 재시작 (announce 반영)..."
+  for i in {1..6}; do
+    docker restart "redis-node-$i" >/dev/null 2>&1 || true
+  done
+  sleep 5
+  echo "    재시작 완료"
+  echo ""
+else
+  echo "[4] announce 설정 스킵 (기본/로컬 권장)"
+  echo ""
+fi
 
-echo ""
 echo "============================================"
-echo "Redis Cluster 초기화 완료!"
+echo "✅ Redis Cluster 준비 완료"
 echo "============================================"
-echo ""
-echo "Cluster 상태 확인:"
-echo "docker exec -it redis-node-1 redis-cli -a ${REDIS_PASSWORD} cluster info"
-echo ""
-echo "Cluster 노드 확인:"
-echo "docker exec -it redis-node-1 redis-cli -a ${REDIS_PASSWORD} cluster nodes"
-
+echo "상태 확인:"
+echo "  docker exec -it redis-node-1 redis-cli -a \"$REDIS_PASSWORD\" -p 7000 cluster info"
+echo "노드 확인:"
+echo "  docker exec -it redis-node-1 redis-cli -a \"$REDIS_PASSWORD\" -p 7000 cluster nodes"

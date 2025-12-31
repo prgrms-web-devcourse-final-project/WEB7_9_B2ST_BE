@@ -25,7 +25,9 @@ import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.entity.PaymentStatus;
 import com.back.b2st.domain.payment.repository.PaymentRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
@@ -42,6 +44,8 @@ class PaymentConfirmServiceConcurrencyTest {
 
 	@Autowired
 	private ReservationRepository reservationRepository;
+	@Autowired
+	private ReservationSeatRepository reservationSeatRepository;
 
 	@Autowired
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -79,10 +83,15 @@ class PaymentConfirmServiceConcurrencyTest {
 		Reservation reservation = Reservation.builder()
 			.scheduleId(scheduleId)
 			.memberId(memberId)
-			.seatId(seatId)
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation savedReservation = reservationRepository.save(reservation);
+
+		ReservationSeat reservationSeat = ReservationSeat.builder()
+			.reservationId(savedReservation.getId())
+			.scheduleSeatId(scheduleSeat.getId())
+			.build();
+		reservationSeatRepository.save(reservationSeat);
 
 		Payment payment = Payment.builder()
 			.orderId(orderId)

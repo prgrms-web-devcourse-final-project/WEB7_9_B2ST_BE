@@ -2,12 +2,11 @@ package com.back.b2st.domain.reservation.dto.response;
 
 import java.time.LocalDateTime;
 
-public record ReservationDetailRes(
+public record ReservationRes(
 	Long reservationId,
 	String status,
 	PerformanceInfo performance
 ) {
-
 	public record PerformanceInfo(
 		Long performanceId,
 		Long performanceScheduleId,
@@ -15,15 +14,6 @@ public record ReservationDetailRes(
 		String category,
 		LocalDateTime startDate,
 		LocalDateTime startAt
-	) {
-	}
-
-	public record SeatInfo(
-		Long seatId,
-		Long sectionId,
-		String sectionName,
-		String rowLabel,
-		Integer seatNumber
 	) {
 	}
 }

@@ -33,8 +33,10 @@ spring:
 
   data:
     redis:
+      mode: single
       host: localhost
       port: 6379
+      password: ""
 
   mail:
     host: localhost

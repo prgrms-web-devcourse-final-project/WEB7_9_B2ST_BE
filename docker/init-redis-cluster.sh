@@ -1,10 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# Redis Cluster 초기화 스크립트 (로컬/프로덕션 공용 - 안전 버전)
+# Redis Cluster 초기화 스크립트 (장애 복구 / 수동 초기화 전용)
+#
+# ⚠️ 운영 가이드:
+#   - 정상 배포 시에는 사용하지 마세요! docker compose up -d만 사용하면 됩니다.
+#   - redis-cluster-init 서비스가 자동으로 초기화하므로 중복 실행을 방지합니다.
+#   - 이 스크립트는 장애 복구나 수동 개입이 필요할 때만 사용하세요.
 #
 # 사용 예시:
-# 1) 로컬: 클러스터 초기화만 (권장)
+# 1) 장애 복구: 클러스터 재초기화 (통합 compose 자동 탐색)
 #    bash docker/init-redis-cluster.sh
 #
 # 2) 비밀번호 지정
@@ -13,7 +18,11 @@ set -euo pipefail
 # 3) 초기화 전에 완전 초기화(컨테이너+볼륨 삭제)까지 하고 싶을 때
 #    RESET=1 bash docker/init-redis-cluster.sh
 #
-# 4) 프로덕션에서 announce까지 설정하고 싶을 때 (외부 접근 설계가 확정된 경우에만)
+# 4) 특정 compose 파일 지정 (기본 자동 탐색 대신)
+#    COMPOSE_FILE=docker-compose.redis-cluster.yml bash docker/init-redis-cluster.sh
+#
+# 5) 프로덕션에서 announce 설정 (분리된 compose 전용, 통합 compose는 자동 비활성화)
+#    ⚠️ 통합 compose 사용 시 APPLY_ANNOUNCE는 자동으로 비활성화됨
 #    CLUSTER_ANNOUNCE_IP=10.0.0.12 APPLY_ANNOUNCE=1 bash docker/init-redis-cluster.sh
 
 # 비밀번호: 인자 > 환경변수 > 기본값
@@ -30,23 +39,46 @@ CLUSTER_ANNOUNCE_IP="${CLUSTER_ANNOUNCE_IP:-}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# compose 파일 자동 탐색 (우선순위: docker/ 아래 > 루트)
-if [ -f "$PROJECT_ROOT/docker/docker-compose.redis-cluster.yml" ]; then
+# compose 파일 자동 탐색 또는 환경 변수 지정
+# 환경 변수 COMPOSE_FILE이 지정되어 있으면 그것을 사용
+if [ -n "${COMPOSE_FILE:-}" ]; then
+  if [ ! -f "$COMPOSE_FILE" ]; then
+    echo "❌ 오류: 지정된 compose 파일이 없습니다: $COMPOSE_FILE"
+    exit 1
+  fi
+  echo "ℹ️  환경 변수로 compose 파일 지정됨: $COMPOSE_FILE"
+elif [ -f "$PROJECT_ROOT/docker-compose.yml" ]; then
+  # docker-compose.yml 우선 (통합 구성)
+  COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
+elif [ -f "$PROJECT_ROOT/docker/docker-compose.redis-cluster.yml" ]; then
   COMPOSE_FILE="$PROJECT_ROOT/docker/docker-compose.redis-cluster.yml"
 elif [ -f "$PROJECT_ROOT/docker-compose.redis-cluster.yml" ]; then
   COMPOSE_FILE="$PROJECT_ROOT/docker-compose.redis-cluster.yml"
 elif [ -f "$SCRIPT_DIR/docker-compose.redis-cluster.yml" ]; then
   COMPOSE_FILE="$SCRIPT_DIR/docker-compose.redis-cluster.yml"
 else
-  echo "❌ 오류: docker-compose.redis-cluster.yml 파일을 찾을 수 없습니다."
+  echo "❌ 오류: compose 파일을 찾을 수 없습니다."
   echo "   확인 경로:"
+  echo "   - $PROJECT_ROOT/docker-compose.yml (통합 구성)"
   echo "   - $PROJECT_ROOT/docker/docker-compose.redis-cluster.yml"
   echo "   - $PROJECT_ROOT/docker-compose.redis-cluster.yml"
   echo "   - $SCRIPT_DIR/docker-compose.redis-cluster.yml"
+  echo ""
+  echo "   또는 환경 변수로 지정:"
+  echo "   COMPOSE_FILE=/path/to/compose.yml bash docker/init-redis-cluster.sh"
   exit 1
 fi
 
 cd "$PROJECT_ROOT"
+
+# 통합 compose 사용 시 announce 설정 강제 비활성화
+# (통합 compose에 이미 --cluster-announce-ip가 서비스명으로 설정되어 있음)
+if echo "$COMPOSE_FILE" | grep -q "docker-compose.yml$" && [ "$APPLY_ANNOUNCE" = "1" ]; then
+  echo "⚠️  경고: 통합 compose 파일에서는 APPLY_ANNOUNCE를 사용할 수 없습니다."
+  echo "   통합 compose에 이미 --cluster-announce-ip가 서비스명으로 설정되어 있습니다."
+  echo "   APPLY_ANNOUNCE를 자동으로 비활성화합니다."
+  APPLY_ANNOUNCE=0
+fi
 
 echo "============================================"
 echo "Redis Cluster 초기화 (안전 버전)"
@@ -62,13 +94,27 @@ export REDIS_PASSWORD="$REDIS_PASSWORD"
 # RESET=1일 때만 파괴적 초기화 수행
 if [ "$RESET" = "1" ]; then
   echo "[0] 기존 컨테이너/볼륨 정리 (RESET=1)..."
-  docker compose -f "$COMPOSE_FILE" down -v || true
+  # docker-compose.yml의 경우 Redis 노드만 정리 (다른 서비스 보존)
+  if echo "$COMPOSE_FILE" | grep -q "docker-compose.yml$"; then
+    echo "    통합 구성 파일 감지: Redis 노드만 정리합니다 (PostgreSQL/App 유지)..."
+    docker compose -f "$COMPOSE_FILE" stop redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5 redis-node-6 || true
+    docker compose -f "$COMPOSE_FILE" rm -f redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5 redis-node-6 || true
+    docker volume rm redis-node-1-data redis-node-2-data redis-node-3-data redis-node-4-data redis-node-5-data redis-node-6-data 2>/dev/null || true
+  else
+    docker compose -f "$COMPOSE_FILE" down -v || true
+  fi
   echo "    정리 완료"
   echo ""
 fi
 
 echo "[1] Redis 노드 기동..."
-docker compose -f "$COMPOSE_FILE" up -d
+# docker-compose.yml의 경우 Redis 노드만 시작 (다른 서비스 제외)
+if echo "$COMPOSE_FILE" | grep -q "docker-compose.yml$"; then
+  echo "    통합 구성 파일 감지: Redis 노드만 시작합니다..."
+  docker compose -f "$COMPOSE_FILE" up -d redis-node-1 redis-node-2 redis-node-3 redis-node-4 redis-node-5 redis-node-6
+else
+  docker compose -f "$COMPOSE_FILE" up -d
+fi
 
 echo "[2] 노드 준비 대기..."
 # 노드 1이 PONG 응답할 때까지 대기
@@ -93,10 +139,12 @@ if echo "$CLUSTER_INFO" | grep -q "cluster_state:ok"; then
 else
   echo "    클러스터 create 수행..."
   # 컨테이너 네트워크 DNS(hostname) 기반이 가장 안정적
-  echo yes | docker exec -i redis-node-1 redis-cli --cluster create \
+  docker exec -i redis-node-1 redis-cli --cluster create \
     redis-node-1:7000 redis-node-2:7001 redis-node-3:7002 \
     redis-node-4:7003 redis-node-5:7004 redis-node-6:7005 \
-    --cluster-replicas 1 -a "$REDIS_PASSWORD"
+    --cluster-replicas 1 \
+    --cluster-yes \
+    -a "$REDIS_PASSWORD"
 
   echo "    create 완료 후 상태 확인..."
   docker exec -i redis-node-1 redis-cli -a "$REDIS_PASSWORD" -p 7000 cluster info \
@@ -104,7 +152,9 @@ else
 fi
 echo ""
 
-# announce 설정은 기본적으로 하지 않음 (로컬에서 특히 위험)
+# announce 설정은 기본적으로 하지 않음
+# 통합 compose 사용 시: compose 파일에 이미 announce 설정이 있으므로 스킵
+# 분리된 compose 사용 시: 필요시에만 APPLY_ANNOUNCE=1로 활성화
 if [ "$APPLY_ANNOUNCE" = "1" ]; then
   if [ -z "$CLUSTER_ANNOUNCE_IP" ]; then
     echo "❌ APPLY_ANNOUNCE=1 인데 CLUSTER_ANNOUNCE_IP가 비어있습니다."
@@ -130,7 +180,11 @@ if [ "$APPLY_ANNOUNCE" = "1" ]; then
   echo "    재시작 완료"
   echo ""
 else
-  echo "[4] announce 설정 스킵 (기본/로컬 권장)"
+  if echo "$COMPOSE_FILE" | grep -q "docker-compose.yml$"; then
+    echo "[4] announce 설정 스킵 (통합 compose에 이미 설정됨: 서비스명 사용)"
+  else
+    echo "[4] announce 설정 스킵 (기본값: 필요시 APPLY_ANNOUNCE=1로 활성화)"
+  fi
   echo ""
 fi
 

@@ -3,13 +3,16 @@ package com.back.b2st.domain.reservation.repository;
 import static com.back.b2st.domain.performance.entity.QPerformance.*;
 import static com.back.b2st.domain.performanceschedule.entity.QPerformanceSchedule.*;
 import static com.back.b2st.domain.reservation.entity.QReservation.*;
+import static com.back.b2st.domain.reservation.entity.QReservationSeat.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Repository;
 
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationRes;
+import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
@@ -79,5 +82,47 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 			.where(reservation.memberId.eq(memberId))
 			.orderBy(reservation.createdAt.desc())
 			.fetch();
+	}
+
+	@Override
+	public boolean existsCompletedByScheduleSeat(
+		Long scheduleId,
+		Long scheduleSeatId
+	) {
+		Integer result = queryFactory
+			.selectOne()
+			.from(reservation)
+			.join(reservationSeat)
+			.on(reservationSeat.reservationId.eq(reservation.id))
+			.where(
+				reservation.scheduleId.eq(scheduleId),
+				reservationSeat.scheduleSeatId.eq(scheduleSeatId),
+				reservation.status.eq(ReservationStatus.COMPLETED)
+			)
+			.fetchFirst();
+
+		return result != null;
+	}
+
+	@Override
+	public boolean existsActivePendingByScheduleSeat(
+		Long scheduleId,
+		Long scheduleSeatId,
+		LocalDateTime now
+	) {
+		Integer result = queryFactory
+			.selectOne()
+			.from(reservation)
+			.join(reservationSeat)
+			.on(reservationSeat.reservationId.eq(reservation.id))
+			.where(
+				reservation.scheduleId.eq(scheduleId),
+				reservationSeat.scheduleSeatId.eq(scheduleSeatId),
+				reservation.status.eq(ReservationStatus.PENDING),
+				reservation.expiresAt.gt(now)
+			)
+			.fetchFirst();
+
+		return result != null;
 	}
 }

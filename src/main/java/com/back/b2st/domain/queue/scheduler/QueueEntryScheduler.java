@@ -1,7 +1,11 @@
 package com.back.b2st.domain.queue.scheduler;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -17,19 +21,9 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * QueueEntryScheduler
  *
- * 📌 역할
  * - 대기열을 자동으로 흘려보내는 스케줄러
  * - WAITING 상태의 사용자를 ENTERABLE 상태로 자동 이동
  * - 사람이 버튼을 누르지 않아도 정해진 시간마다 서버가 알아서 처리
- *
- * 핵심 동작:
- * 1. 모든 활성 대기열 조회
- * 2. 각 대기열별로 입장 가능 인원 계산
- * 3. 상위 N명을 자동으로 입장 처리
- *
- * ⚠️ 주의사항
- * - 분산 락이 적용되어 있어 멀티 인스턴스 환경에서도 안전
- * - @Profile("!test")로 테스트 환경에서는 비활성화 (수동 제어)
  */
 @Component
 @RequiredArgsConstructor
@@ -40,20 +34,73 @@ public class QueueEntryScheduler {
 
 	private final QueueRepository queueRepository;
 	private final QueueSchedulerService queueSchedulerService;
+	private final RedissonClient redissonClient;
+
+
+	@Value("${spring.data.redis.mode:single}")
+	private String redisMode;
+
+	@Value("${queue.scheduler.batch-size:10}")
+	private int batchSize;
+
+	@Value("${queue.scheduler.fixed-delay:10000}")
+	private long fixedDelay;
 
 	/**
 	 * 자동 입장 처리
-	 *
-	 * 실행 주기: 10초마다 (설정으로 변경 가능)
-	 * - 각 대기열별로 대기 중인 사용자를 입장 처리
-	 * - 한 번에 처리할 인원: 10명 (배치 크기)
-	 *
-	 * @Scheduled(fixedDelay = 10000)
-	 * - 이전 실행이 완료된 후 10초 뒤에 다시 실행
-	 * - 처리 시간이 길어져도 중복 실행 방지
 	 */
-	@Scheduled(fixedDelay = 10000) // 10초마다
+	@Scheduled(fixedDelayString = "${queue.scheduler.fixed-delay:10000}")
 	public void autoProcessQueueEntries() {
+		//  락 조건: redisMode 기준
+		// - redisMode == "single": 단일 Redis → 락 없이 실행
+		// - redisMode == "cluster": Redis Cluster → 리더 락 사용
+		if ("single".equals(redisMode)) {
+			log.debug("단일 Redis 모드 - 리더 락 없이 실행");
+			processAllQueues();
+			return;
+		}
+
+		// Redis Cluster 모드: 리더 락 사용
+		String leaderLockKey = "queue:scheduler:leader";
+		RLock leaderLock = redissonClient.getLock(leaderLockKey);
+
+		try {
+			// 리더 락 획득 시도
+			long waitTime = 3;
+			long leaseTime = 300; // 락 유지 시간
+
+			boolean acquired = leaderLock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
+
+			if (!acquired) {
+				log.debug("스케줄러 리더 락 획득 실패 (다른 서버에서 실행 중)");
+				return;
+			}
+
+			log.debug("스케줄러 리더 락 획득 성공 - 모든 대기열 처리 시작 (lease time: {}초)", leaseTime);
+
+			// 리더로 선출된 서버만 모든 대기열 처리
+			processAllQueues();
+
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			log.error("스케줄러 리더 락 획득 중 인터럽트 발생", e);
+		} catch (Exception e) {
+			log.error("자동 입장 스케줄러 실패", e);
+		} finally {
+			// 리더 락 해제
+			if (leaderLock.isHeldByCurrentThread()) {
+				leaderLock.unlock();
+				log.debug("스케줄러 리더 락 해제");
+			}
+		}
+	}
+
+	/**
+	 * 모든 대기열 처리 (내부 메서드)
+	 *
+	 * 리더 락을 획득한 서버만 이 메서드를 실행
+	 */
+	private void processAllQueues() {
 		try {
 			// 1. 모든 활성 대기열 조회
 			List<Queue> activeQueues = queueRepository.findAll();
@@ -66,17 +113,16 @@ public class QueueEntryScheduler {
 			// 2. 각 대기열별로 자동 입장 처리
 			for (Queue queue : activeQueues) {
 				try {
-					// 분산 락 적용되어 있어 안전하게 처리됨
-					queueSchedulerService.processNextEntries(queue.getId(), 10);
+					// batchSize는 application.yml에서 설정 (몇명으로 하지)
+					// queueId별 락은 제거하고 리더 락만 사용
+					queueSchedulerService.processNextEntries(queue.getId(), batchSize);
 				} catch (Exception e) {
-					// 특정 대기열 실패해도 다른 대기열 처리는 계속
 					log.error("대기열 자동 입장 처리 실패 - queueId: {}", queue.getId(), e);
 				}
 			}
 
 		} catch (Exception e) {
-			// 스케줄러는 절대 죽으면 안 됨
-			log.error("자동 입장 스케줄러 실패", e);
+			log.error("대기열 처리 중 오류 발생", e);
 		}
 	}
 }

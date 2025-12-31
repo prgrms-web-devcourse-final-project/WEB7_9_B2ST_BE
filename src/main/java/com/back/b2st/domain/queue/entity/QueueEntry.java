@@ -24,38 +24,39 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 /**
- * 대기열 참가 엔티티
+ * 대기열 입장 기록 엔티티
+ * - UNIQUE (queue_id, user_id): 재진입 시 findOrCreate 패턴 필수
  */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
-		name = "queue_entries",
-		indexes = {
-			@Index(name = "idx_queue_entries_user_queue", columnList = "user_id, queue_id"),
-			@Index(name = "idx_queue_entries_queue_status", columnList = "queue_id, status"),
-			@Index(name = "idx_queue_entries_queue_status_expires", columnList = "queue_id, status, expires_at"),
-			@Index(name = "idx_queue_entries_token", columnList = "entry_token"),
-			@Index(name = "idx_queue_entries_status_expires", columnList = "status, expires_at"),
-			@Index(name = "idx_queue_entries_user_status", columnList = "user_id, status")
-		},
-		uniqueConstraints = {
-			@UniqueConstraint(
-						name = "uk_queue_user",
-						columnNames = {"queue_id", "user_id"}
-			),
-			@UniqueConstraint(
-						name = "uk_entry_token",
-						columnNames = {"entry_token"}
-			)
-		}
+	name = "queue_entries",
+	indexes = {
+		@Index(name = "idx_queue_entries_user_queue", columnList = "user_id, queue_id"),
+		@Index(name = "idx_queue_entries_queue_status", columnList = "queue_id, status"),
+		@Index(name = "idx_queue_entries_queue_status_expires", columnList = "queue_id, status, expires_at"),
+		@Index(name = "idx_queue_entries_token", columnList = "entry_token"),
+		@Index(name = "idx_queue_entries_status_expires", columnList = "status, expires_at"),
+		@Index(name = "idx_queue_entries_user_status", columnList = "user_id, status")
+	},
+	uniqueConstraints = {
+		@UniqueConstraint(
+			name = "uk_queue_user",
+			columnNames = {"queue_id", "user_id"}
+		),
+		@UniqueConstraint(
+			name = "uk_entry_token",
+			columnNames = {"entry_token"}
+		)
+	}
 )
-
 @SequenceGenerator(
-		name = "queue_entry_id_gen",
-		sequenceName = "queue_entry_seq",
-		allocationSize = 50
+	name = "queue_entry_id_gen",
+	sequenceName = "queue_entry_seq",
+	allocationSize = 50
 )
 @DynamicUpdate
 public class QueueEntry extends BaseEntity {
@@ -108,11 +109,11 @@ public class QueueEntry extends BaseEntity {
 
 	@Builder
 	public QueueEntry(
-			Long queueId,
-			Long userId,
-			LocalDateTime joinedAt,
-			LocalDateTime enterableAt,
-			LocalDateTime expiresAt
+		Long queueId,
+		Long userId,
+		LocalDateTime joinedAt,
+		LocalDateTime enterableAt,
+		LocalDateTime expiresAt
 	) {
 		this.queueId = queueId;
 		this.userId = userId;
@@ -122,16 +123,18 @@ public class QueueEntry extends BaseEntity {
 		this.status = QueueEntryStatus.ENTERABLE;
 	}
 
-	// ===== 상태 전이 메서드  =====
+	// ===== 상태 전이 메서드 =====
 
 	/**
 	 * ENTERABLE 상태로 전환
 	 */
 	public void updateToEnterable(
-			LocalDateTime joinedAt,
-			LocalDateTime enterableAt,
-			LocalDateTime expiresAt
+		UUID newEntryToken,
+		LocalDateTime joinedAt,
+		LocalDateTime enterableAt,
+		LocalDateTime expiresAt
 	) {
+		this.entryToken = newEntryToken;
 		this.status = QueueEntryStatus.ENTERABLE;
 		this.joinedAt = joinedAt;
 		this.enterableAt = enterableAt;

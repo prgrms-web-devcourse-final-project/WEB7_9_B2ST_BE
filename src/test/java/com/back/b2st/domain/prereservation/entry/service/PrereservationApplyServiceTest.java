@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import com.back.b2st.domain.email.service.EmailSender;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
@@ -230,6 +231,80 @@ class PrereservationApplyServiceTest {
 
 		then(prereservationRepository).should().save(any(Prereservation.class));
 		then(emailSender).shouldHaveNoInteractions();
+	}
+
+	@Test
+	@DisplayName("apply(): 정상적으로 신청이 저장된다(이메일 발송)")
+	void apply_successWithEmail_sendsEmail() {
+		// given
+		Long venueId = 100L;
+		String email = "user@example.com";
+
+		LocalDateTime bookingOpenAt = LocalDateTime.now().plusMinutes(10);
+		LocalDateTime slotStartAt = bookingOpenAt.plusHours(1);
+		LocalDateTime slotEndAt = bookingOpenAt.plusHours(2);
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		Performance performance = mock(Performance.class);
+		Venue venue = mock(Venue.class);
+		Section section = mock(Section.class);
+
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(schedule.getBookingOpenAt()).willReturn(bookingOpenAt);
+		given(schedule.getPerformance()).willReturn(performance);
+		given(performance.getVenue()).willReturn(venue);
+		given(venue.getVenueId()).willReturn(venueId);
+
+		given(section.getVenueId()).willReturn(venueId);
+		given(section.getSectionName()).willReturn("A구역");
+
+		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.of(section));
+		given(prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
+			SCHEDULE_ID, MEMBER_ID, SECTION_ID
+		)).willReturn(false);
+		given(prereservationSlotService.calculateSlotOrThrow(schedule, section))
+			.willReturn(new PrereservationSlotService.Slot(slotStartAt, slotEndAt));
+
+		// when
+		prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, email, SECTION_ID);
+
+		// then
+		then(prereservationRepository).should().save(any(Prereservation.class));
+		then(emailSender).should().sendNotificationEmail(eq(email), eq("[TT] 신청 예매 사전 신청 완료"), anyString());
+	}
+
+	@Test
+	@DisplayName("apply(): 저장 중 중복이면 DUPLICATE_APPLICATION 예외(DataIntegrityViolation)")
+	void apply_duplicateOnSave_throw() {
+		// given
+		Long venueId = 100L;
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		Performance performance = mock(Performance.class);
+		Venue venue = mock(Venue.class);
+		Section section = mock(Section.class);
+
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
+		given(schedule.getPerformance()).willReturn(performance);
+		given(performance.getVenue()).willReturn(venue);
+		given(venue.getVenueId()).willReturn(venueId);
+
+		given(section.getVenueId()).willReturn(venueId);
+
+		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.of(section));
+		given(prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
+			SCHEDULE_ID, MEMBER_ID, SECTION_ID
+		)).willReturn(false);
+		given(prereservationRepository.save(any(Prereservation.class)))
+			.willThrow(new DataIntegrityViolationException("duplicate"));
+
+		// when & then
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
+			.isInstanceOf(BusinessException.class)
+			.hasMessageContaining(PrereservationErrorCode.DUPLICATE_APPLICATION.getMessage());
 	}
 
 	@Test

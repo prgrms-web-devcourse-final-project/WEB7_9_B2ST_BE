@@ -209,7 +209,7 @@ class PrereservationPaymentHandlerTest {
 		given(performance.getPerformanceId()).willReturn(PERFORMANCE_ID);
 
 		given(scheduleSeat.getStatus()).willReturn(SeatStatus.HOLD);
-		given(seatGrade.getPrice()).willReturn(BigDecimal.valueOf(50000));
+		given(seatGrade.getPrice()).willReturn(50000);
 
 		given(reservationRepository.findById(RESERVATION_ID)).willReturn(Optional.of(reservation));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
@@ -227,7 +227,7 @@ class PrereservationPaymentHandlerTest {
 		assertThat(result).isNotNull();
 		assertThat(result.domainType()).isEqualTo(DomainType.PRERESERVATION);
 		assertThat(result.domainId()).isEqualTo(RESERVATION_ID);
-		assertThat(result.amount()).isEqualTo(50000L);
+		assertThat(result.expectedAmount()).isEqualTo(50000);
 
 		then(seatHoldTokenService).should().validateOwnership(SCHEDULE_ID, SEAT_ID, MEMBER_ID);
 	}

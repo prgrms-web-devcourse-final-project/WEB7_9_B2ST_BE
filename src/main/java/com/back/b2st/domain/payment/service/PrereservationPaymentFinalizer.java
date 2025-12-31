@@ -22,16 +22,13 @@ import com.back.b2st.global.error.exception.BusinessException;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
 public class PrereservationPaymentFinalizer implements PaymentFinalizer {
 
-	@PersistenceContext
-	private EntityManager entityManager;
-
+	private final EntityManager entityManager;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final TicketService ticketService;
 	private final Clock clock;

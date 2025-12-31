@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -159,9 +158,7 @@ class PrereservationHoldServiceTest {
 		)).willReturn(true);
 
 		Section section = mock(Section.class);
-		given(section.getVenueId()).willReturn(1L);
 		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.of(section));
-		given(sectionRepository.findByVenueId(1L)).willReturn(List.of(section));
 
 		given(prereservationSlotService.calculateSlotOrThrow(eq(schedule), eq(section)))
 			.willReturn(new PrereservationSlotService.Slot(
@@ -194,9 +191,7 @@ class PrereservationHoldServiceTest {
 		)).willReturn(true);
 
 		Section section = mock(Section.class);
-		given(section.getVenueId()).willReturn(1L);
 		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.of(section));
-		given(sectionRepository.findByVenueId(1L)).willReturn(List.of(section));
 
 		given(prereservationSlotService.calculateSlotOrThrow(eq(schedule), eq(section)))
 			.willReturn(new PrereservationSlotService.Slot(

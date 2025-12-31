@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +27,7 @@ import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
+import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.service.TicketService;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -58,19 +58,6 @@ class PrereservationPaymentFinalizerTest {
 	private static final Long SCHEDULE_ID = 100L;
 	private static final Long SEAT_ID = 1000L;
 
-	private LocalDateTime now;
-
-	@BeforeEach
-	void setUp() {
-		now = LocalDateTime.of(2025, 1, 1, 14, 0);
-		Clock fixedClock = Clock.fixed(
-			Instant.parse("2025-01-01T14:00:00Z"),
-			ZoneId.of("UTC")
-		);
-		given(clock.instant()).willReturn(fixedClock.instant());
-		given(clock.getZone()).willReturn(fixedClock.getZone());
-	}
-
 	@Test
 	@DisplayName("supports(): DomainType.PRERESERVATION 지원")
 	void supports_prereservation_true() {
@@ -100,7 +87,8 @@ class PrereservationPaymentFinalizerTest {
 		// when & then
 		assertThatThrownBy(() -> prereservationPaymentFinalizer.finalizePayment(payment))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(ReservationErrorCode.RESERVATION_NOT_FOUND.getMessage());
+			.satisfies(ex -> assertThat(((BusinessException)ex).getErrorCode())
+				.isEqualTo(ReservationErrorCode.RESERVATION_NOT_FOUND));
 	}
 
 	@Test
@@ -120,7 +108,8 @@ class PrereservationPaymentFinalizerTest {
 		// when & then
 		assertThatThrownBy(() -> prereservationPaymentFinalizer.finalizePayment(payment))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS.getMessage());
+			.satisfies(ex -> assertThat(((BusinessException)ex).getErrorCode())
+				.isEqualTo(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS));
 	}
 
 	@Test
@@ -141,7 +130,8 @@ class PrereservationPaymentFinalizerTest {
 		// when & then
 		assertThatThrownBy(() -> prereservationPaymentFinalizer.finalizePayment(payment))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(ReservationErrorCode.RESERVATION_ALREADY_CANCELED.getMessage());
+			.satisfies(ex -> assertThat(((BusinessException)ex).getErrorCode())
+				.isEqualTo(ReservationErrorCode.RESERVATION_ALREADY_CANCELED));
 	}
 
 	@Test
@@ -167,7 +157,10 @@ class PrereservationPaymentFinalizerTest {
 		// when & then
 		assertThatThrownBy(() -> prereservationPaymentFinalizer.finalizePayment(payment))
 			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining("신청 예매 결제 대상이 아닙니다");
+			.satisfies(ex -> {
+				assertThat(((BusinessException)ex).getErrorCode()).isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
+				assertThat(ex).hasMessageContaining("신청 예매 결제 대상이 아닙니다");
+			});
 	}
 
 	@Test
@@ -201,7 +194,7 @@ class PrereservationPaymentFinalizerTest {
 		given(query.setLockMode(LockModeType.PESSIMISTIC_WRITE)).willReturn(query);
 		given(query.getResultStream()).willReturn(java.util.stream.Stream.of(scheduleSeat));
 
-		willDoNothing().given(ticketService).createTicket(RESERVATION_ID, MEMBER_ID, SEAT_ID);
+		given(ticketService.createTicket(RESERVATION_ID, MEMBER_ID, SEAT_ID)).willReturn(mock(Ticket.class));
 
 		// when
 		assertThatCode(() -> prereservationPaymentFinalizer.finalizePayment(payment))
@@ -243,9 +236,16 @@ class PrereservationPaymentFinalizerTest {
 		given(query.setLockMode(LockModeType.PESSIMISTIC_WRITE)).willReturn(query);
 		given(query.getResultStream()).willReturn(java.util.stream.Stream.of(scheduleSeat));
 
+		Clock fixedClock = Clock.fixed(
+			Instant.parse("2025-01-01T14:00:00Z"),
+			ZoneId.of("UTC")
+		);
+		given(clock.instant()).willReturn(fixedClock.instant());
+		given(clock.getZone()).willReturn(fixedClock.getZone());
+
 		willDoNothing().given(reservation).complete(any());
 		willDoNothing().given(scheduleSeat).sold();
-		willDoNothing().given(ticketService).createTicket(RESERVATION_ID, MEMBER_ID, SEAT_ID);
+		given(ticketService.createTicket(RESERVATION_ID, MEMBER_ID, SEAT_ID)).willReturn(mock(Ticket.class));
 
 		// when
 		assertThatCode(() -> prereservationPaymentFinalizer.finalizePayment(payment))

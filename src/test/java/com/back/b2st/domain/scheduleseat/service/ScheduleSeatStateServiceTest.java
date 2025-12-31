@@ -257,7 +257,8 @@ class ScheduleSeatStateServiceTest {
 	void holdSeat_prereservationFailed_noLock() {
 		// given - 신청하지 않은 구역
 		doThrow(new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND))
-			.when(prereservationService).validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID);
+			.when(
+				prereservationService).validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID);
 
 		// when & then
 		assertThrows(BusinessException.class,

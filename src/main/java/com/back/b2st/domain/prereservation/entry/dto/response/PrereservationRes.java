@@ -1,4 +1,4 @@
-package com.back.b2st.domain.prereservation.dto.response;
+package com.back.b2st.domain.prereservation.entry.dto.response;
 
 import java.util.List;
 

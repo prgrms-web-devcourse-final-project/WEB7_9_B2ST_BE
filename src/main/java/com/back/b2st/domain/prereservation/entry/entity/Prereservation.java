@@ -1,4 +1,4 @@
-package com.back.b2st.domain.prereservation.entity;
+package com.back.b2st.domain.prereservation.entry.entity;
 
 import com.back.b2st.global.jpa.entity.BaseEntity;
 

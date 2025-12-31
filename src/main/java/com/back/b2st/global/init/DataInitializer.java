@@ -31,6 +31,8 @@ import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.prereservation.policy.entity.PrereservationTimeTable;
+import com.back.b2st.domain.prereservation.policy.repository.PrereservationTimeTableRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
@@ -71,6 +73,7 @@ public class DataInitializer implements CommandLineRunner {
 	private final PaymentRepository paymentRepository;
 	private final TicketRepository ticketRepository;
 	private final LotteryEntryRepository lotteryEntryRepository;
+	private final PrereservationTimeTableRepository prereservationTimeTableRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -213,6 +216,31 @@ public class DataInitializer implements CommandLineRunner {
 
 		// 구역 설정 리스트
 		List<Section> sections = List.of(sectionA, sectionB, sectionC);
+
+		// 신청 예매(BookingType.PRERESERVE) 시간표 시드 생성
+		List<PrereservationTimeTable> timeTables = schedules.stream()
+			.filter(schedule -> schedule.getBookingType() == BookingType.PRERESERVE)
+			.flatMap(schedule -> IntStream.range(0, sections.size())
+				.mapToObj(idx -> {
+					LocalDateTime bookingOpenAt = schedule.getBookingOpenAt();
+					LocalDateTime startAt = bookingOpenAt.plusHours(idx);
+					LocalDateTime endAt = startAt.plusHours(1).minusSeconds(1);
+
+					LocalDateTime bookingCloseAt = schedule.getBookingCloseAt();
+					if (bookingCloseAt != null && bookingCloseAt.isBefore(endAt)) {
+						endAt = bookingCloseAt;
+					}
+
+					return PrereservationTimeTable.builder()
+						.performanceScheduleId(schedule.getPerformanceScheduleId())
+						.sectionId(sections.get(idx).getId())
+						.bookingStartAt(startAt)
+						.bookingEndAt(endAt)
+						.build();
+				}))
+			.toList();
+		prereservationTimeTableRepository.saveAll(timeTables);
+		log.info("[DataInit/Test] Prereservation time tables initialized. count={}", timeTables.size());
 
 		// 모든 구역의 좌석 생성
 		List<Seat> seats = sections.stream()

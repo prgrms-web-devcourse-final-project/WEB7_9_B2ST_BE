@@ -16,7 +16,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.back.b2st.domain.prereservation.service.PrereservationService;
 import com.back.b2st.domain.reservation.dto.request.ReservationReq;
 import com.back.b2st.domain.reservation.dto.response.ReservationCreateRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
@@ -39,9 +38,6 @@ class ReservationServiceTest {
 
 	@Mock
 	private ScheduleSeatStateService scheduleSeatStateService;
-
-	@Mock
-	private PrereservationService prereservationService;
 
 	@InjectMocks
 	private ReservationService reservationService;

@@ -1,4 +1,4 @@
-package com.back.b2st.domain.prereservation.dto.request;
+package com.back.b2st.domain.prereservation.entry.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 

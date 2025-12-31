@@ -17,7 +17,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.back.b2st.domain.prereservation.service.PrereservationService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
@@ -32,9 +31,6 @@ class ScheduleSeatStateServiceTest {
 
 	@Mock
 	private SeatHoldTokenService seatHoldTokenService;
-
-	@Mock
-	private PrereservationService prereservationService;
 
 	@Mock
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -88,7 +84,6 @@ class ScheduleSeatStateServiceTest {
 			spy(new ScheduleSeatStateService(
 				scheduleSeatLockService,
 				seatHoldTokenService,
-				prereservationService,
 				scheduleSeatRepository
 			));
 

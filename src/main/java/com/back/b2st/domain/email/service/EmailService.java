@@ -134,7 +134,7 @@ public class EmailService {
 	 */
 	@Transactional(readOnly = true)
 	public void sendWinnerNotifications(Long scheduleId) {
-		log.debug("당첨자 이메일 발송 시작 - scheduleId: {}", scheduleId);
+		log.info("당첨자 이메일 발송 시작 - scheduleId: {}", scheduleId);
 
 		List<LotteryResultEmailInfo> winners = lotteryResultRepository
 			.findSendEmailInfoByScheduleId(scheduleId);
@@ -160,7 +160,7 @@ public class EmailService {
 			}
 		}
 
-		log.debug("당첨자 이메일 발송 완료 - 성공: {}, 실패: {}", successCount, failCount);
+		log.info("당첨자 이메일 발송 완료 - 성공: {}, 실패: {}", successCount, failCount);
 	}
 
 	/**
@@ -178,7 +178,7 @@ public class EmailService {
 			winner.paymentDeadline()
 		);
 
-		log.debug("당첨 안내 이메일 발송 완료 - email: {}, resultId: {}",
+		log.info("당첨 안내 이메일 발송 완료 - email: {}, resultId: {}",
 			maskEmail(member.getEmail()), winner.id());
 	}
 

@@ -1,5 +1,6 @@
 package com.back.b2st.domain.prereservation.booking.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,6 +29,6 @@ public interface PrereservationBookingRepository extends JpaRepository<Prereserv
 		""")
 	Optional<PrereservationBooking> findActiveByScheduleSeatId(
 		@Param("scheduleSeatId") Long scheduleSeatId,
-		@Param("activeStatuses") java.util.List<PrereservationBookingStatus> activeStatuses);
+		@Param("activeStatuses") List<PrereservationBookingStatus> activeStatuses
+	);
 }
-

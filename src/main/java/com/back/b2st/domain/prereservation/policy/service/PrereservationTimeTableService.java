@@ -30,7 +30,8 @@ public class PrereservationTimeTableService {
 	@Transactional(readOnly = true)
 	public List<PrereservationTimeTable> getTimeTables(Long scheduleId) {
 		validatePrereserveScheduleOrThrow(scheduleId);
-		return prereservationTimeTableRepository.findAllByPerformanceScheduleIdOrderByBookingStartAtAscSectionIdAsc(scheduleId);
+		return prereservationTimeTableRepository
+			.findAllByPerformanceScheduleIdOrderByBookingStartAtAscSectionIdAsc(scheduleId);
 	}
 
 	@Transactional
@@ -83,4 +84,3 @@ public class PrereservationTimeTableService {
 		}
 	}
 }
-

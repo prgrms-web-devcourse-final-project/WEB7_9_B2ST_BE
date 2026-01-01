@@ -9,7 +9,12 @@ import com.back.b2st.domain.prereservation.policy.entity.PrereservationTimeTable
 
 public interface PrereservationTimeTableRepository extends JpaRepository<PrereservationTimeTable, Long> {
 
-	Optional<PrereservationTimeTable> findByPerformanceScheduleIdAndSectionId(Long performanceScheduleId, Long sectionId);
+	Optional<PrereservationTimeTable> findByPerformanceScheduleIdAndSectionId(
+		Long performanceScheduleId,
+		Long sectionId
+	);
 
-	List<PrereservationTimeTable> findAllByPerformanceScheduleIdOrderByBookingStartAtAscSectionIdAsc(Long performanceScheduleId);
+	List<PrereservationTimeTable> findAllByPerformanceScheduleIdOrderByBookingStartAtAscSectionIdAsc(
+		Long performanceScheduleId
+	);
 }

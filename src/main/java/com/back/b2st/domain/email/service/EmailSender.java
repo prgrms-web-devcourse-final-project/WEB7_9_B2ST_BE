@@ -53,6 +53,14 @@ public class EmailSender {
 	}
 
 	@Async("emailExecutor")
+	public void sendNotificationEmail(String to, String subject, String message) {
+		sendTemplateEmail(to, subject, "email/notification",
+			Map.of(
+				"message", message
+			));
+	}
+
+	@Async("emailExecutor")
 	public void sendLotteryWinnerEmail(
 		String to,
 		String name,

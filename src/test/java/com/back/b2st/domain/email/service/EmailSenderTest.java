@@ -340,5 +340,28 @@ class EmailSenderTest {
 			}
 		}
 	}
-}
 
+	@Nested
+	@DisplayName("알림 이메일 발송 (sendNotificationEmail)")
+	class SendNotificationEmailTest {
+
+		@Test
+		@DisplayName("성공")
+		void success() {
+			// given
+			String to = "user@example.com";
+			String subject = "subject";
+			String message = "message";
+
+			given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+			given(templateEngine.process(eq("email/notification"), any())).willReturn("<html>Notification</html>");
+
+			// when
+			emailSender.sendNotificationEmail(to, subject, message);
+
+			// then
+			verify(mailSender).send(mimeMessage);
+			verify(templateEngine).process(eq("email/notification"), any());
+		}
+	}
+}

@@ -96,7 +96,7 @@ public class PaymentController {
 		@Valid @RequestBody PaymentFailReq request,
 		@Parameter(hidden = true) @CurrentUser UserPrincipal user
 	) {
-		Payment payment = paymentFailService.fail(user.getId(), orderId, request.reason());
+		Payment payment = paymentFailService.fail(user.getId(), orderId, request.reason().name());
 		return ResponseEntity.ok(BaseResponse.success(PaymentFailRes.from(payment)));
 	}
 }

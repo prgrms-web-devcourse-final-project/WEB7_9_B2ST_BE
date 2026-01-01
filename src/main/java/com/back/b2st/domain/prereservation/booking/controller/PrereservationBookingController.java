@@ -1,0 +1,48 @@
+package com.back.b2st.domain.prereservation.booking.controller;
+
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.back.b2st.domain.prereservation.booking.dto.response.PrereservationBookingCreateRes;
+import com.back.b2st.domain.prereservation.booking.service.PrereservationBookingService;
+import com.back.b2st.global.annotation.CurrentUser;
+import com.back.b2st.global.common.BaseResponse;
+import com.back.b2st.security.UserPrincipal;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/prereservations/schedules/{scheduleId}/seats/{seatId}/bookings")
+@Tag(name = "신청 예매", description = "신청 예매 전용 예매 생성 API")
+public class PrereservationBookingController {
+
+	private final PrereservationBookingService prereservationBookingService;
+
+	@PostMapping
+	@Operation(
+		summary = "신청예매 예매 생성(결제 시작)",
+		description = """
+			HOLD된 좌석으로 신청예매 전용 예매를 생성합니다.
+			- bookingType=PRERESERVE 회차만 가능
+			- 좌석 HOLD 소유권(memberId) 검증
+			- 생성된 prereservationBookingId를 결제 domainId로 사용합니다(domainType=PRERESERVATION)
+			"""
+	)
+	public BaseResponse<PrereservationBookingCreateRes> create(
+		@Parameter(hidden = true) @CurrentUser UserPrincipal user,
+		@Parameter(description = "공연 회차 ID", example = "1")
+		@PathVariable Long scheduleId,
+		@Parameter(description = "좌석 ID", example = "101")
+		@PathVariable Long seatId
+	) {
+		var booking = prereservationBookingService.createBooking(user.getId(), scheduleId, seatId);
+		return BaseResponse.created(new PrereservationBookingCreateRes(booking.getId(), booking.getExpiresAt()));
+	}
+}
+

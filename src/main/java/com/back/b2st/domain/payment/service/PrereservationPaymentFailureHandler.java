@@ -4,7 +4,7 @@ import org.springframework.stereotype.Component;
 
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
-import com.back.b2st.domain.reservation.service.ReservationService;
+import com.back.b2st.domain.prereservation.booking.service.PrereservationBookingService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PrereservationPaymentFailureHandler implements PaymentFailureHandler {
 
-	private final ReservationService reservationService;
+	private final PrereservationBookingService prereservationBookingService;
 
 	@Override
 	public boolean supports(DomainType domainType) {
@@ -21,6 +21,6 @@ public class PrereservationPaymentFailureHandler implements PaymentFailureHandle
 
 	@Override
 	public void handleFailure(Payment payment) {
-		reservationService.failReservation(payment.getDomainId());
+		prereservationBookingService.failBooking(payment.getDomainId());
 	}
 }

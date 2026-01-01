@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.back.b2st.domain.lottery.result.dto.LotteryPaymentInfo;
 import com.back.b2st.domain.lottery.result.dto.LotteryReservationInfo;
+import com.back.b2st.domain.lottery.result.dto.LotteryResultEmailInfo;
 import com.back.b2st.domain.lottery.result.entity.LotteryResult;
 
 public interface LotteryResultRepository extends JpaRepository<LotteryResult, Long> {
@@ -26,22 +27,23 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		JOIN LotteryEntry le ON lr.lotteryEntryId = le.id
 		WHERE le.uuid = :uuid
 		""")
-	LotteryPaymentInfo findPaymentInfoByid(
+	LotteryPaymentInfo findPaymentInfoByid(    // todo ById
 		@Param("uuid") UUID uuid);
 
 	/**
-	 * 회차의 미결제자 응모 정보 조회
+	 * 이메일 전송을 위한 미결제자 정보 조회
 	 */
 	@Query("""
-		select new com.back.b2st.domain.lottery.result.dto.LotteryPaymentInfo(
-				lr.id, lr.memberId, le.grade, le.quantity
-				)
+		select new com.back.b2st.domain.lottery.result.dto.LotteryResultEmailInfo(
+				lr.id, lr.memberId, m.name, le.grade, le.quantity, lr.paymentDeadline
+		)
 		FROM LotteryResult lr
 		JOIN LotteryEntry le ON lr.lotteryEntryId = le.id
+		JOIN Member m ON lr.memberId = m.id
 		WHERE le.scheduleId = :scheduleId
 		  AND lr.paid = false
 		""")
-	List<LotteryPaymentInfo> findPaymentInfoByScheduleId(
+	List<LotteryResultEmailInfo> findSendEmailInfoByScheduleId(
 		@Param("scheduleId") Long scheduleId);
 
 	/**

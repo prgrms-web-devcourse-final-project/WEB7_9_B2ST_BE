@@ -70,5 +70,9 @@ public class PrereservationTimeTable extends BaseEntity {
 		this.bookingStartAt = bookingStartAt;
 		this.bookingEndAt = bookingEndAt;
 	}
-}
 
+	public void updateBookingTime(LocalDateTime bookingStartAt, LocalDateTime bookingEndAt) {
+		this.bookingStartAt = bookingStartAt;
+		this.bookingEndAt = bookingEndAt;
+	}
+}

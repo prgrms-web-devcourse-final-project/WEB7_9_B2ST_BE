@@ -62,6 +62,8 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional
 public class DataInitializer implements CommandLineRunner {
 
+	private static final String TEST_PERFORMANCE_TITLE = "2024 아이유 콘서트 - HEREH WORLD TOUR";
+
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final ScheduleSeatRepository scheduleSeatRepository;
@@ -163,6 +165,7 @@ public class DataInitializer implements CommandLineRunner {
 		// 중복 생성 방지: 이미 공연장이 있으면 스킵
 		if (venueRepository.count() > 0) {
 			log.info("[DataInit] 이미 데이터 존재하여 초기화 스킵");
+			seedPrereservationTimeTablesIfMissing();
 			return;
 		}
 
@@ -481,6 +484,73 @@ public class DataInitializer implements CommandLineRunner {
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
+		}
+	}
+
+	private void seedPrereservationTimeTablesIfMissing() {
+		List<PerformanceSchedule> prereserveSchedules = performanceScheduleRepository.findAll().stream()
+			.filter(schedule -> schedule.getBookingType() == BookingType.PRERESERVE)
+			.filter(schedule -> schedule.getBookingOpenAt() != null)
+			.filter(schedule -> schedule.getPerformance() != null)
+			.filter(schedule -> schedule.getPerformance().getTitle() != null)
+			.filter(schedule -> TEST_PERFORMANCE_TITLE.equals(schedule.getPerformance().getTitle()))
+			.toList();
+
+		if (prereserveSchedules.isEmpty()) {
+			return;
+		}
+
+		int createdCount = 0;
+		for (PerformanceSchedule schedule : prereserveSchedules) {
+			Long scheduleId = schedule.getPerformanceScheduleId();
+			var existing = prereservationTimeTableRepository
+				.findAllByPerformanceScheduleIdOrderByBookingStartAtAscSectionIdAsc(scheduleId);
+			var existingSectionIds = existing.stream().map(PrereservationTimeTable::getSectionId).collect(java.util.stream.Collectors.toSet());
+
+			Long venueId = schedule.getPerformance().getVenue().getVenueId();
+			List<Section> sections = sectionRepository.findByVenueId(venueId).stream()
+				.sorted(java.util.Comparator.comparingLong(Section::getId))
+				.toList();
+			if (sections.isEmpty()) {
+				continue;
+			}
+
+			LocalDateTime bookingOpenAt = schedule.getBookingOpenAt();
+			LocalDateTime bookingCloseAt = schedule.getBookingCloseAt();
+
+			List<PrereservationTimeTable> toCreate = new java.util.ArrayList<>();
+			for (int idx = 0; idx < sections.size(); idx++) {
+				Section section = sections.get(idx);
+				if (existingSectionIds.contains(section.getId())) {
+					continue;
+				}
+
+				LocalDateTime startAt = bookingOpenAt.plusHours(idx);
+				LocalDateTime endAt = startAt.plusHours(1).minusSeconds(1);
+
+				if (bookingCloseAt != null && bookingCloseAt.isBefore(endAt)) {
+					endAt = bookingCloseAt;
+				}
+				if (!endAt.isAfter(startAt)) {
+					continue;
+				}
+
+				toCreate.add(PrereservationTimeTable.builder()
+					.performanceScheduleId(scheduleId)
+					.sectionId(section.getId())
+					.bookingStartAt(startAt)
+					.bookingEndAt(endAt)
+					.build());
+			}
+
+			if (!toCreate.isEmpty()) {
+				prereservationTimeTableRepository.saveAll(toCreate);
+				createdCount += toCreate.size();
+			}
+		}
+
+		if (createdCount > 0) {
+			log.info("[DataInit/Test] Prereservation time tables ensured. created={}", createdCount);
 		}
 	}
 

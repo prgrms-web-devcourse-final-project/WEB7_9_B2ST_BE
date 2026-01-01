@@ -8,9 +8,9 @@ import com.back.b2st.domain.payment.error.PaymentErrorCode;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
-import com.back.b2st.domain.reservation.entity.Reservation;
-import com.back.b2st.domain.reservation.entity.ReservationStatus;
-import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
+import com.back.b2st.domain.prereservation.booking.entity.PrereservationBookingStatus;
+import com.back.b2st.domain.prereservation.booking.service.PrereservationBookingService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
@@ -25,11 +25,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PrereservationPaymentHandler implements PaymentDomainHandler {
 
-	private final ReservationRepository reservationRepository;
 	private final ScheduleSeatRepository scheduleSeatRepository;
 	private final SeatHoldTokenService seatHoldTokenService;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final SeatGradeRepository seatGradeRepository;
+	private final PrereservationBookingService prereservationBookingService;
 
 	@Override
 	public boolean supports(DomainType domainType) {
@@ -38,44 +38,41 @@ public class PrereservationPaymentHandler implements PaymentDomainHandler {
 
 	@Override
 	@Transactional(readOnly = true)
-	public PaymentTarget loadAndValidate(Long reservationId, Long memberId) {
-		Reservation reservation = reservationRepository.findById(reservationId)
-			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND));
+	public PaymentTarget loadAndValidate(Long bookingId, Long memberId) {
+		PrereservationBooking booking = prereservationBookingService.getBookingOrThrow(bookingId);
 
-		if (!reservation.getMemberId().equals(memberId)) {
+		if (!booking.getMemberId().equals(memberId)) {
 			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
 		}
 
-		if (reservation.getStatus() != ReservationStatus.CREATED
-			&& reservation.getStatus() != ReservationStatus.PENDING) {
+		if (booking.getStatus() != PrereservationBookingStatus.CREATED) {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 		}
 
-		Long scheduleId = reservation.getScheduleId();
-		Long seatId = reservation.getSeatId();
+		ScheduleSeat scheduleSeat = scheduleSeatRepository.findById(booking.getScheduleSeatId())
+			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND));
 
-		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
+		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleSeat.getScheduleId())
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND));
 
 		if (schedule.getBookingType() != BookingType.PRERESERVE) {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE, "신청 예매 결제 대상이 아닙니다.");
 		}
 
-		ScheduleSeat scheduleSeat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
-			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND));
-
 		if (scheduleSeat.getStatus() != SeatStatus.HOLD) {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 		}
 
-		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
+		seatHoldTokenService.validateOwnership(scheduleSeat.getScheduleId(), scheduleSeat.getSeatId(), memberId);
 
 		Long performanceId = schedule.getPerformance().getPerformanceId();
-		SeatGrade seatGrade = seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(performanceId, seatId)
+		SeatGrade seatGrade = seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(
+				performanceId,
+				scheduleSeat.getSeatId()
+			)
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE));
 
 		Long expectedAmount = seatGrade.getPrice().longValue();
-		return new PaymentTarget(DomainType.PRERESERVATION, reservationId, expectedAmount);
+		return new PaymentTarget(DomainType.PRERESERVATION, bookingId, expectedAmount);
 	}
 }
-

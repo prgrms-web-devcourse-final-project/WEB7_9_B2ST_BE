@@ -12,18 +12,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
-import com.back.b2st.domain.reservation.service.ReservationService;
+import com.back.b2st.domain.prereservation.booking.service.PrereservationBookingService;
 
 @ExtendWith(MockitoExtension.class)
 class PrereservationPaymentFailureHandlerTest {
 
 	@Mock
-	private ReservationService reservationService;
+	private PrereservationBookingService prereservationBookingService;
 
 	@InjectMocks
 	private PrereservationPaymentFailureHandler prereservationPaymentFailureHandler;
 
-	private static final Long RESERVATION_ID = 1L;
+	private static final Long BOOKING_ID = 1L;
 
 	@Test
 	@DisplayName("supports(): DomainType.PRERESERVATION 지원")
@@ -46,15 +46,15 @@ class PrereservationPaymentFailureHandlerTest {
 	void handleFailure_success() {
 		// given
 		Payment payment = mock(Payment.class);
-		given(payment.getDomainId()).willReturn(RESERVATION_ID);
+		given(payment.getDomainId()).willReturn(BOOKING_ID);
 
-		willDoNothing().given(reservationService).failReservation(RESERVATION_ID);
+		willDoNothing().given(prereservationBookingService).failBooking(BOOKING_ID);
 
 		// when
 		assertThatCode(() -> prereservationPaymentFailureHandler.handleFailure(payment))
 			.doesNotThrowAnyException();
 
 		// then
-		then(reservationService).should().failReservation(RESERVATION_ID);
+		then(prereservationBookingService).should().failBooking(BOOKING_ID);
 	}
 }

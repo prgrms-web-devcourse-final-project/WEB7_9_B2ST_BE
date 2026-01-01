@@ -21,15 +21,21 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(
-	name = "prereservation_time_tables",
-	indexes = {
-		@Index(name = "idx_prereservation_time_tables_schedule", columnList = "performance_schedule_id"),
-		@Index(name = "idx_prereservation_time_tables_schedule_section", columnList = "performance_schedule_id, section_id")
-	},
-	uniqueConstraints = {
-		@UniqueConstraint(
-			name = "uk_prereservation_time_tables_schedule_section",
+	@Table(
+		name = "prereservation_time_tables",
+		indexes = {
+			@Index(
+				name = "idx_prereservation_time_tables_schedule",
+				columnList = "performance_schedule_id"
+			),
+			@Index(
+				name = "idx_prereservation_time_tables_schedule_section",
+				columnList = "performance_schedule_id, section_id"
+			)
+		},
+		uniqueConstraints = {
+			@UniqueConstraint(
+				name = "uk_prereservation_time_tables_schedule_section",
 			columnNames = {"performance_schedule_id", "section_id"}
 		)
 	}
@@ -70,5 +76,9 @@ public class PrereservationTimeTable extends BaseEntity {
 		this.bookingStartAt = bookingStartAt;
 		this.bookingEndAt = bookingEndAt;
 	}
-}
 
+	public void updateBookingTime(LocalDateTime bookingStartAt, LocalDateTime bookingEndAt) {
+		this.bookingStartAt = bookingStartAt;
+		this.bookingEndAt = bookingEndAt;
+	}
+}

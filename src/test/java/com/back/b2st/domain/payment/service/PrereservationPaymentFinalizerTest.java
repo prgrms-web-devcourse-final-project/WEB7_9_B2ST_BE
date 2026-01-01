@@ -22,9 +22,9 @@ import com.back.b2st.domain.payment.error.PaymentErrorCode;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
-import com.back.b2st.domain.reservation.entity.Reservation;
-import com.back.b2st.domain.reservation.entity.ReservationStatus;
-import com.back.b2st.domain.reservation.error.ReservationErrorCode;
+import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
+import com.back.b2st.domain.prereservation.booking.entity.PrereservationBookingStatus;
+import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.ticket.entity.Ticket;
@@ -33,7 +33,6 @@ import com.back.b2st.global.error.exception.BusinessException;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.TypedQuery;
 
 @ExtendWith(MockitoExtension.class)
 class PrereservationPaymentFinalizerTest {
@@ -45,6 +44,9 @@ class PrereservationPaymentFinalizerTest {
 	private PerformanceScheduleRepository performanceScheduleRepository;
 
 	@Mock
+	private PrereservationBookingRepository prereservationBookingRepository;
+
+	@Mock
 	private TicketService ticketService;
 
 	@Mock
@@ -53,59 +55,50 @@ class PrereservationPaymentFinalizerTest {
 	@InjectMocks
 	private PrereservationPaymentFinalizer prereservationPaymentFinalizer;
 
-	private static final Long RESERVATION_ID = 1L;
+	private static final Long BOOKING_ID = 1L;
 	private static final Long MEMBER_ID = 10L;
 	private static final Long SCHEDULE_ID = 100L;
 	private static final Long SEAT_ID = 1000L;
+	private static final Long SCHEDULE_SEAT_ID = 999L;
 
 	@Test
 	@DisplayName("supports(): DomainType.PRERESERVATION 지원")
 	void supports_prereservation_true() {
-		// when & then
 		assertThat(prereservationPaymentFinalizer.supports(DomainType.PRERESERVATION)).isTrue();
 	}
 
 	@Test
 	@DisplayName("supports(): 다른 도메인 타입은 미지원")
 	void supports_others_false() {
-		// when & then
 		assertThat(prereservationPaymentFinalizer.supports(DomainType.RESERVATION)).isFalse();
 		assertThat(prereservationPaymentFinalizer.supports(DomainType.LOTTERY)).isFalse();
 		assertThat(prereservationPaymentFinalizer.supports(DomainType.TRADE)).isFalse();
 	}
 
 	@Test
-	@DisplayName("finalizePayment(): 예약이 없으면 RESERVATION_NOT_FOUND 예외")
-	void finalizePayment_reservationNotFound_throw() {
-		// given
+	@DisplayName("finalizePayment(): booking이 없으면 DOMAIN_NOT_FOUND 예외")
+	void finalizePayment_bookingNotFound_throw() {
 		Payment payment = mock(Payment.class);
-		given(payment.getDomainId()).willReturn(RESERVATION_ID);
+		given(payment.getDomainId()).willReturn(BOOKING_ID);
+		given(prereservationBookingRepository.findByIdWithLock(BOOKING_ID)).willReturn(Optional.empty());
 
-		given(entityManager.find(Reservation.class, RESERVATION_ID, LockModeType.PESSIMISTIC_WRITE))
-			.willReturn(null);
-
-		// when & then
 		assertThatThrownBy(() -> prereservationPaymentFinalizer.finalizePayment(payment))
 			.isInstanceOf(BusinessException.class)
 			.satisfies(ex -> assertThat(((BusinessException)ex).getErrorCode())
-				.isEqualTo(ReservationErrorCode.RESERVATION_NOT_FOUND));
+				.isEqualTo(PaymentErrorCode.DOMAIN_NOT_FOUND));
 	}
 
 	@Test
-	@DisplayName("finalizePayment(): 다른 사용자의 예약이면 UNAUTHORIZED_PAYMENT_ACCESS 예외")
+	@DisplayName("finalizePayment(): 다른 사용자의 booking이면 UNAUTHORIZED_PAYMENT_ACCESS 예외")
 	void finalizePayment_unauthorizedMember_throw() {
-		// given
 		Payment payment = mock(Payment.class);
-		Reservation reservation = mock(Reservation.class);
+		PrereservationBooking booking = mock(PrereservationBooking.class);
 
-		given(payment.getDomainId()).willReturn(RESERVATION_ID);
+		given(payment.getDomainId()).willReturn(BOOKING_ID);
 		given(payment.getMemberId()).willReturn(MEMBER_ID);
-		given(reservation.getMemberId()).willReturn(999L);
+		given(booking.getMemberId()).willReturn(999L);
+		given(prereservationBookingRepository.findByIdWithLock(BOOKING_ID)).willReturn(Optional.of(booking));
 
-		given(entityManager.find(Reservation.class, RESERVATION_ID, LockModeType.PESSIMISTIC_WRITE))
-			.willReturn(reservation);
-
-		// when & then
 		assertThatThrownBy(() -> prereservationPaymentFinalizer.finalizePayment(payment))
 			.isInstanceOf(BusinessException.class)
 			.satisfies(ex -> assertThat(((BusinessException)ex).getErrorCode())
@@ -113,48 +106,22 @@ class PrereservationPaymentFinalizerTest {
 	}
 
 	@Test
-	@DisplayName("finalizePayment(): 취소된 예약이면 RESERVATION_ALREADY_CANCELED 예외")
-	void finalizePayment_reservationCanceled_throw() {
-		// given
-		Payment payment = mock(Payment.class);
-		Reservation reservation = mock(Reservation.class);
-
-		given(payment.getDomainId()).willReturn(RESERVATION_ID);
-		given(payment.getMemberId()).willReturn(MEMBER_ID);
-		given(reservation.getMemberId()).willReturn(MEMBER_ID);
-		given(reservation.getStatus()).willReturn(ReservationStatus.CANCELED);
-
-		given(entityManager.find(Reservation.class, RESERVATION_ID, LockModeType.PESSIMISTIC_WRITE))
-			.willReturn(reservation);
-
-		// when & then
-		assertThatThrownBy(() -> prereservationPaymentFinalizer.finalizePayment(payment))
-			.isInstanceOf(BusinessException.class)
-			.satisfies(ex -> assertThat(((BusinessException)ex).getErrorCode())
-				.isEqualTo(ReservationErrorCode.RESERVATION_ALREADY_CANCELED));
-	}
-
-	@Test
-	@DisplayName("finalizePayment(): BookingType이 PRERESERVE가 아니면 예외")
+	@DisplayName("finalizePayment(): bookingType이 PRERESERVE가 아니면 예외")
 	void finalizePayment_wrongBookingType_throw() {
-		// given
 		Payment payment = mock(Payment.class);
-		Reservation reservation = mock(Reservation.class);
+		PrereservationBooking booking = mock(PrereservationBooking.class);
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
 
-		given(payment.getDomainId()).willReturn(RESERVATION_ID);
+		given(payment.getDomainId()).willReturn(BOOKING_ID);
 		given(payment.getMemberId()).willReturn(MEMBER_ID);
-		given(reservation.getMemberId()).willReturn(MEMBER_ID);
-		given(reservation.getStatus()).willReturn(ReservationStatus.CREATED);
-		given(reservation.getScheduleId()).willReturn(SCHEDULE_ID);
+		given(booking.getMemberId()).willReturn(MEMBER_ID);
+		given(booking.getStatus()).willReturn(PrereservationBookingStatus.CREATED);
+		given(booking.getScheduleId()).willReturn(SCHEDULE_ID);
+		given(prereservationBookingRepository.findByIdWithLock(BOOKING_ID)).willReturn(Optional.of(booking));
 
+		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 		given(schedule.getBookingType()).willReturn(BookingType.FIRST_COME);
 
-		given(entityManager.find(Reservation.class, RESERVATION_ID, LockModeType.PESSIMISTIC_WRITE))
-			.willReturn(reservation);
-		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-
-		// when & then
 		assertThatThrownBy(() -> prereservationPaymentFinalizer.finalizePayment(payment))
 			.isInstanceOf(BusinessException.class)
 			.satisfies(ex -> {
@@ -164,77 +131,63 @@ class PrereservationPaymentFinalizerTest {
 	}
 
 	@Test
-	@DisplayName("finalizePayment(): 이미 완료된 예약은 idempotent 처리")
+	@DisplayName("finalizePayment(): 이미 완료된 booking은 idempotent 처리")
 	void finalizePayment_alreadyCompleted_idempotent() {
-		// given
 		Payment payment = mock(Payment.class);
-		Reservation reservation = mock(Reservation.class);
+		PrereservationBooking booking = mock(PrereservationBooking.class);
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
 		ScheduleSeat scheduleSeat = mock(ScheduleSeat.class);
-		TypedQuery<ScheduleSeat> query = mock(TypedQuery.class);
 
-		given(payment.getDomainId()).willReturn(RESERVATION_ID);
+		given(payment.getDomainId()).willReturn(BOOKING_ID);
 		given(payment.getMemberId()).willReturn(MEMBER_ID);
-		given(reservation.getId()).willReturn(RESERVATION_ID);
-		given(reservation.getMemberId()).willReturn(MEMBER_ID);
-		given(reservation.getStatus()).willReturn(ReservationStatus.COMPLETED);
-		given(reservation.getScheduleId()).willReturn(SCHEDULE_ID);
-		given(reservation.getSeatId()).willReturn(SEAT_ID);
+		given(booking.getId()).willReturn(BOOKING_ID);
+		given(booking.getMemberId()).willReturn(MEMBER_ID);
+		given(booking.getStatus()).willReturn(PrereservationBookingStatus.COMPLETED);
+		given(booking.getScheduleId()).willReturn(SCHEDULE_ID);
+		given(booking.getScheduleSeatId()).willReturn(SCHEDULE_SEAT_ID);
+		given(prereservationBookingRepository.findByIdWithLock(BOOKING_ID)).willReturn(Optional.of(booking));
 
-		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(scheduleSeat.getStatus()).willReturn(SeatStatus.SOLD);
-
-		given(entityManager.find(Reservation.class, RESERVATION_ID, LockModeType.PESSIMISTIC_WRITE))
-			.willReturn(reservation);
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 
-		given(entityManager.createQuery(anyString(), eq(ScheduleSeat.class))).willReturn(query);
-		given(query.setParameter("scheduleId", SCHEDULE_ID)).willReturn(query);
-		given(query.setParameter("seatId", SEAT_ID)).willReturn(query);
-		given(query.setLockMode(LockModeType.PESSIMISTIC_WRITE)).willReturn(query);
-		given(query.getResultStream()).willReturn(java.util.stream.Stream.of(scheduleSeat));
+		given(entityManager.find(ScheduleSeat.class, SCHEDULE_SEAT_ID, LockModeType.PESSIMISTIC_WRITE))
+			.willReturn(scheduleSeat);
+		given(scheduleSeat.getStatus()).willReturn(SeatStatus.SOLD);
+		given(scheduleSeat.getSeatId()).willReturn(SEAT_ID);
 
-		given(ticketService.createTicket(RESERVATION_ID, MEMBER_ID, SEAT_ID)).willReturn(mock(Ticket.class));
+		given(ticketService.createTicket(BOOKING_ID, MEMBER_ID, SEAT_ID)).willReturn(mock(Ticket.class));
 
-		// when
 		assertThatCode(() -> prereservationPaymentFinalizer.finalizePayment(payment))
 			.doesNotThrowAnyException();
 
-		// then
-		then(reservation).should(never()).complete(any());
+		then(booking).should(never()).complete(any());
 		then(scheduleSeat).should(never()).sold();
 	}
 
 	@Test
-	@DisplayName("finalizePayment(): 정상 케이스 - 예약 완료 및 티켓 생성")
+	@DisplayName("finalizePayment(): 정상 케이스 - booking 완료 및 티켓 생성")
 	void finalizePayment_success() {
-		// given
 		Payment payment = mock(Payment.class);
-		Reservation reservation = mock(Reservation.class);
+		PrereservationBooking booking = mock(PrereservationBooking.class);
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
 		ScheduleSeat scheduleSeat = mock(ScheduleSeat.class);
-		TypedQuery<ScheduleSeat> query = mock(TypedQuery.class);
 
-		given(payment.getDomainId()).willReturn(RESERVATION_ID);
+		given(payment.getDomainId()).willReturn(BOOKING_ID);
 		given(payment.getMemberId()).willReturn(MEMBER_ID);
-		given(reservation.getId()).willReturn(RESERVATION_ID);
-		given(reservation.getMemberId()).willReturn(MEMBER_ID);
-		given(reservation.getStatus()).willReturn(ReservationStatus.CREATED);
-		given(reservation.getScheduleId()).willReturn(SCHEDULE_ID);
-		given(reservation.getSeatId()).willReturn(SEAT_ID);
+		given(booking.getId()).willReturn(BOOKING_ID);
+		given(booking.getMemberId()).willReturn(MEMBER_ID);
+		given(booking.getStatus()).willReturn(PrereservationBookingStatus.CREATED);
+		given(booking.getScheduleId()).willReturn(SCHEDULE_ID);
+		given(booking.getScheduleSeatId()).willReturn(SCHEDULE_SEAT_ID);
+		given(prereservationBookingRepository.findByIdWithLock(BOOKING_ID)).willReturn(Optional.of(booking));
 
-		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(scheduleSeat.getStatus()).willReturn(SeatStatus.HOLD);
-
-		given(entityManager.find(Reservation.class, RESERVATION_ID, LockModeType.PESSIMISTIC_WRITE))
-			.willReturn(reservation);
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 
-		given(entityManager.createQuery(anyString(), eq(ScheduleSeat.class))).willReturn(query);
-		given(query.setParameter("scheduleId", SCHEDULE_ID)).willReturn(query);
-		given(query.setParameter("seatId", SEAT_ID)).willReturn(query);
-		given(query.setLockMode(LockModeType.PESSIMISTIC_WRITE)).willReturn(query);
-		given(query.getResultStream()).willReturn(java.util.stream.Stream.of(scheduleSeat));
+		given(entityManager.find(ScheduleSeat.class, SCHEDULE_SEAT_ID, LockModeType.PESSIMISTIC_WRITE))
+			.willReturn(scheduleSeat);
+		given(scheduleSeat.getStatus()).willReturn(SeatStatus.HOLD);
+		given(scheduleSeat.getSeatId()).willReturn(SEAT_ID);
 
 		Clock fixedClock = Clock.fixed(
 			Instant.parse("2025-01-01T14:00:00Z"),
@@ -243,17 +196,16 @@ class PrereservationPaymentFinalizerTest {
 		given(clock.instant()).willReturn(fixedClock.instant());
 		given(clock.getZone()).willReturn(fixedClock.getZone());
 
-		willDoNothing().given(reservation).complete(any());
+		willDoNothing().given(booking).complete(any());
 		willDoNothing().given(scheduleSeat).sold();
-		given(ticketService.createTicket(RESERVATION_ID, MEMBER_ID, SEAT_ID)).willReturn(mock(Ticket.class));
+		given(ticketService.createTicket(BOOKING_ID, MEMBER_ID, SEAT_ID)).willReturn(mock(Ticket.class));
 
-		// when
 		assertThatCode(() -> prereservationPaymentFinalizer.finalizePayment(payment))
 			.doesNotThrowAnyException();
 
-		// then
-		then(reservation).should().complete(any(LocalDateTime.class));
+		then(booking).should().complete(any(LocalDateTime.class));
 		then(scheduleSeat).should().sold();
-		then(ticketService).should().createTicket(RESERVATION_ID, MEMBER_ID, SEAT_ID);
+		then(ticketService).should().createTicket(BOOKING_ID, MEMBER_ID, SEAT_ID);
 	}
 }
+

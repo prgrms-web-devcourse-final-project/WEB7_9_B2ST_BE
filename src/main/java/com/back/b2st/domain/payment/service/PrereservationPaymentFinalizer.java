@@ -12,9 +12,9 @@ import com.back.b2st.domain.payment.error.PaymentErrorCode;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
-import com.back.b2st.domain.reservation.entity.Reservation;
-import com.back.b2st.domain.reservation.entity.ReservationStatus;
-import com.back.b2st.domain.reservation.error.ReservationErrorCode;
+import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
+import com.back.b2st.domain.prereservation.booking.entity.PrereservationBookingStatus;
+import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.ticket.service.TicketService;
@@ -30,6 +30,7 @@ public class PrereservationPaymentFinalizer implements PaymentFinalizer {
 
 	private final EntityManager entityManager;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
+	private final PrereservationBookingRepository prereservationBookingRepository;
 	private final TicketService ticketService;
 	private final Clock clock;
 
@@ -41,57 +42,49 @@ public class PrereservationPaymentFinalizer implements PaymentFinalizer {
 	@Override
 	@Transactional
 	public void finalizePayment(Payment payment) {
-		Reservation reservation = entityManager.find(Reservation.class, payment.getDomainId(), LockModeType.PESSIMISTIC_WRITE);
-		if (reservation == null) {
-			throw new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND);
-		}
+		PrereservationBooking booking = prereservationBookingRepository.findByIdWithLock(payment.getDomainId())
+			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND));
 
-		if (!reservation.getMemberId().equals(payment.getMemberId())) {
+		if (!booking.getMemberId().equals(payment.getMemberId())) {
 			throw new BusinessException(PaymentErrorCode.UNAUTHORIZED_PAYMENT_ACCESS);
 		}
 
-		if (reservation.getStatus() == ReservationStatus.CANCELED) {
-			throw new BusinessException(ReservationErrorCode.RESERVATION_ALREADY_CANCELED);
+		if (booking.getStatus() == PrereservationBookingStatus.CANCELED) {
+			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE, "이미 취소된 신청예매입니다.");
 		}
 
-		PerformanceSchedule schedule = performanceScheduleRepository.findById(reservation.getScheduleId())
+		PerformanceSchedule schedule = performanceScheduleRepository.findById(booking.getScheduleId())
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND));
 
 		if (schedule.getBookingType() != BookingType.PRERESERVE) {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE, "신청 예매 결제 대상이 아닙니다.");
 		}
 
-		ScheduleSeat scheduleSeat = findScheduleSeatWithLock(reservation.getScheduleId(), reservation.getSeatId());
+		ScheduleSeat scheduleSeat = findScheduleSeatWithLock(booking.getScheduleSeatId());
 
-		if (reservation.getStatus() == ReservationStatus.COMPLETED) {
+		if (booking.getStatus() == PrereservationBookingStatus.COMPLETED) {
 			ensureSeatSold(scheduleSeat);
-			ensureTicketExists(reservation);
+			ensureTicketExists(booking, scheduleSeat.getSeatId());
 			return;
 		}
 
 		ensureSeatHoldOrSold(scheduleSeat);
 
 		LocalDateTime now = LocalDateTime.now(clock);
-		reservation.complete(now);
+		booking.complete(now);
 		scheduleSeat.sold();
-		ensureTicketExists(reservation);
+		ensureTicketExists(booking, scheduleSeat.getSeatId());
 	}
 
-	private ScheduleSeat findScheduleSeatWithLock(Long scheduleId, Long seatId) {
-		ScheduleSeat scheduleSeat = entityManager
-			.createQuery("SELECT s FROM ScheduleSeat s WHERE s.scheduleId = :scheduleId AND s.seatId = :seatId", ScheduleSeat.class)
-			.setParameter("scheduleId", scheduleId)
-			.setParameter("seatId", seatId)
-			.setLockMode(LockModeType.PESSIMISTIC_WRITE)
-			.getResultStream()
-			.findFirst()
-			.orElse(null);
+		private ScheduleSeat findScheduleSeatWithLock(Long scheduleSeatId) {
+			ScheduleSeat scheduleSeat =
+				entityManager.find(ScheduleSeat.class, scheduleSeatId, LockModeType.PESSIMISTIC_WRITE);
 
-		if (scheduleSeat == null) {
-			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND, "예매 좌석 정보를 찾을 수 없습니다.");
+			if (scheduleSeat == null) {
+				throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND, "예매 좌석 정보를 찾을 수 없습니다.");
+			}
+			return scheduleSeat;
 		}
-		return scheduleSeat;
-	}
 
 	private void ensureSeatHoldOrSold(ScheduleSeat scheduleSeat) {
 		if (scheduleSeat.getStatus() == SeatStatus.SOLD) {
@@ -108,8 +101,7 @@ public class PrereservationPaymentFinalizer implements PaymentFinalizer {
 		}
 	}
 
-	private void ensureTicketExists(Reservation reservation) {
-		ticketService.createTicket(reservation.getId(), reservation.getMemberId(), reservation.getSeatId());
+	private void ensureTicketExists(PrereservationBooking booking, Long seatId) {
+		ticketService.createTicket(booking.getId(), booking.getMemberId(), seatId);
 	}
 }
-

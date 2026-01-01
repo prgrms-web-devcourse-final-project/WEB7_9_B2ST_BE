@@ -20,8 +20,10 @@ import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
@@ -40,6 +42,9 @@ class PrereservationPaymentHandlerTest {
 	private ScheduleSeatRepository scheduleSeatRepository;
 
 	@Mock
+	private ReservationSeatRepository reservationSeatRepository;
+
+	@Mock
 	private SeatHoldTokenService seatHoldTokenService;
 
 	@Mock
@@ -55,6 +60,7 @@ class PrereservationPaymentHandlerTest {
 	private static final Long MEMBER_ID = 10L;
 	private static final Long SCHEDULE_ID = 100L;
 	private static final Long SEAT_ID = 1000L;
+	private static final Long SCHEDULE_SEAT_ID = 999L;
 	private static final Long PERFORMANCE_ID = 50L;
 
 	@Test
@@ -143,15 +149,20 @@ class PrereservationPaymentHandlerTest {
 	void loadAndValidate_wrongBookingType_throw() {
 		// given
 		Reservation reservation = mock(Reservation.class);
+		ReservationSeat reservationSeat = mock(ReservationSeat.class);
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		ScheduleSeat scheduleSeat = mock(ScheduleSeat.class);
 
 		given(reservation.getMemberId()).willReturn(MEMBER_ID);
 		given(reservation.getStatus()).willReturn(ReservationStatus.CREATED);
-		given(reservation.getScheduleId()).willReturn(SCHEDULE_ID);
+		given(reservationSeat.getScheduleSeatId()).willReturn(SCHEDULE_SEAT_ID);
+		given(scheduleSeat.getScheduleId()).willReturn(SCHEDULE_ID);
 
 		given(schedule.getBookingType()).willReturn(BookingType.FIRST_COME);
 
 		given(reservationRepository.findById(RESERVATION_ID)).willReturn(Optional.of(reservation));
+		given(reservationSeatRepository.findByReservationId(RESERVATION_ID)).willReturn(java.util.List.of(reservationSeat));
+		given(scheduleSeatRepository.findById(SCHEDULE_SEAT_ID)).willReturn(Optional.of(scheduleSeat));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
 		// when & then
@@ -166,21 +177,23 @@ class PrereservationPaymentHandlerTest {
 	void loadAndValidate_seatNotHold_throw() {
 		// given
 		Reservation reservation = mock(Reservation.class);
+		ReservationSeat reservationSeat = mock(ReservationSeat.class);
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
 		ScheduleSeat scheduleSeat = mock(ScheduleSeat.class);
 
 		given(reservation.getMemberId()).willReturn(MEMBER_ID);
 		given(reservation.getStatus()).willReturn(ReservationStatus.CREATED);
-		given(reservation.getScheduleId()).willReturn(SCHEDULE_ID);
-		given(reservation.getSeatId()).willReturn(SEAT_ID);
+		given(reservationSeat.getScheduleSeatId()).willReturn(SCHEDULE_SEAT_ID);
+		given(scheduleSeat.getScheduleId()).willReturn(SCHEDULE_ID);
+		given(scheduleSeat.getSeatId()).willReturn(SEAT_ID);
 
 		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(scheduleSeat.getStatus()).willReturn(SeatStatus.AVAILABLE);
 
 		given(reservationRepository.findById(RESERVATION_ID)).willReturn(Optional.of(reservation));
+		given(reservationSeatRepository.findByReservationId(RESERVATION_ID)).willReturn(java.util.List.of(reservationSeat));
+		given(scheduleSeatRepository.findById(SCHEDULE_SEAT_ID)).willReturn(Optional.of(scheduleSeat));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-		given(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID))
-			.willReturn(Optional.of(scheduleSeat));
 
 		// when & then
 		assertThatThrownBy(
@@ -194,6 +207,7 @@ class PrereservationPaymentHandlerTest {
 	void loadAndValidate_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
+		ReservationSeat reservationSeat = mock(ReservationSeat.class);
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
 		Performance performance = mock(Performance.class);
 		ScheduleSeat scheduleSeat = mock(ScheduleSeat.class);
@@ -201,8 +215,9 @@ class PrereservationPaymentHandlerTest {
 
 		given(reservation.getMemberId()).willReturn(MEMBER_ID);
 		given(reservation.getStatus()).willReturn(ReservationStatus.CREATED);
-		given(reservation.getScheduleId()).willReturn(SCHEDULE_ID);
-		given(reservation.getSeatId()).willReturn(SEAT_ID);
+		given(reservationSeat.getScheduleSeatId()).willReturn(SCHEDULE_SEAT_ID);
+		given(scheduleSeat.getScheduleId()).willReturn(SCHEDULE_ID);
+		given(scheduleSeat.getSeatId()).willReturn(SEAT_ID);
 
 		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
 		given(schedule.getPerformance()).willReturn(performance);
@@ -212,9 +227,9 @@ class PrereservationPaymentHandlerTest {
 		given(seatGrade.getPrice()).willReturn(50000);
 
 		given(reservationRepository.findById(RESERVATION_ID)).willReturn(Optional.of(reservation));
+		given(reservationSeatRepository.findByReservationId(RESERVATION_ID)).willReturn(java.util.List.of(reservationSeat));
+		given(scheduleSeatRepository.findById(SCHEDULE_SEAT_ID)).willReturn(Optional.of(scheduleSeat));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-		given(scheduleSeatRepository.findByScheduleIdAndSeatId(SCHEDULE_ID, SEAT_ID))
-			.willReturn(Optional.of(scheduleSeat));
 		given(seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(PERFORMANCE_ID, SEAT_ID))
 			.willReturn(Optional.of(seatGrade));
 

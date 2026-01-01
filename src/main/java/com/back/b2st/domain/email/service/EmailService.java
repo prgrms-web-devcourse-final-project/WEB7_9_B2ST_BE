@@ -3,6 +3,7 @@ package com.back.b2st.domain.email.service;
 import static com.back.b2st.global.util.MaskingUtil.*;
 
 import java.security.SecureRandom;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +15,10 @@ import com.back.b2st.domain.email.dto.response.CheckDuplicateRes;
 import com.back.b2st.domain.email.entity.EmailVerification;
 import com.back.b2st.domain.email.error.EmailErrorCode;
 import com.back.b2st.domain.email.repository.EmailVerificationRepository;
+import com.back.b2st.domain.lottery.result.dto.LotteryResultEmailInfo;
+import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.member.entity.Member;
+import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -29,6 +33,7 @@ public class EmailService {
 	// 코드 난수
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 	private final EmailVerificationRepository emailVerificationRepository;
+	private final LotteryResultRepository lotteryResultRepository;
 	private final EmailSender emailSender;
 	private final MemberRepository memberRepository;
 	private final EmailRateLimiter rateLimiter;
@@ -122,6 +127,59 @@ public class EmailService {
 			.ifPresent(Member::verifyEmail);
 
 		log.info("이메일 인증 성공: email={}", maskEmail(email));
+	}
+
+	/**
+	 * 특정 회차의 당첨자에게 이메일 발송
+	 */
+	@Transactional(readOnly = true)
+	public void sendWinnerNotifications(Long scheduleId) {
+		log.debug("당첨자 이메일 발송 시작 - scheduleId: {}", scheduleId);
+
+		List<LotteryResultEmailInfo> winners = lotteryResultRepository
+			.findSendEmailInfoByScheduleId(scheduleId);
+
+		if (winners.isEmpty()) {
+			log.info("당첨자 없음 - scheduleId: {}", scheduleId);
+			return;
+		}
+
+		log.debug("당첨자 수: {}", winners.size());
+
+		int successCount = 0;
+		int failCount = 0;
+
+		for (LotteryResultEmailInfo winner : winners) {
+			try {
+				sendWinnerEmail(winner);
+				successCount++;
+			} catch (Exception e) {
+				failCount++;
+				log.error("이메일 발송 실패 - resultId: {}, memberId: {}, error: {}",
+					winner.id(), winner.memberId(), e.getMessage());
+			}
+		}
+
+		log.debug("당첨자 이메일 발송 완료 - 성공: {}, 실패: {}", successCount, failCount);
+	}
+
+	/**
+	 * 개별 당첨자에게 이메일 발송
+	 */
+	private void sendWinnerEmail(LotteryResultEmailInfo winner) {
+		Member member = memberRepository.findById(winner.memberId())
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+		emailSender.sendLotteryWinnerEmail(
+			member.getEmail(),
+			winner.memberName(),
+			winner.seatGrade(),
+			winner.quantity(),
+			winner.paymentDeadline()
+		);
+
+		log.debug("당첨 안내 이메일 발송 완료 - email: {}, resultId: {}",
+			maskEmail(member.getEmail()), winner.id());
 	}
 
 	// 밑으로 헬퍼 메서드

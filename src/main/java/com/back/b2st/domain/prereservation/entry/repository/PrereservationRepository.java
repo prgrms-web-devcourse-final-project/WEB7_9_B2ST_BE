@@ -1,10 +1,10 @@
-package com.back.b2st.domain.prereservation.repository;
+package com.back.b2st.domain.prereservation.entry.repository;
 
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.back.b2st.domain.prereservation.entity.Prereservation;
+import com.back.b2st.domain.prereservation.entry.entity.Prereservation;
 
 public interface PrereservationRepository extends JpaRepository<Prereservation, Long> {
 

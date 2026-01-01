@@ -1,4 +1,4 @@
-package com.back.b2st.domain.prereservation.service;
+package com.back.b2st.domain.prereservation.entry.service;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -12,33 +12,28 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
+import com.back.b2st.domain.email.service.EmailSender;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.performance.entity.Performance;
-import com.back.b2st.domain.prereservation.dto.response.PrereservationRes;
-import com.back.b2st.domain.prereservation.entity.Prereservation;
-import com.back.b2st.domain.prereservation.error.PrereservationErrorCode;
-import com.back.b2st.domain.prereservation.repository.PrereservationRepository;
-import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
-import com.back.b2st.domain.seat.seat.entity.Seat;
-import com.back.b2st.domain.seat.seat.repository.SeatRepository;
-import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.domain.prereservation.entry.dto.response.PrereservationRes;
+import com.back.b2st.domain.prereservation.entry.entity.Prereservation;
+import com.back.b2st.domain.prereservation.entry.error.PrereservationErrorCode;
+import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
+import com.back.b2st.domain.prereservation.policy.service.PrereservationSlotService;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
+import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.global.error.exception.BusinessException;
 
-import java.util.List;
-
 @ExtendWith(MockitoExtension.class)
-class PrereservationServiceTest {
+class PrereservationApplyServiceTest {
 
 	@Mock
 	private PerformanceScheduleRepository performanceScheduleRepository;
-
-	@Mock
-	private SeatRepository seatRepository;
 
 	@Mock
 	private SectionRepository sectionRepository;
@@ -46,123 +41,18 @@ class PrereservationServiceTest {
 	@Mock
 	private PrereservationRepository prereservationRepository;
 
+	@Mock
+	private PrereservationSlotService prereservationSlotService;
+
+	@Mock
+	private EmailSender emailSender;
+
 	@InjectMocks
-	private PrereservationService prereservationService;
+	private PrereservationApplyService prereservationApplyService;
 
 	private static final Long MEMBER_ID = 1L;
 	private static final Long SCHEDULE_ID = 10L;
-	private static final Long SEAT_ID = 100L;
 	private static final Long SECTION_ID = 7L;
-
-	@Test
-	@DisplayName("validateSeatHoldAllowed(): BookingType이 PRERESERVE가 아니면 검증을 스킵한다")
-	void validateHold_skipNonPrereserve() {
-		// given
-		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.FIRST_COME);
-		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-
-		// when & then
-		assertThatCode(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
-			.doesNotThrowAnyException();
-		then(seatRepository).shouldHaveNoInteractions();
-		then(prereservationRepository).shouldHaveNoInteractions();
-	}
-
-	@Test
-	@DisplayName("validateSeatHoldAllowed(): 예매 오픈 전이면 BOOKING_NOT_OPEN 예외")
-	void validateHold_beforeOpen() {
-		// given
-		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
-		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-
-		// when & then
-		assertThatThrownBy(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
-			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(PrereservationErrorCode.BOOKING_NOT_OPEN.getMessage());
-	}
-
-	@Test
-	@DisplayName("validateSeatHoldAllowed(): 예매 마감 이후면 BOOKING_CLOSED 예외")
-	void validateHold_afterClose() {
-		// given
-		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(10));
-		given(schedule.getBookingCloseAt()).willReturn(LocalDateTime.now().minusMinutes(1));
-		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-
-		// when & then
-		assertThatThrownBy(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
-			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(PrereservationErrorCode.BOOKING_CLOSED.getMessage());
-	}
-
-	@Test
-	@DisplayName("validateSeatHoldAllowed(): 좌석이 없으면 SEAT_NOT_FOUND 예외")
-	void validateHold_seatNotFound() {
-		// given
-		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(1));
-		given(schedule.getBookingCloseAt()).willReturn(LocalDateTime.now().plusMinutes(10));
-		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-		given(seatRepository.findById(SEAT_ID)).willReturn(Optional.empty());
-
-		// when & then
-		assertThatThrownBy(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
-			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(ScheduleSeatErrorCode.SEAT_NOT_FOUND.getMessage());
-	}
-
-	@Test
-	@DisplayName("validateSeatHoldAllowed(): 신청하지 않은 구역이면 SECTION_NOT_ACTIVATED 예외")
-	void validateHold_notApplied() {
-		// given
-		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(1));
-		given(schedule.getBookingCloseAt()).willReturn(LocalDateTime.now().plusMinutes(10));
-		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-
-		Seat seat = mock(Seat.class);
-		given(seat.getSectionId()).willReturn(SECTION_ID);
-		given(seatRepository.findById(SEAT_ID)).willReturn(Optional.of(seat));
-
-		given(prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
-			SCHEDULE_ID, MEMBER_ID, SECTION_ID
-		)).willReturn(false);
-
-		// when & then
-		assertThatThrownBy(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
-			.isInstanceOf(BusinessException.class)
-			.hasMessageContaining(PrereservationErrorCode.SECTION_NOT_ACTIVATED.getMessage());
-	}
-
-	@Test
-	@DisplayName("validateSeatHoldAllowed(): 신청한 구역이면 예외 없이 통과한다")
-	void validateHold_success() {
-		// given
-		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
-		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(1));
-		given(schedule.getBookingCloseAt()).willReturn(LocalDateTime.now().plusMinutes(10));
-		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
-
-		Seat seat = mock(Seat.class);
-		given(seat.getSectionId()).willReturn(SECTION_ID);
-		given(seatRepository.findById(SEAT_ID)).willReturn(Optional.of(seat));
-
-		given(prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
-			SCHEDULE_ID, MEMBER_ID, SECTION_ID
-		)).willReturn(true);
-
-		// when & then
-		assertThatCode(() -> prereservationService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
-			.doesNotThrowAnyException();
-	}
 
 	@Test
 	@DisplayName("apply(): 공연 회차가 없으면 SCHEDULE_NOT_FOUND 예외")
@@ -171,7 +61,7 @@ class PrereservationServiceTest {
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.empty());
 
 		// when & then
-		assertThatThrownBy(() -> prereservationService.apply(SCHEDULE_ID, MEMBER_ID, SECTION_ID))
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
 			.isInstanceOf(BusinessException.class)
 			.hasMessageContaining(PrereservationErrorCode.SCHEDULE_NOT_FOUND.getMessage());
 	}
@@ -185,9 +75,38 @@ class PrereservationServiceTest {
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
 		// when & then
-		assertThatThrownBy(() -> prereservationService.apply(SCHEDULE_ID, MEMBER_ID, SECTION_ID))
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
 			.isInstanceOf(BusinessException.class)
 			.hasMessageContaining(PrereservationErrorCode.BOOKING_TYPE_NOT_SUPPORTED.getMessage());
+	}
+
+	@Test
+	@DisplayName("apply(): 예매 오픈 시간이 없으면 BOOKING_TIME_NOT_CONFIGURED 예외")
+	void apply_bookingTimeNotConfigured_throw() {
+		// given
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+
+		// when & then
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
+			.isInstanceOf(BusinessException.class)
+			.hasMessageContaining(PrereservationErrorCode.BOOKING_TIME_NOT_CONFIGURED.getMessage());
+	}
+
+	@Test
+	@DisplayName("apply(): 신청 시작 시간 전이면 APPLICATION_NOT_OPEN 예외")
+	void apply_beforeApplyOpen_throw() {
+		// given
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusDays(2));
+		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+
+		// when & then
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
+			.isInstanceOf(BusinessException.class)
+			.hasMessageContaining(PrereservationErrorCode.APPLICATION_NOT_OPEN.getMessage());
 	}
 
 	@Test
@@ -200,7 +119,7 @@ class PrereservationServiceTest {
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
 		// when & then
-		assertThatThrownBy(() -> prereservationService.apply(SCHEDULE_ID, MEMBER_ID, SECTION_ID))
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
 			.isInstanceOf(BusinessException.class)
 			.hasMessageContaining(PrereservationErrorCode.APPLICATION_CLOSED.getMessage());
 	}
@@ -216,7 +135,7 @@ class PrereservationServiceTest {
 		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.empty());
 
 		// when & then
-		assertThatThrownBy(() -> prereservationService.apply(SCHEDULE_ID, MEMBER_ID, SECTION_ID))
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
 			.isInstanceOf(BusinessException.class)
 			.hasMessageContaining(PrereservationErrorCode.SECTION_NOT_FOUND.getMessage());
 	}
@@ -245,7 +164,7 @@ class PrereservationServiceTest {
 		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.of(section));
 
 		// when & then
-		assertThatThrownBy(() -> prereservationService.apply(SCHEDULE_ID, MEMBER_ID, SECTION_ID))
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
 			.isInstanceOf(BusinessException.class)
 			.hasMessageContaining(PrereservationErrorCode.SECTION_NOT_IN_VENUE.getMessage());
 	}
@@ -276,13 +195,13 @@ class PrereservationServiceTest {
 		)).willReturn(true);
 
 		// when & then
-		assertThatThrownBy(() -> prereservationService.apply(SCHEDULE_ID, MEMBER_ID, SECTION_ID))
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
 			.isInstanceOf(BusinessException.class)
 			.hasMessageContaining(PrereservationErrorCode.DUPLICATE_APPLICATION.getMessage());
 	}
 
 	@Test
-	@DisplayName("apply(): 정상적으로 신청이 저장된다")
+	@DisplayName("apply(): 정상적으로 신청이 저장된다(이메일 없음)")
 	void apply_success() {
 		// given
 		Long venueId = 100L;
@@ -307,10 +226,85 @@ class PrereservationServiceTest {
 		)).willReturn(false);
 
 		// when & then
-		assertThatCode(() -> prereservationService.apply(SCHEDULE_ID, MEMBER_ID, SECTION_ID))
+		assertThatCode(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
 			.doesNotThrowAnyException();
 
 		then(prereservationRepository).should().save(any(Prereservation.class));
+		then(emailSender).shouldHaveNoInteractions();
+	}
+
+	@Test
+	@DisplayName("apply(): 정상적으로 신청이 저장된다(이메일 발송)")
+	void apply_successWithEmail_sendsEmail() {
+		// given
+		Long venueId = 100L;
+		String email = "user@example.com";
+
+		LocalDateTime bookingOpenAt = LocalDateTime.now().plusMinutes(10);
+		LocalDateTime slotStartAt = bookingOpenAt.plusHours(1);
+		LocalDateTime slotEndAt = bookingOpenAt.plusHours(2);
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		Performance performance = mock(Performance.class);
+		Venue venue = mock(Venue.class);
+		Section section = mock(Section.class);
+
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(schedule.getBookingOpenAt()).willReturn(bookingOpenAt);
+		given(schedule.getPerformance()).willReturn(performance);
+		given(performance.getVenue()).willReturn(venue);
+		given(venue.getVenueId()).willReturn(venueId);
+
+		given(section.getVenueId()).willReturn(venueId);
+		given(section.getSectionName()).willReturn("A구역");
+
+		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.of(section));
+		given(prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
+			SCHEDULE_ID, MEMBER_ID, SECTION_ID
+		)).willReturn(false);
+		given(prereservationSlotService.calculateSlotOrThrow(schedule, section))
+			.willReturn(new PrereservationSlotService.Slot(slotStartAt, slotEndAt));
+
+		// when
+		prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, email, SECTION_ID);
+
+		// then
+		then(prereservationRepository).should().save(any(Prereservation.class));
+		then(emailSender).should().sendNotificationEmail(eq(email), eq("[TT] 신청 예매 사전 신청 완료"), anyString());
+	}
+
+	@Test
+	@DisplayName("apply(): 저장 중 중복이면 DUPLICATE_APPLICATION 예외(DataIntegrityViolation)")
+	void apply_duplicateOnSave_throw() {
+		// given
+		Long venueId = 100L;
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		Performance performance = mock(Performance.class);
+		Venue venue = mock(Venue.class);
+		Section section = mock(Section.class);
+
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
+		given(schedule.getPerformance()).willReturn(performance);
+		given(performance.getVenue()).willReturn(venue);
+		given(venue.getVenueId()).willReturn(venueId);
+
+		given(section.getVenueId()).willReturn(venueId);
+
+		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.of(section));
+		given(prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
+			SCHEDULE_ID, MEMBER_ID, SECTION_ID
+		)).willReturn(false);
+		given(prereservationRepository.save(any(Prereservation.class)))
+			.willThrow(new DataIntegrityViolationException("duplicate"));
+
+		// when & then
+		assertThatThrownBy(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, "", SECTION_ID))
+			.isInstanceOf(BusinessException.class)
+			.hasMessageContaining(PrereservationErrorCode.DUPLICATE_APPLICATION.getMessage());
 	}
 
 	@Test
@@ -325,10 +319,10 @@ class PrereservationServiceTest {
 
 		given(prereservationRepository.findAllByPerformanceScheduleIdAndMemberIdOrderByCreatedAtDesc(
 			SCHEDULE_ID, MEMBER_ID
-		)).willReturn(List.of(prereservation1, prereservation2));
+		)).willReturn(java.util.List.of(prereservation1, prereservation2));
 
 		// when
-		PrereservationRes result = prereservationService.getMyApplications(SCHEDULE_ID, MEMBER_ID);
+		PrereservationRes result = prereservationApplyService.getMyApplications(SCHEDULE_ID, MEMBER_ID);
 
 		// then
 		assertThat(result.scheduleId()).isEqualTo(SCHEDULE_ID);

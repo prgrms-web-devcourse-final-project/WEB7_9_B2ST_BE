@@ -1,9 +1,8 @@
 package com.back.b2st.domain.payment.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public record PaymentFailReq(
-	@NotBlank String reason
+	@NotNull PaymentFailReason reason
 ) {
 }
-

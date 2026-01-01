@@ -3,6 +3,8 @@ package com.back.b2st.domain.email.service;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -14,6 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.thymeleaf.spring6.SpringTemplateEngine;
+
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -236,6 +240,104 @@ class EmailSenderTest {
 
 			// then
 			verify(mailSender).createMimeMessage();
+		}
+
+		@Nested
+		@DisplayName("추첨 당첨 이메일 발송 (sendLotteryWinnerEmail)")
+		class SendLotteryWinnerEmailTest {
+
+			@Test
+			@DisplayName("성공")
+			void success() {
+				// given
+				String to = "winner@example.com";
+				String name = "홍길동";
+				SeatGradeType grade = SeatGradeType.VIP;
+				Integer quantity = 2;
+				LocalDateTime paymentDeadline = LocalDateTime.of(2025, 1, 15, 23, 59);
+
+				given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+				given(templateEngine.process(eq("email/lottery-winner"), any()))
+					.willReturn("<html>Winner</html>");
+
+				// when
+				emailSender.sendLotteryWinnerEmail(to, name, grade, quantity, paymentDeadline);
+
+				// then
+				verify(mailSender).createMimeMessage();
+				verify(mailSender).send(mimeMessage);
+				verify(templateEngine).process(eq("email/lottery-winner"), any());
+			}
+
+			@Test
+			@DisplayName("템플릿에 name, grade, quantity, paymentDeadline이 전달된다")
+			void templateVariables() {
+				// given
+				String to = "winner@example.com";
+				String name = "테스트유저";
+				SeatGradeType grade = SeatGradeType.ROYAL;
+				Integer quantity = 4;
+				LocalDateTime paymentDeadline = LocalDateTime.of(2025, 1, 20, 23, 59);
+
+				given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+				given(templateEngine.process(eq("email/lottery-winner"), any()))
+					.willReturn("<html>Test</html>");
+
+				// when
+				emailSender.sendLotteryWinnerEmail(to, name, grade, quantity, paymentDeadline);
+
+				// then
+				verify(templateEngine).process(
+					eq("email/lottery-winner"),
+					argThat(context -> context != null)
+				);
+			}
+
+			@Test
+			@DisplayName("실패 - RuntimeException 발생 시 로깅 후 정상 종료")
+			void runtimeException() {
+				// given
+				String to = "winner@example.com";
+				String name = "홍길동";
+				SeatGradeType grade = SeatGradeType.VIP;
+				Integer quantity = 2;
+				LocalDateTime paymentDeadline = LocalDateTime.of(2025, 1, 15, 23, 59);
+
+				given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+				given(templateEngine.process(eq("email/lottery-winner"), any()))
+					.willReturn("<html>Winner</html>");
+				willThrow(new RuntimeException("SMTP connection failed"))
+					.given(mailSender).send(any(MimeMessage.class));
+
+				// when
+				emailSender.sendLotteryWinnerEmail(to, name, grade, quantity, paymentDeadline);
+
+				// then - 예외 발생해도 메서드 정상 종료
+				verify(mailSender).send(any(MimeMessage.class));
+			}
+
+			@Test
+			@DisplayName("실패 - MailSendException 발생 시 로깅 후 정상 종료")
+			void mailSendException() {
+				// given
+				String to = "winner@example.com";
+				String name = "홍길동";
+				SeatGradeType grade = SeatGradeType.STANDARD;
+				Integer quantity = 1;
+				LocalDateTime paymentDeadline = LocalDateTime.of(2025, 1, 10, 23, 59);
+
+				given(mailSender.createMimeMessage()).willReturn(mimeMessage);
+				given(templateEngine.process(eq("email/lottery-winner"), any()))
+					.willReturn("<html>Winner</html>");
+				willThrow(new org.springframework.mail.MailSendException("Mail server unavailable"))
+					.given(mailSender).send(any(MimeMessage.class));
+
+				// when
+				emailSender.sendLotteryWinnerEmail(to, name, grade, quantity, paymentDeadline);
+
+				// then
+				verify(mailSender).send(any(MimeMessage.class));
+			}
 		}
 	}
 }

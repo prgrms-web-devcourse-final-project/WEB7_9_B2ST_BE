@@ -202,8 +202,8 @@ public class DataInitializer implements CommandLineRunner {
 				.startAt(LocalDateTime.of(2025, 1, 1, 19, 0).plusDays(i))
 				.roundNo(i + 1)
 				.bookingType(i % 2 == 0 ? BookingType.PRERESERVE : BookingType.LOTTERY)
-				.bookingOpenAt(LocalDateTime.of(2024, 12, 20, 12, 0))
-				.bookingCloseAt(LocalDateTime.of(2024, 12, 25, 23, 59))
+				.bookingOpenAt(LocalDateTime.now().minusHours(1))
+				.bookingCloseAt(LocalDateTime.now().plusDays(30))
 				.build()
 			).toList();
 		performanceScheduleRepository.saveAll(schedules);
@@ -661,8 +661,8 @@ public class DataInitializer implements CommandLineRunner {
 					.roundNo(i)
 					.startAt(LocalDateTime.now().plusDays(i))
 					.bookingType(bookingType)
-					.bookingOpenAt(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIDNIGHT))
-					.bookingCloseAt(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.of(12, 0)))
+					.bookingOpenAt(LocalDateTime.now().minusHours(1))
+					.bookingCloseAt(LocalDateTime.now().plusDays(30))
 					.build()
 				)
 				.toList()

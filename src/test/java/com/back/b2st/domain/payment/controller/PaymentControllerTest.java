@@ -23,7 +23,9 @@ import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.repository.PaymentRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.security.UserPrincipal;
@@ -41,6 +43,9 @@ class PaymentControllerTest {
 
 	@Autowired
 	private ReservationRepository reservationRepository;
+
+	@Autowired
+	private ReservationSeatRepository reservationSeatRepository;
 
 	@Autowired
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -76,10 +81,9 @@ class PaymentControllerTest {
 		Reservation reservation = Reservation.builder()
 			.memberId(memberId)
 			.scheduleId(scheduleId)
-			.seatId(seatId)
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
-		reservationRepository.save(reservation);
+		Reservation savedReservation = reservationRepository.save(reservation);
 
 		ScheduleSeat scheduleSeat = ScheduleSeat.builder()
 			.scheduleId(scheduleId)
@@ -87,6 +91,12 @@ class PaymentControllerTest {
 			.build();
 		scheduleSeat.hold(LocalDateTime.now().plusMinutes(5));
 		scheduleSeatRepository.save(scheduleSeat);
+
+		ReservationSeat reservationSeat = ReservationSeat.builder()
+			.reservationId(savedReservation.getId())
+			.scheduleSeatId(scheduleSeat.getId())
+			.build();
+		reservationSeatRepository.save(reservationSeat);
 
 		Payment payment = Payment.builder()
 			.orderId(orderId)
@@ -130,7 +140,6 @@ class PaymentControllerTest {
 		Reservation reservation = Reservation.builder()
 			.memberId(memberId)
 			.scheduleId(scheduleId)
-			.seatId(seatId)
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		reservation.complete(LocalDateTime.now());
@@ -142,6 +151,12 @@ class PaymentControllerTest {
 			.build();
 		scheduleSeat.sold();
 		scheduleSeatRepository.save(scheduleSeat);
+
+		ReservationSeat reservationSeat = ReservationSeat.builder()
+			.reservationId(reservation.getId())
+			.scheduleSeatId(scheduleSeat.getId())
+			.build();
+		reservationSeatRepository.save(reservationSeat);
 
 		Payment payment = Payment.builder()
 			.orderId(orderId)

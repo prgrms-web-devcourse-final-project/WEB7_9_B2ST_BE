@@ -2,6 +2,7 @@ package com.back.b2st.domain.email.service;
 
 import static com.back.b2st.global.util.MaskingUtil.*;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +12,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
+
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -54,6 +57,23 @@ public class EmailSender {
 		sendTemplateEmail(to, subject, "email/notification",
 			Map.of(
 				"message", message
+			));
+	}
+
+	@Async("emailExecutor")
+	public void sendLotteryWinnerEmail(
+		String to,
+		String name,
+		SeatGradeType grade,
+		Integer quantity,
+		LocalDateTime paymentDeadline
+	) {
+		sendTemplateEmail(to, "[TT] 추첨 당첨 안내", "email/lottery-winner",
+			Map.of(
+				"name", name,
+				"grade", grade,
+				"quantity", quantity,
+				"paymentDeadline", paymentDeadline
 			));
 	}
 

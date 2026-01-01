@@ -2,165 +2,97 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>추첨 당첨 안내</title>
-    <style>
-        body {
-            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .header {
-            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            margin: 0 0 10px 0;
-            font-size: 28px;
-        }
-
-        .emoji {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-
-        .content {
-            padding: 40px 30px;
-        }
-
-        .greeting {
-            font-size: 18px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .info-box {
-            background-color: #f8f9fa;
-            border: 2px solid #4CAF50;
-            border-radius: 8px;
-            padding: 25px;
-            margin: 30px 0;
-        }
-
-        .info-box h2 {
-            margin-top: 0;
-            color: #4CAF50;
-            font-size: 20px;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            font-weight: bold;
-            color: #555;
-        }
-
-        .info-value {
-            color: #333;
-            font-weight: 600;
-        }
-
-        .warning {
-            background-color: #fff3cd;
-            border: 1px solid #ffc107;
-            border-radius: 4px;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #856404;
-            text-align: center;
-        }
-
-        .footer {
-            background-color: #f8f9fa;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: #6c757d;
-        }
-    </style>
 </head>
-<body>
-<div class="container">
-    <div class="header">
-        <div class="emoji">🎉</div>
-        <h1>추첨 당첨 안내</h1>
-        <p style="margin: 0; font-size: 16px;">축하합니다!</p>
-    </div>
+<body style="margin:0; padding:0; background-color:#f5f5f5; font-family:Apple SD Gothic Neo, Malgun Gothic, sans-serif;">
 
-    <div class="content">
-        <div class="greeting">
-            안녕하세요, <strong th:text="${name}">고객님</strong>!<br>
-            공연 추첨에 당첨되셨습니다.
-        </div>
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5; padding:20px;">
+    <tr>
+        <td align="center">
 
-        <div class="info-box">
-            <h2>당첨 내역</h2>
+            <!-- container -->
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px;">
 
-            <div class="info-row">
-                <span class="info-label">좌석 등급</span>
-                <span class="info-value" th:text="${grade}">VIP</span>
-            </div>
+                <!-- header -->
+                <tr>
+                    <td style="background-color:#4CAF50; padding:30px; text-align:center; color:#ffffff;">
+                        <h1 style="margin:0; font-size:26px;">추첨 당첨 안내</h1>
+                    </td>
+                </tr>
 
-            <div class="info-row">
-                <span class="info-label">당첨 매수</span>
-                <span class="info-value">
-                    <span th:text="${quantity}">2</span>매
-                </span>
-            </div>
+                <!-- content -->
+                <tr>
+                    <td style="padding:30px; color:#333333;">
 
-            <div class="info-row">
-                <span class="info-label">결제 기한</span>
-                <span class="info-value"
-                      th:text="${#temporals.format(paymentDeadline, 'yyyy-MM-dd HH:mm')}">
-                    2025-01-15 23:59
-                </span>
-            </div>
-        </div>
+                        <p style="font-size:16px; text-align:center; margin-bottom:25px;">
+                            안녕하세요, <strong th:text="${name}">고객님</strong>님<br>
+                            응모하신 공연에 <strong>당첨</strong>되셨습니다.
+                        </p>
 
-        <div style="text-align: center; margin: 30px 0; line-height: 1.6;">
-            <p style="margin: 10px 0;">
-                마이페이지 > 응모 내역 조회를 통해<br>
-                결제 기한 내에 결제를 완료해주세요.
-            </p>
-        </div>
+                        <!-- info box -->
+                        <table width="100%" cellpadding="0" cellspacing="0"
+                               style="border:2px solid #4CAF50; border-radius:6px; background-color:#f8f9fa;">
+                            <tr>
+                                <td colspan="2" style="padding:15px; font-size:18px; font-weight:bold; color:#4CAF50;">
+                                    당첨 내역
+                                </td>
+                            </tr>
 
-        <div class="warning">
-            ⚠️ <strong>중요</strong><br>
-            결제 기한이 지나면 당첨이 자동으로 취소됩니다.
-        </div>
-    </div>
+                            <tr>
+                                <td style="padding:10px; font-weight:bold;">좌석 등급</td>
+                                <td style="padding:10px;" th:text="${grade}">STANDARD</td>
+                            </tr>
 
-    <div class="footer">
-        <p>본 메일은 발신 전용이며, 회신되지 않습니다.</p>
-        <p>문의사항은 고객센터를 이용해주세요.</p>
-        <p>&copy; 2025 B2ST TT(Ticket&Trade). All rights reserved.</p>
-    </div>
-</div>
+                            <tr>
+                                <td style="padding:10px; font-weight:bold;">당첨 매수</td>
+                                <td style="padding:10px;">
+                                    <span th:text="${quantity}">1</span>매
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td style="padding:10px; font-weight:bold;">결제 기한</td>
+                                <td style="padding:10px;"
+                                    th:text="${#temporals.format(paymentDeadline, 'yyyy-MM-dd HH:mm')}">
+                                    2026-01-04 00:00
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p style="text-align:center; margin:25px 0; line-height:1.6;">
+                            마이페이지 &gt; 응모 내역 조회를 통해<br>
+                            <strong>결제 기한 내</strong> 결제를 완료해주세요.
+                        </p>
+
+                        <!-- warning -->
+                        <table width="100%" cellpadding="0" cellspacing="0"
+                               style="background-color:#fff3cd; border:1px solid #ffc107; border-radius:4px;">
+                            <tr>
+                                <td style="padding:15px; text-align:center; font-size:14px; color:#856404;">
+                                    ⚠️ <strong>중요</strong><br>
+                                    결제 기한이 지나면 당첨이 자동으로 취소됩니다.
+                                </td>
+                            </tr>
+                        </table>
+
+                    </td>
+                </tr>
+
+                <!-- footer -->
+                <tr>
+                    <td style="background-color:#f8f9fa; padding:20px; text-align:center; font-size:12px; color:#6c757d;">
+                        본 메일은 발신 전용이며 회신되지 않습니다.<br>
+                        문의사항은 고객센터를 이용해주세요.<br><br>
+                        © 2025 B2ST TT(Ticket&Trade). All rights reserved.
+                    </td>
+                </tr>
+
+            </table>
+            <!-- /container -->
+
+        </td>
+    </tr>
+</table>
+
 </body>
 </html>

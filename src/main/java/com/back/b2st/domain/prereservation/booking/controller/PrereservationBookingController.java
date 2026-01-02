@@ -28,7 +28,6 @@ public class PrereservationBookingController {
 	private final PrereservationHoldService prereservationHoldService;
 	private final ScheduleSeatStateService scheduleSeatStateService;
 
-	/** === 신청예매 전용 좌석 HOLD === */
 	@PostMapping("/hold")
 	@Operation(
 		summary = "신청예매 좌석 선택 (HOLD)",
@@ -57,7 +56,6 @@ public class PrereservationBookingController {
 		return BaseResponse.created(null);
 	}
 
-	/** === 신청예매 예매 생성 (결제 시작) === */
 	@PostMapping("/bookings")
 	@Operation(
 		summary = "신청예매 예매 생성(결제 시작)",

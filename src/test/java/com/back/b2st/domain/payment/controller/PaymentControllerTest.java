@@ -17,9 +17,11 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.payment.dto.request.PaymentPayReq;
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.entity.Payment;
@@ -39,7 +41,7 @@ class PaymentControllerTest {
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	@Autowired
+	@MockitoBean
 	private PaymentOneClickService paymentOneClickService;
 
 	private Authentication memberAuth;
@@ -60,10 +62,25 @@ class PaymentControllerTest {
 	@Test
 	@DisplayName("원클릭 결제(pay) 성공 - 결제 DONE 반환")
 	void pay_success() throws Exception {
-		// given: 실제 데이터 사용 (InitData에서 생성된 데이터)
+		Payment payment = Payment.builder()
+			.orderId("ORDER-1")
+			.memberId(memberId)
+			.domainType(DomainType.RESERVATION)
+			.domainId(10L)
+			.amount(15000L)
+			.method(PaymentMethod.CARD)
+			.expiresAt(null)
+			.build();
+		payment.complete(LocalDateTime.now());
+
+		org.mockito.Mockito.when(paymentOneClickService.pay(
+			org.mockito.ArgumentMatchers.eq(memberId),
+			org.mockito.ArgumentMatchers.any(PaymentPayReq.class)
+		)).thenReturn(payment);
+
 		String body = objectMapper.writeValueAsString(new Object() {
 			public final String domainType = "RESERVATION";
-			public final Long domainId = 1L;  // InitData의 실제 Reservation ID
+			public final Long domainId = 10L;
 			public final String paymentMethod = "CARD";
 		});
 
@@ -79,9 +96,24 @@ class PaymentControllerTest {
 	@Test
 	@DisplayName("추첨 예매 원클릭 결제(pay) 매핑 - 결제 DONE 반환")
 	void pay_lottery_success() throws Exception {
-		// given: 실제 LotteryEntry UUID 사용 (InitData에서 생성된 데이터)
-		// 실제 UUID는 InitData에 따라 다를 수 있으므로, 테스트가 실패하면 조정 필요
-		String entryIdStr = "00000000-0000-0000-0000-000000000001";  // 임시 UUID
+		UUID entryId = UUID.randomUUID();
+		String entryIdStr = entryId.toString();
+
+		Payment payment = Payment.builder()
+			.orderId("ORDER-LOTTERY-1")
+			.memberId(memberId)
+			.domainType(DomainType.LOTTERY)
+			.domainId(99L)
+			.amount(30000L)
+			.method(PaymentMethod.CARD)
+			.expiresAt(null)
+			.build();
+		payment.complete(LocalDateTime.now());
+
+		org.mockito.Mockito.when(paymentOneClickService.pay(
+			org.mockito.ArgumentMatchers.eq(memberId),
+			org.mockito.ArgumentMatchers.any(PaymentPayReq.class)
+		)).thenReturn(payment);
 
 		String body = objectMapper.writeValueAsString(new Object() {
 			public final String domainType = "LOTTERY";

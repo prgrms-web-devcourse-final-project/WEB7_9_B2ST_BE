@@ -39,7 +39,13 @@ public class ScheduleSeatController implements ScheduleSeatApi {
 		return BaseResponse.success(scheduleSeatService.getSeatsByStatus(scheduleId, status));
 	}
 
-	/** === 좌석 HOLD === */
+	/**
+	 * === 좌석 HOLD (일반예매/추첨 전용) ===
+	 *
+	 * 일반예매(FIRST_COME) 및 추첨(LOTTERY) 전용 좌석 HOLD API입니다.
+	 * - 별도의 검증 없이 바로 좌석 HOLD
+	 * - 신청예매(PRERESERVE)는 PrereservationBookingController.holdSeat() 사용
+	 */
 	@PostMapping("/{scheduleId}/seats/{seatId}/hold")
 	public BaseResponse<Void> holdSeat(
 		@CurrentUser UserPrincipal user,

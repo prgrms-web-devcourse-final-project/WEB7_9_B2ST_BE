@@ -31,7 +31,7 @@ public class PaymentController {
 	@Operation(
 		summary = "원클릭 결제 (PG 미사용)",
 		description = "결제 준비/승인/도메인 후처리를 한 번에 수행합니다.\n\n"
-			+ "- LOTTERY: entryId(UUID) 또는 domainId(추첨 결과 ID, Long) 중 하나 필수\n"
+			+ "- LOTTERY: entryId(UUID) 필수\n"
 			+ "- LOTTERY 결제 후처리: 좌석/티켓 즉시 생성하지 않고 paid=true만 마킹(좌석 배정은 배치에서 처리)\n"
 			+ "- 그 외: domainId(Long) 필수"
 	)

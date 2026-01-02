@@ -27,7 +27,7 @@ import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.service.PaymentOneClickService;
 import com.back.b2st.security.UserPrincipal;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc

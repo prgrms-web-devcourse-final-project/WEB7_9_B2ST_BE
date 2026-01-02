@@ -107,6 +107,32 @@ class PaymentOneClickServiceTest {
 	}
 
 	@Test
+	void pay_lottery_withDomainId_usesCommonPrepareThenCompletes() {
+		Long memberId = 1L;
+		PaymentPayReq request = new PaymentPayReq(DomainType.LOTTERY, PaymentMethod.CARD, 99L, null);
+
+		Payment prepared = Payment.builder()
+			.orderId("order-2b")
+			.memberId(memberId)
+			.domainType(DomainType.LOTTERY)
+			.domainId(99L)
+			.amount(30000L)
+			.method(PaymentMethod.CARD)
+			.expiresAt(null)
+			.build();
+
+		when(paymentPrepareService.prepare(memberId, new PaymentPrepareReq(DomainType.LOTTERY, 99L, PaymentMethod.CARD)))
+			.thenReturn(prepared);
+		when(paymentRepository.findByOrderId("order-2b")).thenReturn(Optional.of(prepared));
+
+		Payment res = paymentOneClickService.pay(memberId, request);
+
+		assertThat(res).isSameAs(prepared);
+		verify(paymentConfirmTransactionService).completeIdempotently("order-2b");
+		verify(paymentFinalizeService).finalizeByOrderId("order-2b");
+	}
+
+	@Test
 	void pay_throwsWhenDomainIdMissing_forNonLottery() {
 		PaymentPayReq request = new PaymentPayReq(DomainType.RESERVATION, PaymentMethod.CARD, null, null);
 
@@ -117,7 +143,7 @@ class PaymentOneClickServiceTest {
 	}
 
 	@Test
-	void pay_throwsWhenEntryIdMissing_forLottery() {
+	void pay_throwsWhenBothEntryIdAndDomainIdMissing_forLottery() {
 		PaymentPayReq request = new PaymentPayReq(DomainType.LOTTERY, PaymentMethod.CARD, null, null);
 
 		assertThatThrownBy(() -> paymentOneClickService.pay(1L, request))

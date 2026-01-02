@@ -9,9 +9,11 @@ import org.springframework.data.repository.query.Param;
 
 import com.back.b2st.domain.seat.grade.dto.SeatCountByGrade;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 
 public interface SeatGradeRepository extends JpaRepository<SeatGrade, Long> {
 	Optional<SeatGrade> findTopByPerformanceIdAndSeatIdOrderByIdDesc(Long performanceId, Long seatId);
+	Optional<SeatGrade> findTopByPerformanceIdAndGradeOrderByIdDesc(Long performanceId, SeatGradeType grade);
 
 	/**
 	 * 특정 공연의 등급별 좌석 수

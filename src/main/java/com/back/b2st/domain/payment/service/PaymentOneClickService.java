@@ -26,15 +26,24 @@ public class PaymentOneClickService {
 	@Transactional
 	public Payment pay(Long memberId, PaymentPayReq request) {
 		if (request.domainType() == DomainType.LOTTERY) {
-			if (request.entryId() == null) {
-				throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND, "추첨 응모 ID(entryId)가 필요합니다.");
+			if (request.entryId() != null) {
+				Payment payment = lotteryPaymentPrepareService.prepareByEntryUuid(
+					memberId,
+					request.entryId(),
+					request.paymentMethod()
+				);
+				return completeAndFinalize(payment.getOrderId());
 			}
-			Payment payment = lotteryPaymentPrepareService.prepareByEntryUuid(
-				memberId,
-				request.entryId(),
-				request.paymentMethod()
-			);
-			return completeAndFinalize(payment.getOrderId());
+
+			if (request.domainId() != null) {
+				Payment payment = paymentPrepareService.prepare(
+					memberId,
+					new PaymentPrepareReq(DomainType.LOTTERY, request.domainId(), request.paymentMethod())
+				);
+				return completeAndFinalize(payment.getOrderId());
+			}
+
+			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND, "추첨 응모 ID(entryId) 또는 추첨 결과 ID(domainId)가 필요합니다.");
 		}
 
 		if (request.domainId() == null) {

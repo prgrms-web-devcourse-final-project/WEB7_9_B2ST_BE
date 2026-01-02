@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "reservation",
 	indexes = {
-		@Index(name = "idx_reservation_member", columnList = "member_id"),
+		@Index(name = "idx_reservation_member_schedule", columnList = "member_id, schedule_id"),
 		@Index(name = "idx_reservation_status_expires", columnList = "status, expires_at")
 	}
 )

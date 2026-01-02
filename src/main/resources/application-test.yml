@@ -84,11 +84,3 @@ logging:
     org.springframework.mail: DEBUG
     com.sun.mail: DEBUG
 
-management:
-  health:
-    mail:
-      enabled: false
-    redis:
-      enabled: false
-    db:
-      enabled: false

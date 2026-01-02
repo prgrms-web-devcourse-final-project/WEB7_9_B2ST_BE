@@ -95,6 +95,7 @@ class PaymentControllerTest {
 	@DisplayName("추첨 예매 원클릭 결제(pay) 매핑 - 결제 DONE 반환")
 	void pay_lottery_success() throws Exception {
 		UUID entryId = UUID.randomUUID();
+		String entryIdStr = entryId.toString();
 
 		Payment payment = Payment.builder()
 			.orderId("ORDER-LOTTERY-1")
@@ -115,7 +116,7 @@ class PaymentControllerTest {
 		String body = objectMapper.writeValueAsString(new Object() {
 			public final String domainType = "LOTTERY";
 			public final String paymentMethod = "CARD";
-			public final String entryId = entryId.toString();
+			public final String entryId = entryIdStr;
 		});
 
 		mockMvc.perform(post("/api/payments/pay")

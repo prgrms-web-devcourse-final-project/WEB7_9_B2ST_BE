@@ -129,3 +129,15 @@ logging:
     org.springframework.mail: DEBUG
     com.sun.mail: DEBUG
     com.back.b2st.domain.queue: INFO
+
+aws:
+  s3:
+    bucket: local-dummy-bucket
+    region: ap-northeast-2
+    presign-expiration-seconds: 300
+    max-file-size: 10485760
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+    cdn-base-url: https://xxxx.cloudfront.net   # 선택

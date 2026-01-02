@@ -83,7 +83,6 @@ dependencies {
 
     // 헬스 체크 및 모니터링용
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
 
 }
 

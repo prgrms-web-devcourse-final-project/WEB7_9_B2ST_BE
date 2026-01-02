@@ -51,10 +51,11 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 	 */
 	@Query("""
 		select new com.back.b2st.domain.lottery.result.dto.LotteryReservationInfo(
-				lr.id, lr.memberId, le.scheduleId, le.grade, le.quantity
+				r.id, lr.id, lr.memberId, le.scheduleId, le.grade, le.quantity
 				)
 		FROM LotteryResult lr
 		JOIN LotteryEntry le ON lr.lotteryEntryId = le.id
+		JOIN Reservation r ON r.memberId = lr.memberId AND r.scheduleId = le.scheduleId
 		WHERE lr.paid = true
 		""")
 	List<LotteryReservationInfo> findReservationInfoByPaidIsTrue();

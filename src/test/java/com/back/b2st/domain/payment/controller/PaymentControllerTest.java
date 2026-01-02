@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,48 +17,38 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.payment.dto.request.PaymentPayReq;
 import com.back.b2st.domain.payment.entity.DomainType;
-import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentMethod;
-import com.back.b2st.domain.payment.repository.PaymentRepository;
-import com.back.b2st.domain.reservation.entity.Reservation;
-import com.back.b2st.domain.reservation.entity.ReservationSeat;
-import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
-import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
-import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.payment.entity.Payment;
+import com.back.b2st.domain.payment.service.PaymentOneClickService;
 import com.back.b2st.security.UserPrincipal;
+import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Transactional
 class PaymentControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;
 
 	@Autowired
-	private PaymentRepository paymentRepository;
+	private ObjectMapper objectMapper;
 
-	@Autowired
-	private ReservationRepository reservationRepository;
-
-	@Autowired
-	private ReservationSeatRepository reservationSeatRepository;
-
-	@Autowired
-	private ScheduleSeatRepository scheduleSeatRepository;
+	@MockitoBean
+	private PaymentOneClickService paymentOneClickService;
 
 	private Authentication memberAuth;
 	private Long memberId;
 
 	@BeforeEach
 	void setup() {
-		paymentRepository.deleteAll();
-		reservationRepository.deleteAll();
-		scheduleSeatRepository.deleteAll();
 		memberId = 1L;
 
 		UserPrincipal member = UserPrincipal.builder()
@@ -69,116 +60,68 @@ class PaymentControllerTest {
 	}
 
 	@Test
-	@DisplayName("결제 승인(confirm) 성공 - READY → DONE")
-	void confirm_success() throws Exception {
-		// given
-		String orderId = "ORDER-123";
-		Long amount = 15000L;
-		Long scheduleId = 100L;
-		Long seatId = 200L;
-
-		// 예매 및 좌석 생성
-		Reservation reservation = Reservation.builder()
-			.memberId(memberId)
-			.scheduleId(scheduleId)
-			.expiresAt(LocalDateTime.now().plusMinutes(5))
-			.build();
-		Reservation savedReservation = reservationRepository.save(reservation);
-
-		ScheduleSeat scheduleSeat = ScheduleSeat.builder()
-			.scheduleId(scheduleId)
-			.seatId(seatId)
-			.build();
-		scheduleSeat.hold(LocalDateTime.now().plusMinutes(5));
-		scheduleSeatRepository.save(scheduleSeat);
-
-		ReservationSeat reservationSeat = ReservationSeat.builder()
-			.reservationId(savedReservation.getId())
-			.scheduleSeatId(scheduleSeat.getId())
-			.build();
-		reservationSeatRepository.save(reservationSeat);
-
+	@DisplayName("원클릭 결제(pay) 성공 - 결제 DONE 반환")
+	void pay_success() throws Exception {
 		Payment payment = Payment.builder()
-			.orderId(orderId)
+			.orderId("ORDER-1")
 			.memberId(memberId)
 			.domainType(DomainType.RESERVATION)
-			.domainId(reservation.getId())
-			.amount(amount)
-			.method(PaymentMethod.CARD)
-			.expiresAt(null)
-			.build();
-		paymentRepository.save(payment);
-
-		String body = """
-			{
-			  "orderId": "%s",
-			  "amount": %d
-			}
-			""".formatted(orderId, amount);
-
-		// when & then
-		mockMvc.perform(post("/api/payments/confirm")
-				.with(authentication(memberAuth))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(body))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.orderId").value(orderId))
-			.andExpect(jsonPath("$.data.amount").value(amount))
-			.andExpect(jsonPath("$.data.status").value("DONE"));
-	}
-
-	@Test
-	@DisplayName("결제 승인(confirm) 멱등 - 이미 DONE이면 외부 호출 없이 200")
-	void confirm_idempotent_done() throws Exception {
-		// given
-		String orderId = "ORDER-456";
-		Long amount = 20000L;
-		Long scheduleId = 101L;
-		Long seatId = 201L;
-
-		// 이미 확정된 예매 및 좌석 생성
-		Reservation reservation = Reservation.builder()
-			.memberId(memberId)
-			.scheduleId(scheduleId)
-			.expiresAt(LocalDateTime.now().plusMinutes(5))
-			.build();
-		reservation.complete(LocalDateTime.now());
-		reservationRepository.save(reservation);
-
-		ScheduleSeat scheduleSeat = ScheduleSeat.builder()
-			.scheduleId(scheduleId)
-			.seatId(seatId)
-			.build();
-		scheduleSeat.sold();
-		scheduleSeatRepository.save(scheduleSeat);
-
-		ReservationSeat reservationSeat = ReservationSeat.builder()
-			.reservationId(reservation.getId())
-			.scheduleSeatId(scheduleSeat.getId())
-			.build();
-		reservationSeatRepository.save(reservationSeat);
-
-		Payment payment = Payment.builder()
-			.orderId(orderId)
-			.memberId(memberId)
-			.domainType(DomainType.RESERVATION)
-			.domainId(reservation.getId())
-			.amount(amount)
+			.domainId(10L)
+			.amount(15000L)
 			.method(PaymentMethod.CARD)
 			.expiresAt(null)
 			.build();
 		payment.complete(LocalDateTime.now());
-		paymentRepository.save(payment);
 
-		String body = """
-			{
-			  "orderId": "%s",
-			  "amount": %d
-			}
-			""".formatted(orderId, amount);
+		org.mockito.Mockito.when(paymentOneClickService.pay(
+			org.mockito.ArgumentMatchers.eq(memberId),
+			org.mockito.ArgumentMatchers.any(PaymentPayReq.class)
+		)).thenReturn(payment);
+
+		String body = objectMapper.writeValueAsString(new Object() {
+			public final String domainType = "RESERVATION";
+			public final Long domainId = 10L;
+			public final String paymentMethod = "CARD";
+		});
 
 		// when & then
-		mockMvc.perform(post("/api/payments/confirm")
+		mockMvc.perform(post("/api/payments/pay")
+				.with(authentication(memberAuth))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("DONE"));
+	}
+
+	@Test
+	@DisplayName("추첨 예매 원클릭 결제(pay) 매핑 - 결제 DONE 반환")
+	void pay_lottery_success() throws Exception {
+		UUID entryId = UUID.randomUUID();
+		String entryIdStr = entryId.toString();
+
+		Payment payment = Payment.builder()
+			.orderId("ORDER-LOTTERY-1")
+			.memberId(memberId)
+			.domainType(DomainType.LOTTERY)
+			.domainId(99L)
+			.amount(30000L)
+			.method(PaymentMethod.CARD)
+			.expiresAt(null)
+			.build();
+		payment.complete(LocalDateTime.now());
+
+		org.mockito.Mockito.when(paymentOneClickService.pay(
+			org.mockito.ArgumentMatchers.eq(memberId),
+			org.mockito.ArgumentMatchers.any(PaymentPayReq.class)
+		)).thenReturn(payment);
+
+		String body = objectMapper.writeValueAsString(new Object() {
+			public final String domainType = "LOTTERY";
+			public final String paymentMethod = "CARD";
+			public final String entryId = entryIdStr;
+		});
+
+		mockMvc.perform(post("/api/payments/pay")
 				.with(authentication(memberAuth))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(body))

@@ -88,7 +88,7 @@ management:
   health:
     mail:
       enabled: false
-  endpoints:
-    web:
-      exposure:
-        include: health, info
+    redis:
+      enabled: false
+    db:
+      enabled: false

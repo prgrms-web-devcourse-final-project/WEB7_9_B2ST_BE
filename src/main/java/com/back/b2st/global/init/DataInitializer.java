@@ -195,13 +195,13 @@ public class DataInitializer implements CommandLineRunner {
 
 		Long venueId = venue.getVenueId();
 
-		// 회차 23개 추가 생성
+		// 기존 회차 24개 생성 (일반예매/추첨 - 신청예매 구현 전 원래 데이터)
 		List<PerformanceSchedule> schedules = IntStream.rangeClosed(0, 23)
 			.mapToObj(i -> PerformanceSchedule.builder()
 				.performance(performance)
 				.startAt(LocalDateTime.of(2025, 1, 1, 19, 0).plusDays(i))
 				.roundNo(i + 1)
-				.bookingType(i % 2 == 0 ? BookingType.PRERESERVE : BookingType.LOTTERY)
+				.bookingType(i % 2 == 0 ? BookingType.FIRST_COME : BookingType.LOTTERY)
 				.bookingOpenAt(LocalDateTime.now().minusHours(1))
 				.bookingCloseAt(LocalDateTime.now().plusDays(30))
 				.build()
@@ -209,6 +209,19 @@ public class DataInitializer implements CommandLineRunner {
 		performanceScheduleRepository.saveAll(schedules);
 		performanceSchedule = schedules.getFirst();
 		performanceSchedule2 = schedules.get(1);
+
+		// 신청예매 테스트용 회차 추가 (25~27회차)
+		List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(24, 26)
+			.mapToObj(i -> PerformanceSchedule.builder()
+				.performance(performance)
+				.startAt(LocalDateTime.of(2025, 1, 1, 19, 0).plusDays(i))
+				.roundNo(i + 1)
+				.bookingType(BookingType.PRERESERVE)
+				.bookingOpenAt(LocalDateTime.now().minusHours(1))
+				.bookingCloseAt(LocalDateTime.now().plusDays(30))
+				.build()
+			).toList();
+		performanceScheduleRepository.saveAll(prereserveSchedules);
 
 		// 구역 생성
 		sectionA = sectionRepository.save(Section.builder().venueId(venueId).sectionName("A").build());
@@ -224,8 +237,7 @@ public class DataInitializer implements CommandLineRunner {
 		List<Section> sections = List.of(sectionA, sectionB, sectionC);
 
 		// 신청 예매(BookingType.PRERESERVE) 시간표 시드 생성
-		List<PrereservationTimeTable> timeTables = schedules.stream()
-			.filter(schedule -> schedule.getBookingType() == BookingType.PRERESERVE)
+		List<PrereservationTimeTable> timeTables = prereserveSchedules.stream()
 			.flatMap(schedule -> IntStream.range(0, sections.size())
 				.mapToObj(idx -> {
 					LocalDateTime bookingOpenAt = schedule.getBookingOpenAt();

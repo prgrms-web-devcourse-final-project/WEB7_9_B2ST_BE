@@ -33,7 +33,8 @@ import lombok.NoArgsConstructor;
 		@Index(name = "idx_lottery_results_member", columnList = "member_id"),
 		@Index(name = "idx_lottery_results_lottery_entry_member", columnList = "lottery_entry_id, member_id"),
 		@Index(name = "idx_lottery_results_payment_deadline", columnList = "payment_deadline"),
-		@Index(name = "idx_lottery_results_uuid", columnList = "uuid")
+		@Index(name = "idx_lottery_results_uuid", columnList = "uuid"),
+		@Index(name = "idx_lottery_results_paid", columnList = "is_paid")
 	},
 	uniqueConstraints = {
 		@UniqueConstraint(

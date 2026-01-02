@@ -14,6 +14,7 @@ public enum ReservationErrorCode implements ErrorCode {
 	/* ===== 예매 조회/권한 ===== */
 	RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R007", "예매내역이 없습니다."),
 	RESERVATION_FORBIDDEN(HttpStatus.FORBIDDEN, "R008", "해당 예매에 대한 권한이 없습니다."),
+	RESERVATION_SCHEDULE_MISMATCH(HttpStatus.BAD_REQUEST, "RS002", "예매 회차 정보가 일치하지 않습니다."),
 
 	/* ===== 예매 상태 ===== */
 	RESERVATION_ALREADY_COMPLETED(HttpStatus.CONFLICT, "R009", "이미 결제가 완료된 예매입니다."),

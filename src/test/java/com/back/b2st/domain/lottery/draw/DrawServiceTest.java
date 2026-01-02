@@ -286,7 +286,7 @@ class DrawServiceTest {
 			lotteryEntryRepository.findAll().stream()
 				.filter(e -> e.getScheduleId().equals(newSchedule.getPerformanceScheduleId()))
 				.forEach(entry -> {
-					entry.setApplied();
+					entry.apply();
 					lotteryEntryRepository.save(entry);
 				});
 

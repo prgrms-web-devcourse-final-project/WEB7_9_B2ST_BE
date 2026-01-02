@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum DomainType {
 	RESERVATION("일반 예매"),
+	PRERESERVATION("신청 예매"),
 	LOTTERY("추첨 예매"),
 	TRADE("티켓 거래");
 

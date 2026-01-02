@@ -11,7 +11,5 @@ import com.back.b2st.domain.reservation.entity.ReservationSeat;
 public interface ReservationSeatRepository
 	extends JpaRepository<ReservationSeat, Long>, ReservationSeatRepositoryCustom {
 
-	// List<ReservationSeatInfo> findSeatInfos(Long reservationId);
-
 	List<ReservationSeat> findByReservationId(Long reservationId);
 }

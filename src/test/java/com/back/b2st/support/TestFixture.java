@@ -90,7 +90,7 @@ public class TestFixture {
 				.posterUrl("")
 				.startDate(LocalDateTime.now())
 				.endDate(LocalDateTime.now().plusDays(7))
-				.status(PerformanceStatus.ON_SALE)
+				.status(PerformanceStatus.ACTIVE)
 				.build()
 		);
 	}

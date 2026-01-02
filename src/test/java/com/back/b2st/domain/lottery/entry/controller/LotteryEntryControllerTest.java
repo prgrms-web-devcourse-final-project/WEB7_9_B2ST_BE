@@ -119,7 +119,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			.description(null)
 			.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
 			.endDate(LocalDateTime.of(2024, 12, 22, 21, 0))
-			.status(PerformanceStatus.ON_SALE)
+			.status(PerformanceStatus.ACTIVE)
 			.build());
 
 		// Section 생성 추가

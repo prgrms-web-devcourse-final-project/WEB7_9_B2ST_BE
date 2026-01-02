@@ -9,24 +9,26 @@ import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 
 public record PerformanceDetailRes(
-	Long performanceId,    //공연ID
-	String title, //공연제목
-	String category,    //장르
-	String posterUrl, //포스터URL
-	String description,    //공연설명
-	LocalDateTime startDate,    //공연시작일
-	LocalDateTime endDate,    //공연종료일
-	PerformanceStatus status,    //공연상태
-	VenueSummary venue,    //공연장 정보
-	List<GreadPrice> greadPrices
+	Long performanceId,
+	String title,
+	String category,
+	String posterUrl,
+	String description,
+	LocalDateTime startDate,
+	LocalDateTime endDate,
+	PerformanceStatus status,
+	LocalDateTime bookingOpenAt,
+	LocalDateTime bookingCloseAt,
+	boolean isBookable,
+	VenueSummary venue,
+	List<GradePrice> gradePrices
 ) {
-	public record GreadPrice(
+	public record GradePrice(
 		SeatGradeType gradeType,
 		Integer price
-	) {
-	}
+	) {}
 
-	public static PerformanceDetailRes from(Performance performance) {
+	public static PerformanceDetailRes from(Performance performance, LocalDateTime now, List<GradePrice> gradePrices) {
 		return new PerformanceDetailRes(
 			performance.getPerformanceId(),
 			performance.getTitle(),
@@ -36,24 +38,17 @@ public record PerformanceDetailRes(
 			performance.getStartDate(),
 			performance.getEndDate(),
 			performance.getStatus(),
+			performance.getBookingOpenAt(),
+			performance.getBookingCloseAt(),
+			performance.isBookable(now),
 			VenueSummary.from(performance.getVenue()),
-			// todo 등급, 가격 정보 데이터도 받아오도록
-			List.of(
-				new GreadPrice(SeatGradeType.VIP, 30000),
-				new GreadPrice(SeatGradeType.STANDARD, 10000)
-			)
+			gradePrices == null ? List.of() : gradePrices
 		);
 	}
 
-	public record VenueSummary(
-		Long venueId,
-		String name
-	) {
+	public record VenueSummary(Long venueId, String name) {
 		public static VenueSummary from(Venue venue) {
-			return new VenueSummary(
-				venue.getVenueId(),
-				venue.getName()
-			);
+			return new VenueSummary(venue.getVenueId(), venue.getName());
 		}
 	}
 }

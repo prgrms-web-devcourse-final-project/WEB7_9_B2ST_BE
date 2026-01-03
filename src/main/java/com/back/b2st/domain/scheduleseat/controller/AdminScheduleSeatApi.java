@@ -19,7 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-@Tag(name = "관리자 좌석", description = "관리자용 회차 좌석 조회 및 HOLD 해제")
+@Tag(name = "회차별 좌석 (관리자)", description = "관리자용 회차 좌석 조회 및 HOLD 해제")
 @RequestMapping("/api/admin/schedules/{scheduleId}/seats")
 @SecurityRequirement(name = "Authorization")
 public interface AdminScheduleSeatApi {

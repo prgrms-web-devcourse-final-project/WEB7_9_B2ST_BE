@@ -90,3 +90,9 @@ management:
     mail:
       enabled: false
 
+autoconfigure:
+  exclude:
+    - org.springframework.boot.mail.autoconfigure.MailSenderAutoConfiguration
+    - org.springframework.boot.mail.autoconfigure.MailHealthContributorAutoConfiguration
+
+

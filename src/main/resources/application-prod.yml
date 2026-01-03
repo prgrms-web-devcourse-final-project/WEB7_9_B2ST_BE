@@ -58,7 +58,7 @@ jwt:
   access-expiration: ${JWT_ACCESS_EXPIRATION}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION}
 
-# ueue 시스템 활성화
+# queue 시스템 활성화
 queue:
   enabled: true
   default:
@@ -69,3 +69,6 @@ queue:
   lua:
     enabled: true
     fallback-enabled: true
+
+server:
+  forward-headers-strategy: framework

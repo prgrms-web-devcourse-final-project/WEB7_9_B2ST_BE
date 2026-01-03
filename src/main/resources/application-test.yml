@@ -83,3 +83,4 @@ logging:
     org.hibernate.orm.jdbc.bind: TRACE
     org.springframework.mail: DEBUG
     com.sun.mail: DEBUG
+

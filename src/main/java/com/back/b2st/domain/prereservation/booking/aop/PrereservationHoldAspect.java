@@ -9,8 +9,9 @@ import com.back.b2st.domain.prereservation.booking.service.PrereservationHoldSer
 
 import lombok.RequiredArgsConstructor;
 
+@Deprecated
 @Aspect
-@Component
+// @Component
 @Order(0)
 @RequiredArgsConstructor
 public class PrereservationHoldAspect {

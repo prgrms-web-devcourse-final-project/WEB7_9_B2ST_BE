@@ -81,6 +81,7 @@ dependencies {
     implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:4.0.0-M1")
     implementation "io.awspring.cloud:spring-cloud-aws-starter-s3"
 
+
 }
 
 tasks.withType(JavaCompile) {

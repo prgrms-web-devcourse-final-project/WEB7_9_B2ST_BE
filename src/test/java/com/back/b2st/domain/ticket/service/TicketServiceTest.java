@@ -97,7 +97,7 @@ class TicketServiceTest {
 			.category("Test")
 			.startDate(java.time.LocalDateTime.now())
 			.endDate(java.time.LocalDateTime.now().plusDays(1))
-			.status(PerformanceStatus.ON_SALE)
+			.status(PerformanceStatus.ACTIVE)
 			.build();
 		Performance savedPerformance = performanceRepository.save(performance);
 

@@ -94,7 +94,7 @@ class ReservationControllerTest {
 				.category("콘서트")
 				.startDate(LocalDateTime.now())
 				.endDate(LocalDateTime.now().plusDays(1))
-				.status(PerformanceStatus.ON_SALE)
+				.status(PerformanceStatus.ACTIVE)
 				.build()
 		);
 

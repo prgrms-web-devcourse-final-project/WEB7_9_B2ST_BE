@@ -1,9 +1,13 @@
 package com.back.b2st.domain.performance.entity;
 
+import java.time.LocalDateTime;
+import java.util.Objects;
+
 import com.back.b2st.domain.performance.error.PerformanceErrorCode;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.jpa.entity.BaseEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,7 +16,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
@@ -20,21 +23,13 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
-import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-	name = "performance",
-	indexes = {
-		@Index(name = "idx_performance_id_desc", columnList = "performanceId DESC"),
-		@Index(name = "idx_performance_status_id_desc", columnList = "status, performanceId DESC")
-	}
-)
+@Table(name = "performance")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SequenceGenerator(
@@ -59,8 +54,8 @@ public class Performance extends BaseEntity {
 	@Column(nullable = false, length = 50)
 	private String category; // 장르
 
-	@Column(name = "poster_url", length = 500)
-	private String posterUrl; // 포스터 이미지 URL
+	@Column(name = "poster_key", length = 500)
+	private String posterKey; // 포스터 이미지 S3 Object Key
 
 	@Lob
 	private String description; // 공연 설명
@@ -86,7 +81,7 @@ public class Performance extends BaseEntity {
 		Venue venue,
 		String title,
 		String category,
-		String posterUrl,
+		String posterKey,
 		String description,
 		LocalDateTime startDate,
 		LocalDateTime endDate,
@@ -97,7 +92,7 @@ public class Performance extends BaseEntity {
 		this.venue = Objects.requireNonNull(venue, "venue must not be null");
 		this.title = Objects.requireNonNull(title, "title must not be null");
 		this.category = Objects.requireNonNull(category, "category must not be null");
-		this.posterUrl = posterUrl;
+		this.posterKey = posterKey;
 		this.description = description;
 		this.startDate = Objects.requireNonNull(startDate, "startDate must not be null");
 		this.endDate = Objects.requireNonNull(endDate, "endDate must not be null");

@@ -12,10 +12,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.performance.dto.request.CreatePerformanceReq;
+import com.back.b2st.domain.performance.dto.request.CreatePresignedUrlReq;
 import com.back.b2st.domain.performance.dto.request.UpsertBookingPolicyReq;
 import com.back.b2st.domain.performance.dto.response.PerformanceCursorPageRes;
 import com.back.b2st.domain.performance.dto.response.PerformanceDetailRes;
 import com.back.b2st.domain.performance.service.PerformanceService;
+import com.back.b2st.global.s3.dto.response.PresignedUrlRes;
 import com.back.b2st.global.common.BaseResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -110,6 +112,25 @@ public class AdminPerformanceController {
 		@PathVariable Long performanceId
 	) {
 		return BaseResponse.success(performanceService.getPerformanceForAdmin(performanceId));
+	}
+
+	/**
+	 * 포스터 이미지 업로드용 Presigned URL 발급 (관리자)
+	 * POST /api/admin/performances/poster/presign
+	 */
+	@Operation(
+		summary = "포스터 이미지 업로드용 Presigned URL 발급",
+		description = "S3에 포스터 이미지를 직접 업로드하기 위한 Presigned URL을 발급합니다. " +
+			"허용된 이미지 형식: image/jpeg, image/png, image/webp. 최대 파일 크기: 10MB."
+	)
+	@PostMapping("/poster/presign")
+	public BaseResponse<PresignedUrlRes> generatePresignedUrl(
+		@Valid @RequestBody CreatePresignedUrlReq request
+	) {
+		return BaseResponse.success(performanceService.generatePosterPresign(
+			request.contentType(),
+			request.fileSize()
+		));
 	}
 }
 

@@ -17,10 +17,13 @@ import com.back.b2st.domain.performance.dto.response.PerformanceListRes;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.performance.error.PerformanceErrorCode;
+import com.back.b2st.domain.performance.mapper.PerformanceMapper;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.exception.BusinessException;
+import com.back.b2st.global.s3.dto.response.PresignedUrlRes;
+import com.back.b2st.global.s3.service.S3Service;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,10 +34,24 @@ public class PerformanceService {
 
 	private final PerformanceRepository performanceRepository;
 	private final VenueRepository venueRepository;
+	private final PerformanceMapper performanceMapper;
+	private final S3Service s3Service;
+
+	private static final String POSTER_PREFIX = "performances/posters";
 
 	/* =========================
 	 * 관리자 기능
 	 * ========================= */
+
+	/**
+	 * 포스터 이미지 업로드용 Presigned PUT URL 발급 (관리자)
+	 *
+	 * - prefix는 도메인에서 결정
+	 * - 반환되는 objectKey를 DB에 저장하여 추후 조회 시 Presigned GET으로 변환
+	 */
+	public PresignedUrlRes generatePosterPresign(String contentType, long fileSize) {
+		return s3Service.generatePresignedUploadUrl(POSTER_PREFIX, contentType, fileSize);
+	}
 
 	@Transactional
 	public PerformanceDetailRes createPerformance(CreatePerformanceReq request) {
@@ -45,11 +62,14 @@ public class PerformanceService {
 		Venue venue = venueRepository.findById(request.venueId())
 			.orElseThrow(() -> new BusinessException(PerformanceErrorCode.VENUE_NOT_FOUND));
 
+		// DB에는 posterKey(objectKey)만 저장 (S3 Private)
+		String posterKey = normalizePosterKey(request.posterKey());
+
 		Performance performance = Performance.builder()
 			.venue(venue)
 			.title(request.title())
 			.category(request.category())
-			.posterUrl(blankToNull(request.posterUrl()))
+			.posterKey(posterKey)
 			.description(blankToNull(request.description()))
 			.startDate(request.startDate())
 			.endDate(request.endDate())
@@ -59,7 +79,7 @@ public class PerformanceService {
 			.build();
 
 		Performance saved = performanceRepository.save(performance);
-		return PerformanceDetailRes.from(saved, LocalDateTime.now(), null);
+		return performanceMapper.toDetailRes(saved, LocalDateTime.now(), null);
 	}
 
 	@Transactional
@@ -73,11 +93,17 @@ public class PerformanceService {
 
 		LocalDateTime openAt = request.bookingOpenAt();
 		LocalDateTime closeAt = request.bookingCloseAt();
+		LocalDateTime endDate = performance.getEndDate();
 
 		if (closeAt != null && !openAt.isBefore(closeAt)) {
 			throw new BusinessException(PerformanceErrorCode.INVALID_BOOKING_TIME);
 		}
-		if (openAt.isAfter(performance.getEndDate())) {
+
+		if (openAt.isAfter(endDate)) {
+			throw new BusinessException(PerformanceErrorCode.INVALID_BOOKING_TIME);
+		}
+
+		if (closeAt != null && closeAt.isAfter(endDate)) {
 			throw new BusinessException(PerformanceErrorCode.INVALID_BOOKING_TIME);
 		}
 
@@ -88,7 +114,7 @@ public class PerformanceService {
 	public Page<PerformanceListRes> getPerformancesForAdmin(Pageable pageable) {
 		LocalDateTime now = LocalDateTime.now();
 		return performanceRepository.findAll(pageable)
-			.map(p -> PerformanceListRes.from(p, now));
+			.map(p -> performanceMapper.toListRes(p, now));
 	}
 
 	// 관리자: Offset 검색
@@ -96,16 +122,16 @@ public class PerformanceService {
 		LocalDateTime now = LocalDateTime.now();
 		if (keyword == null || keyword.trim().isEmpty()) {
 			return performanceRepository.findAll(pageable)
-				.map(p -> PerformanceListRes.from(p, now));
+				.map(p -> performanceMapper.toListRes(p, now));
 		}
 		return performanceRepository.searchAll(keyword.trim(), pageable)
-			.map(p -> PerformanceListRes.from(p, now));
+			.map(p -> performanceMapper.toListRes(p, now));
 	}
 
 	// 관리자: 상세
 	public PerformanceDetailRes getPerformanceForAdmin(Long performanceId) {
 		return performanceRepository.findWithVenueByPerformanceId(performanceId)
-			.map(p -> PerformanceDetailRes.from(p, LocalDateTime.now(), null))
+			.map(p -> performanceMapper.toDetailRes(p, LocalDateTime.now(), null))
 			.orElseThrow(() -> new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND));
 	}
 
@@ -117,13 +143,13 @@ public class PerformanceService {
 	public Page<PerformanceListRes> getActivePerformances(Pageable pageable) {
 		LocalDateTime now = LocalDateTime.now();
 		return performanceRepository.findByStatus(PerformanceStatus.ACTIVE, pageable)
-			.map(p -> PerformanceListRes.from(p, now));
+			.map(p -> performanceMapper.toListRes(p, now));
 	}
 
 	// 사용자: 상세
 	public PerformanceDetailRes getActivePerformance(Long performanceId) {
 		return performanceRepository.findWithVenueByPerformanceIdAndStatus(performanceId, PerformanceStatus.ACTIVE)
-			.map(p -> PerformanceDetailRes.from(p, LocalDateTime.now(), null))
+			.map(p -> performanceMapper.toDetailRes(p, LocalDateTime.now(), null))
 			.orElseThrow(() -> new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND));
 	}
 
@@ -132,10 +158,10 @@ public class PerformanceService {
 		LocalDateTime now = LocalDateTime.now();
 		if (keyword == null || keyword.trim().isEmpty()) {
 			return performanceRepository.findByStatus(PerformanceStatus.ACTIVE, pageable)
-				.map(p -> PerformanceListRes.from(p, now));
+				.map(p -> performanceMapper.toListRes(p, now));
 		}
 		return performanceRepository.searchActive(PerformanceStatus.ACTIVE, keyword.trim(), pageable)
-			.map(p -> PerformanceListRes.from(p, now));
+			.map(p -> performanceMapper.toListRes(p, now));
 	}
 
 	/* =========================
@@ -192,14 +218,10 @@ public class PerformanceService {
 	 * 공통 유틸 (Private)
 	 * ========================= */
 
-	/**
-	 * Entity 리스트를 Cursor 응답 DTO로 변환
-	 * (DTO of() 메서드에서 hasNext, nextCursor 계산 수행)
-	 */
 	private PerformanceCursorPageRes mapToCursorRes(List<Performance> performances, int size) {
 		LocalDateTime now = LocalDateTime.now();
 		List<PerformanceListRes> content = performances.stream()
-			.map(p -> PerformanceListRes.from(p, now))
+			.map(p -> performanceMapper.toListRes(p, now))
 			.toList();
 
 		return PerformanceCursorPageRes.of(content, size);
@@ -209,5 +231,41 @@ public class PerformanceService {
 		if (v == null) return null;
 		String t = v.trim();
 		return t.isEmpty() ? null : t;
+	}
+
+	/**
+	 * posterKey 정규화 (저장 단계에서 수행)
+	 *
+	 * - null/blank 처리
+	 * - 선행/후행 슬래시 제거
+	 * - 중간 연속 슬래시 축약 (정규식/replace 루프 미사용)
+	 */
+	private String normalizePosterKey(String posterKey) {
+		String s = blankToNull(posterKey);
+		if (s == null) return null;
+
+		int start = 0;
+		int end = s.length();
+
+		while (start < end && s.charAt(start) == '/') start++;
+		while (start < end && s.charAt(end - 1) == '/') end--;
+
+		if (start >= end) return null;
+
+		StringBuilder sb = new StringBuilder(end - start);
+		boolean prevSlash = false;
+
+		for (int i = start; i < end; i++) {
+			char ch = s.charAt(i);
+			if (ch == '/') {
+				if (prevSlash) continue;
+				prevSlash = true;
+			} else {
+				prevSlash = false;
+			}
+			sb.append(ch);
+		}
+
+		return sb.length() == 0 ? null : sb.toString();
 	}
 }

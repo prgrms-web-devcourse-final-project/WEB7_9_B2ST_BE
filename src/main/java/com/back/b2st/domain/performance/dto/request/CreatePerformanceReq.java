@@ -21,8 +21,13 @@ public record CreatePerformanceReq(
 	@Size(max = 50)
 	String category,
 
+	/**
+	 * 포스터 이미지의 S3 objectKey (DB 저장 값).
+	 * 클라이언트는 presigned URL 업로드 후 반환받은 objectKey를 posterKey로 전달합니다.
+	 * DB에는 posterKey(objectKey)만 저장하고, 응답 DTO에서는 이를 public URL로 변환해 내려줍니다.
+	 */
 	@Size(max = 500)
-	String posterUrl,
+	String posterKey,
 
 	@Size(max = 5000)
 	String description,

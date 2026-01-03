@@ -43,6 +43,8 @@ public class SecurityConfig {
 				.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
 				.authorizeHttpRequests(auth -> auth
+						// 관리자 전용 경로
+						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						// 인증 필요한 auth 하위 경로 (link, logout)
 						.requestMatchers("/api/auth/link/**", "/api/auth/logout").authenticated()
 						.requestMatchers(

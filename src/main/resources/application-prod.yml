@@ -83,3 +83,12 @@ aws:
       - image/jpeg
       - image/png
       - image/webp
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never   # 외부 노출 최소화(권장)

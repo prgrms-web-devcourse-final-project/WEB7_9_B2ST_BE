@@ -95,6 +95,24 @@ public class TestFixture {
 		);
 	}
 
+	public static Performance createPerformance(
+		Venue venue,
+		PerformanceRepository repo,
+		int days
+	) {
+		return repo.save(
+			Performance.builder()
+				.venue(venue)
+				.title("테스트 공연")
+				.category("콘서트")
+				.posterUrl("")
+				.startDate(LocalDateTime.now().minusDays(days))
+				.endDate(LocalDateTime.now().plusDays(7))
+				.status(PerformanceStatus.ACTIVE)
+				.build()
+		);
+	}
+
 	/**
 	 * 공연 회차 생성
 	 * createSchedules(performance, 5, BookingType.LOTTERY, scheduleRepo);
@@ -114,6 +132,28 @@ public class TestFixture {
 					.bookingType(bookingType)
 					.bookingOpenAt(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIDNIGHT))
 					.bookingCloseAt(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.of(12, 0)))
+					.build()
+				)
+				.toList()
+		);
+	}
+
+	public static List<PerformanceSchedule> createSchedules(
+		Performance performance,
+		int count,
+		BookingType bookingType,
+		PerformanceScheduleRepository repo,
+		int days
+	) {
+		return repo.saveAll(
+			IntStream.rangeClosed(1, count)
+				.mapToObj(i -> PerformanceSchedule.builder()
+					.performance(performance)
+					.roundNo(i)
+					.startAt(LocalDateTime.now().plusDays(i))
+					.bookingType(bookingType)
+					.bookingOpenAt(LocalDateTime.of(LocalDate.now().minusDays(days), LocalTime.MIDNIGHT))
+					.bookingCloseAt(LocalDateTime.of(LocalDate.now().minusDays(days), LocalTime.of(12, 0)))
 					.build()
 				)
 				.toList()

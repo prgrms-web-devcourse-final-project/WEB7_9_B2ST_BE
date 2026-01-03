@@ -90,3 +90,4 @@ management:
   health:
     mail:
       enabled: false
+

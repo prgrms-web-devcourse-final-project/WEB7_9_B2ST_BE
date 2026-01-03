@@ -114,7 +114,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			.venue(venue)
 			.title("2024 아이유 콘서트 - HEREH WORLD TOUR")
 			.category("콘서트")
-			.posterKeygit (null)
+			.posterKey(null)
 			.description(null)
 			.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
 			.endDate(LocalDateTime.of(2024, 12, 22, 21, 0))

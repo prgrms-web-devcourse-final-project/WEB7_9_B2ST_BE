@@ -15,7 +15,6 @@ import com.back.b2st.domain.performance.dto.response.PerformanceCursorPageRes;
 import com.back.b2st.domain.performance.dto.response.PerformanceDetailRes;
 import com.back.b2st.domain.performance.dto.response.PerformanceListRes;
 import com.back.b2st.domain.performance.entity.Performance;
-import com.back.b2st.global.s3.dto.response.PresignedUrlRes;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.performance.error.PerformanceErrorCode;
 import com.back.b2st.domain.performance.mapper.PerformanceMapper;
@@ -23,6 +22,7 @@ import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.exception.BusinessException;
+import com.back.b2st.global.s3.dto.response.PresignedUrlRes;
 import com.back.b2st.global.s3.service.S3Service;
 
 import lombok.RequiredArgsConstructor;
@@ -37,21 +37,20 @@ public class PerformanceService {
 	private final PerformanceMapper performanceMapper;
 	private final S3Service s3Service;
 
+	private static final String POSTER_PREFIX = "performances/posters";
+
 	/* =========================
 	 * 관리자 기능
 	 * ========================= */
 
-	private static final String POSTER_PREFIX = "performances/posters";
-
 	/**
-	 * 포스터 이미지 업로드용 Presigned URL 발급 (관리자)
-	 * S3 Presigned URL을 생성하고 검증하여 반환합니다.
+	 * 포스터 이미지 업로드용 Presigned PUT URL 발급 (관리자)
 	 *
-	 * 도메인에서 prefix를 결정하여 global 레이어로 전달합니다.
-	 * 이렇게 하면 확장성과 유지보수성이 향상됩니다.
+	 * - prefix는 도메인에서 결정
+	 * - 반환되는 objectKey를 DB에 저장하여 추후 조회 시 Presigned GET으로 변환
 	 */
 	public PresignedUrlRes generatePosterPresign(String contentType, long fileSize) {
-		return s3Service.generatePresignedUrl(POSTER_PREFIX, contentType, fileSize);
+		return s3Service.generatePresignedUploadUrl(POSTER_PREFIX, contentType, fileSize);
 	}
 
 	@Transactional
@@ -63,15 +62,14 @@ public class PerformanceService {
 		Venue venue = venueRepository.findById(request.venueId())
 			.orElseThrow(() -> new BusinessException(PerformanceErrorCode.VENUE_NOT_FOUND));
 
-		// DB에는 posterKey만 저장, 응답에서 URL 조립
-		// 저장 단계에서 정규화 수행 (선행 '/' 제거)
+		// DB에는 posterKey(objectKey)만 저장 (S3 Private)
 		String posterKey = normalizePosterKey(request.posterKey());
 
 		Performance performance = Performance.builder()
 			.venue(venue)
 			.title(request.title())
 			.category(request.category())
-			.posterKey(posterKey) // DB에는 posterKey만 저장 (PerformanceMapper에서 URL로 변환)
+			.posterKey(posterKey)
 			.description(blankToNull(request.description()))
 			.startDate(request.startDate())
 			.endDate(request.endDate())
@@ -97,17 +95,14 @@ public class PerformanceService {
 		LocalDateTime closeAt = request.bookingCloseAt();
 		LocalDateTime endDate = performance.getEndDate();
 
-		// 1. openAt < closeAt (closeAt이 있을 때)
 		if (closeAt != null && !openAt.isBefore(closeAt)) {
 			throw new BusinessException(PerformanceErrorCode.INVALID_BOOKING_TIME);
 		}
 
-		// 2. openAt <= endDate
 		if (openAt.isAfter(endDate)) {
 			throw new BusinessException(PerformanceErrorCode.INVALID_BOOKING_TIME);
 		}
 
-		// 3. closeAt <= endDate (closeAt이 있을 때)
 		if (closeAt != null && closeAt.isAfter(endDate)) {
 			throw new BusinessException(PerformanceErrorCode.INVALID_BOOKING_TIME);
 		}
@@ -223,10 +218,6 @@ public class PerformanceService {
 	 * 공통 유틸 (Private)
 	 * ========================= */
 
-	/**
-	 * Entity 리스트를 Cursor 응답 DTO로 변환
-	 * (DTO of() 메서드에서 hasNext, nextCursor 계산 수행)
-	 */
 	private PerformanceCursorPageRes mapToCursorRes(List<Performance> performances, int size) {
 		LocalDateTime now = LocalDateTime.now();
 		List<PerformanceListRes> content = performances.stream()
@@ -245,41 +236,36 @@ public class PerformanceService {
 	/**
 	 * posterKey 정규화 (저장 단계에서 수행)
 	 *
-	 * S3 objectKey로 사용되는 posterKey를 정규화합니다.
-	 * - null/빈 문자열 처리
-	 * - 선행/후행 슬래시 제거 (여러 개)
-	 * - 중간 연속 슬래시 정규화
-	 *
-	 * Service 레이어에서 확실히 정규화하여 DB에 저장하므로,
-	 * Mapper에서는 URL 조립만 수행하면 됩니다.
+	 * - null/blank 처리
+	 * - 선행/후행 슬래시 제거
+	 * - 중간 연속 슬래시 축약 (정규식/replace 루프 미사용)
 	 */
 	private String normalizePosterKey(String posterKey) {
-		String normalized = blankToNull(posterKey);
-		if (normalized == null) {
-			return null;
+		String s = blankToNull(posterKey);
+		if (s == null) return null;
+
+		int start = 0;
+		int end = s.length();
+
+		while (start < end && s.charAt(start) == '/') start++;
+		while (start < end && s.charAt(end - 1) == '/') end--;
+
+		if (start >= end) return null;
+
+		StringBuilder sb = new StringBuilder(end - start);
+		boolean prevSlash = false;
+
+		for (int i = start; i < end; i++) {
+			char ch = s.charAt(i);
+			if (ch == '/') {
+				if (prevSlash) continue;
+				prevSlash = true;
+			} else {
+				prevSlash = false;
+			}
+			sb.append(ch);
 		}
 
-		// 선행 슬래시 제거 (여러 개)
-		while (normalized.startsWith("/")) {
-			normalized = normalized.substring(1);
-		}
-
-		// 후행 슬래시 제거 (여러 개)
-		while (normalized.endsWith("/")) {
-			normalized = normalized.substring(0, normalized.length() - 1);
-		}
-
-		// 중간 연속 슬래시 정규화 (정규식 대신 단순 루프 사용 - 성능 고려)
-		// 예: "performances//posters" -> "performances/posters", "////a//b///c" -> "a/b/c"
-		while (normalized.contains("//")) {
-			normalized = normalized.replace("//", "/");
-		}
-
-		// 정규화 후 빈 값이면 null 반환
-		if (normalized.isEmpty()) {
-			return null;
-		}
-
-		return normalized;
+		return sb.length() == 0 ? null : sb.toString();
 	}
 }

@@ -17,12 +17,7 @@ public record PresignedUrlRes(
 	/**
 	 * 만료 시간 (초)
 	 */
-	int expiresInSeconds,
-
-	/**
-	 * Public URL (조회 시 사용, CDN 또는 S3 직접 URL)
-	 */
-	String publicUrl
+	int expiresInSeconds
 ) {
 }
 

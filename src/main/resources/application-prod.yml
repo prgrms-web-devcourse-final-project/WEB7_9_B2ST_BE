@@ -77,7 +77,6 @@ aws:
   s3:
     bucket: ${AWS_S3_BUCKET}
     region: ${AWS_REGION:ap-northeast-2}
-    cdn-base-url: ${AWS_CLOUDFRONT_URL:}
     presign-expiration-seconds: ${AWS_S3_PRESIGN_EXPIRATION:300}
     max-file-size: ${AWS_S3_MAX_FILE_SIZE:10485760}
     allowed-content-types:

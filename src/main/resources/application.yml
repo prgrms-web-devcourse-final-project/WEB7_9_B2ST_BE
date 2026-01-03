@@ -140,4 +140,3 @@ aws:
       - image/jpeg
       - image/png
       - image/webp
-    cdn-base-url: https://xxxx.cloudfront.net   # 선택

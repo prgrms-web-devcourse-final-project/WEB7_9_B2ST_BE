@@ -2,26 +2,50 @@ package com.back.b2st.domain.scheduleseat.service;
 
 import static org.assertj.core.api.Assertions.*;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Future;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 
-@SpringBootTest
+@Testcontainers
+@SpringBootTest(properties = {
+	"spring.task.scheduling.enabled=false"
+})
 @ActiveProfiles("test")
-@Disabled("동시성 문제 재현용 테스트 — 비활성화")
 class SeatSelectionConcurrencyTest {
+
+	private static final String REDIS_PASSWORD = "testpass";
+
+	@Container
+	static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")
+		.withExposedPorts(6379)
+		.withCommand("redis-server", "--requirepass", REDIS_PASSWORD); // 테스트용 Redis 실행
+
+	@DynamicPropertySource
+	static void redisProps(DynamicPropertyRegistry registry) {
+		registry.add("spring.data.redis.host", redis::getHost);
+		registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+		registry.add("spring.data.redis.password", () -> REDIS_PASSWORD);
+	}
 
 	@Autowired
 	private ScheduleSeatStateService scheduleSeatStateService;
@@ -29,52 +53,72 @@ class SeatSelectionConcurrencyTest {
 	@Autowired
 	private ScheduleSeatRepository scheduleSeatRepository;
 
-	private final Long scheduleId = 1001L;
-	private final Long seatId = 55L;
-
-	@BeforeEach
-	void setUp() {
-		// 좌석 초기화 (AVAILABLE)
-		scheduleSeatRepository.deleteAll();
-		ScheduleSeat seat = ScheduleSeat.builder()
-			.scheduleId(scheduleId)
-			.seatId(seatId)
-			.build();
-
-		scheduleSeatRepository.save(seat);
-	}
-
 	@Test
-	@DisplayName("동시성 문제 테스트 — 두 스레드 모두 HOLD 성공하는지 검증(DB 단독 로직의 문제)")
-	void concurrencyIssueOccurs() throws Exception {
+	@DisplayName("동일 좌석에 동시 HOLD 요청 시 1명만 성공한다")
+	void concurrent_hold_only_one_success() throws Exception {
 
-		int threadCount = 2;
+		// given: 하나의 좌석이 AVAILABLE 상태
+		Long scheduleId = 1L;
+		Long seatId = 1L;
+
+		scheduleSeatRepository.deleteAll();
+		scheduleSeatRepository.saveAndFlush(
+			ScheduleSeat.builder()
+				.scheduleId(scheduleId)
+				.seatId(seatId)
+				.build()
+		);
+
+		int threadCount = 50;
 		ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-		CountDownLatch latch = new CountDownLatch(threadCount);
 
-		AtomicInteger successCount = new AtomicInteger(0);
+		CountDownLatch ready = new CountDownLatch(threadCount); // 모든 스레드 준비 대기
+		CountDownLatch start = new CountDownLatch(1);           // 동시에 출발
+		CountDownLatch done = new CountDownLatch(threadCount);  // 종료 대기
 
-		Runnable task = () -> {
-			try {
-				scheduleSeatStateService.changeToHold(scheduleId, seatId);
-				successCount.incrementAndGet(); // HOLD 성공한 스레드 수 증가
-			} catch (Exception e) {
-				System.out.println("[Thread Error] " + e.getMessage());
-			} finally {
-				latch.countDown();
-			}
-		};
+		List<Future<Boolean>> futures = new ArrayList<>();
+		Queue<Throwable> errors = new ConcurrentLinkedQueue<>();
 
-		// 동시에 두 스레드 실행
-		executor.execute(task);
-		executor.execute(task);
+		// when: 50명이 동시에 동일 좌석 HOLD 시도
+		for (int i = 0; i < threadCount; i++) {
+			final long memberId = i + 1;
+			futures.add(executor.submit(() -> {
+				ready.countDown();
+				start.await();
+				try {
+					scheduleSeatStateService.holdSeat(memberId, scheduleId, seatId); // 실제 서비스 진입점
+					return true;
+				} catch (Throwable t) {
+					errors.add(t);
+					return false;
+				} finally {
+					done.countDown();
+				}
+			}));
+		}
 
-		latch.await();  // 모든 스레드 종료 대기
+		ready.await();
+		start.countDown();
+		done.await();
+		executor.shutdownNow();
 
-		System.out.println("성공한 스레드 수 = " + successCount.get());
+		long successCount = futures.stream()
+			.filter(f -> {
+				try {
+					return Boolean.TRUE.equals(f.get());
+				} catch (Exception e) {
+					return false;
+				}
+			})
+			.count();
 
-		// 두 스레드 모두 성공 -> 동시성 문제
-		assertThat(successCount.get())
-			.isEqualTo(2);
+		// then: 단 1명만 HOLD 성공
+		assertThat(successCount).isEqualTo(1);
+
+		ScheduleSeat after = scheduleSeatRepository
+			.findByScheduleIdAndSeatId(scheduleId, seatId)
+			.orElseThrow();
+
+		assertThat(after.getStatus()).isEqualTo(SeatStatus.HOLD);
 	}
 }

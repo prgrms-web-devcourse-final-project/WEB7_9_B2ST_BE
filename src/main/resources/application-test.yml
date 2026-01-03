@@ -85,3 +85,8 @@ logging:
     com.sun.mail: DEBUG
     org.springframework.core.env: DEBUG
 
+management:
+  health:
+    mail:
+      enabled: false
+

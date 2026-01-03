@@ -72,6 +72,10 @@ public class SeatAllocationService {
 				log.error("좌석 할당 실패 reservationId: {}, memberId: {}", infos.reservationId(), infos.memberId(), e);
 			}
 		}
+
+		// 회차 - 좌석배치 완료
+		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId).orElseThrow();
+		schedule.markSeatAllocated();
 	}
 
 	@Transactional
@@ -81,8 +85,6 @@ public class SeatAllocationService {
 			log.debug("이미 좌석 배치 완료 - reservationId: {}", info.reservationId());
 			return List.of();
 		}
-
-		PerformanceSchedule schedule = performanceScheduleRepository.findById(info.scheduleId()).orElseThrow();
 
 		List<ScheduleSeat> availableSeats = getAvailableSeats(info);
 
@@ -111,8 +113,6 @@ public class SeatAllocationService {
 
 		log.info("좌석 배정 완료 - resultId: {}, memberId: {}, 배정 좌석 수: {}",
 			info.resultId(), info.memberId(), allocatedSeats.size());
-
-		schedule.markSeatAllocated();
 
 		return allocatedSeats;
 	}

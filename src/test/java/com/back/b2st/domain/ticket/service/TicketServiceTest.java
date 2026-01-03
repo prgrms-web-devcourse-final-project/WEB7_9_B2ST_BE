@@ -97,7 +97,7 @@ class TicketServiceTest {
 			.category("Test")
 			.startDate(java.time.LocalDateTime.now())
 			.endDate(java.time.LocalDateTime.now().plusDays(1))
-			.status(PerformanceStatus.ON_SALE)
+			.status(PerformanceStatus.ACTIVE)
 			.build();
 		Performance savedPerformance = performanceRepository.save(performance);
 
@@ -133,7 +133,6 @@ class TicketServiceTest {
 		Reservation reservation = Reservation.builder()
 			.scheduleId(savedSchedule.getPerformanceScheduleId())
 			.memberId(savedMember.getId())
-			.seatId(savedSeat.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation savedReservation = reservationRepository.save(reservation);

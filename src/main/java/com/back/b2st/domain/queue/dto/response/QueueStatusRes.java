@@ -14,6 +14,7 @@ public record QueueStatusRes(
 	Integer myRank,
 	Integer waitingAhead,
 	Integer totalWaiting,
+	Integer totalEnterable,
 	Integer maxActiveUsers
 ) {
 
@@ -34,18 +35,36 @@ public record QueueStatusRes(
 			myRank,
 			waitingAhead,
 			totalWaiting,
+			null,
 			null
 		);
 	}
 
 	/**
-	 * ENTERABLE 상태 응답 (Redis에 존재)
+	 * ENTERABLE 상태 응답 (Redis 토큰 존재)
 	 */
 	public static QueueStatusRes enterable(Long queueId, Long userId) {
 		return new QueueStatusRes(
 			queueId,
 			userId,
 			"ENTERABLE",
+			null,
+			null,
+			null,
+			null,
+			null
+		);
+	}
+
+	/**
+	 * EXPIRED 상태 응답 (표시용)
+	 */
+	public static QueueStatusRes expired(Long queueId, Long userId) {
+		return new QueueStatusRes(
+			queueId,
+			userId,
+			"EXPIRED",
+			null,
 			null,
 			null,
 			null,
@@ -61,6 +80,7 @@ public record QueueStatusRes(
 			entry.getQueueId(),
 			entry.getUserId(),
 			entry.getStatus().name(),
+			null,
 			null,
 			null,
 			null,
@@ -84,8 +104,8 @@ public record QueueStatusRes(
 			null,
 			null,
 			totalWaiting,
+			totalEnterable,
 			maxActiveUsers
 		);
 	}
 }
-

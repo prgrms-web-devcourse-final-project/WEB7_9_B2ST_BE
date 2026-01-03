@@ -94,7 +94,7 @@ class ReservationControllerTest {
 				.category("콘서트")
 				.startDate(LocalDateTime.now())
 				.endDate(LocalDateTime.now().plusDays(1))
-				.status(PerformanceStatus.ON_SALE)
+				.status(PerformanceStatus.ACTIVE)
 				.build()
 		);
 
@@ -133,7 +133,6 @@ class ReservationControllerTest {
 			Reservation.builder()
 				.memberId(memberId)
 				.scheduleId(schedule.getPerformanceScheduleId())
-				.seatId(seat1.getId())
 				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build()
 		);
@@ -142,7 +141,6 @@ class ReservationControllerTest {
 			Reservation.builder()
 				.memberId(memberId)
 				.scheduleId(schedule.getPerformanceScheduleId())
-				.seatId(seat2.getId())
 				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build()
 		);

@@ -43,12 +43,15 @@ public class SecurityConfig {
 				.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
 
 				.authorizeHttpRequests(auth -> auth
+						// 관리자 전용 경로
+						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						// 인증 필요한 auth 하위 경로 (link, logout)
 						.requestMatchers("/api/auth/link/**", "/api/auth/logout").authenticated()
 						.requestMatchers(
 								"/api/members/signup", "/api/auth/**", "/h2-console/**", "/error", "/api/banks",
 								"/api/email/**",
-								"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html" // Swagger
+								"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",	//Swagger
+								"/actuator/health", "/actuator/health/**", "/actuator/info"
 						).permitAll()
 						.anyRequest().authenticated())
 				.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))

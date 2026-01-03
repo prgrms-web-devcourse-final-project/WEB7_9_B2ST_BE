@@ -35,7 +35,7 @@ public class LoginEventListener {
 	 * @Transactional(REQUIRES_NEW): 기존 트랜잭션과 별도로 새 트랜잭션 생성
 	 * - 로그 저장 실패가 메인 로그인 흐름에 영향 주지 않도록
 	 */
-	@Async
+	@Async("loginEventExecutor")
 	@EventListener
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void handleLoginEvent(LoginEvent event) {

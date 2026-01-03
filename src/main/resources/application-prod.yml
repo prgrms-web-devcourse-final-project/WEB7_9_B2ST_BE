@@ -4,7 +4,7 @@ spring:
       on-profile: prod
 
   datasource:
-    url: jdbc:postgresql://tt_postgres:5432/${POSTGRES_DB}
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     hikari:
@@ -24,6 +24,8 @@ spring:
       host: tt_redis
       port: 6379
       password: ${REDIS_PASSWORD}
+      cluster:
+        nodes: ${REDIS_CLUSTER_NODES:redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005}
 
   mail:
     host: ${MAIL_HOST}
@@ -56,7 +58,7 @@ jwt:
   access-expiration: ${JWT_ACCESS_EXPIRATION}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION}
 
-# ueue 시스템 활성화
+# queue 시스템 활성화
 queue:
   enabled: true
   default:
@@ -67,3 +69,26 @@ queue:
   lua:
     enabled: true
     fallback-enabled: true
+
+server:
+  forward-headers-strategy: framework
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_REGION:ap-northeast-2}
+    presign-expiration-seconds: ${AWS_S3_PRESIGN_EXPIRATION:300}
+    max-file-size: ${AWS_S3_MAX_FILE_SIZE:10485760}
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never   # 외부 노출 최소화(권장)

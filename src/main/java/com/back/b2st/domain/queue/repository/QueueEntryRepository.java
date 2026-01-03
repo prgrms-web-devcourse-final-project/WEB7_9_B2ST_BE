@@ -19,12 +19,14 @@ import com.back.b2st.domain.queue.entity.QueueEntryStatus;
 public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 
 	/**
-	 * 대기열 ID와 사용자 ID로 조회
+	 * 대기열 ID와 사용자 ID로 조회 (findOrCreate 패턴)
+	 * UNIQUE 제약: (queue_id, user_id)
 	 */
 	Optional<QueueEntry> findByQueueIdAndUserId(Long queueId, Long userId);
 
 	/**
 	 * 입장권 토큰으로 조회
+	 * UNIQUE 제약: entry_token
 	 */
 	Optional<QueueEntry> findByEntryToken(UUID entryToken);
 
@@ -44,13 +46,18 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 	List<QueueEntry> findByQueueIdAndStatus(Long queueId, QueueEntryStatus status);
 
 	/**
+	 * 특정 상태의 모든 입장 기록 조회 (정합성 보정용)
+	 */
+	List<QueueEntry> findAllByStatus(QueueEntryStatus status);
+
+	/**
 	 * 대기열의 특정 상태 입장 기록 조회 (페이징)
 	 */
 	Page<QueueEntry> findByQueueIdAndStatus(Long queueId, QueueEntryStatus status, Pageable pageable);
 
 	/**
 	 * 대기열의 활성(ENTERABLE) 입장 수
-	 * 실시간 체크는 Redis ZCARD 사용, 이 메서드는 통계/분석용
+	 * ⚠️ 실시간 체크는 Redis ZCARD 사용, 이 메서드는 통계/분석용
 	 */
 	@Query("""
 		SELECT COUNT(qe) FROM QueueEntry qe
@@ -190,4 +197,43 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 	@Modifying(clearAutomatically = true)
 	@Query("DELETE FROM QueueEntry qe WHERE qe.queueId = :queueId")
 	int deleteByQueueId(@Param("queueId") Long queueId);
+
+	/**
+	 * 만료된 ENTERABLE 조회 (정리 대상)
+	 * - expiresAt <= now 인 ENTERABLE 상태의 엔트리
+	 * - 배치 사이즈 제어를 위해 Pageable 사용
+	 */
+	@Query("""
+		SELECT qe
+		FROM QueueEntry qe
+		WHERE qe.status = :status
+		  AND qe.expiresAt IS NOT NULL
+		  AND qe.expiresAt <= :now
+		ORDER BY qe.expiresAt ASC
+		""")
+	List<QueueEntry> findExpiredEnterables(
+		@Param("status") QueueEntryStatus status,
+		@Param("now") LocalDateTime now,
+		Pageable pageable
+	);
+
+	/**
+	 * 만료되지 않은 ENTERABLE 조회 (stale 정리 대상)
+	 * - expiresAt > now 인 ENTERABLE 상태의 엔트리
+	 * - 배치 사이즈 제어를 위해 Pageable 사용
+	 */
+	@Query("""
+		SELECT qe
+		FROM QueueEntry qe
+		WHERE qe.status = :status
+		  AND qe.expiresAt IS NOT NULL
+		  AND qe.expiresAt > :now
+		ORDER BY qe.expiresAt ASC
+		""")
+	List<QueueEntry> findNonExpiredEnterables(
+		@Param("status") QueueEntryStatus status,
+		@Param("now") LocalDateTime now,
+		Pageable pageable
+	);
 }
+

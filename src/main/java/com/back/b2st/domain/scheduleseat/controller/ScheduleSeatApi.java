@@ -67,6 +67,7 @@ public interface ScheduleSeatApi {
 			- Redis 분산 락(3초 TTL) 획득 후 처리
 			- DB 좌석 상태: AVAILABLE → HOLD
 			- Redis HOLD 소유권 토큰 저장(5분 TTL)
+			- BookingType이 SEAT(신청 예매)인 회차는 사전 신청한 구역만 HOLD 가능
 			
 			주의)
 			- 이 API는 HOLD '소유권 검증'을 수행하지 않습니다.

@@ -1,22 +1,5 @@
 package com.back.b2st.global.init;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.IntStream;
-
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.member.entity.Member;
@@ -31,8 +14,12 @@ import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.prereservation.policy.entity.PrereservationTimeTable;
+import com.back.b2st.domain.prereservation.policy.repository.PrereservationTimeTableRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
@@ -47,9 +34,21 @@ import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.security.CustomUserDetails;
-
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -57,6 +56,8 @@ import lombok.extern.slf4j.Slf4j;
 @Profile("!test")
 @Transactional
 public class DataInitializer implements CommandLineRunner {
+
+	private static final String TEST_PERFORMANCE_TITLE = "2024 아이유 콘서트 - HEREH WORLD TOUR";
 
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
@@ -68,9 +69,11 @@ public class DataInitializer implements CommandLineRunner {
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final SeatGradeRepository seatGradeRepository;
 	private final ReservationRepository reservationRepository;
+	private final ReservationSeatRepository reservationSeatRepository;
 	private final PaymentRepository paymentRepository;
 	private final TicketRepository ticketRepository;
 	private final LotteryEntryRepository lotteryEntryRepository;
+	private final PrereservationTimeTableRepository prereservationTimeTableRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -157,6 +160,7 @@ public class DataInitializer implements CommandLineRunner {
 		// 중복 생성 방지: 이미 공연장이 있으면 스킵
 		if (venueRepository.count() > 0) {
 			log.info("[DataInit] 이미 데이터 존재하여 초기화 스킵");
+			seedPrereservationTimeTablesIfMissing();
 			return;
 		}
 
@@ -177,29 +181,42 @@ public class DataInitializer implements CommandLineRunner {
 			.venue(venue)
 			.title("2024 아이유 콘서트 - HEREH WORLD TOUR")
 			.category("콘서트")
-			.posterUrl("")
+			.posterKey(null)
 			.description(null)
 			.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
 			.endDate(LocalDateTime.of(2024, 12, 29, 21, 0))
-			.status(PerformanceStatus.ON_SALE)
+			.status(PerformanceStatus.ACTIVE)
 			.build());
 
 		Long venueId = venue.getVenueId();
 
-		// 회차 23개 추가 생성
+		// 기존 회차 24개 생성 (일반예매/추첨 - 신청예매 구현 전 원래 데이터)
 		List<PerformanceSchedule> schedules = IntStream.rangeClosed(0, 23)
 			.mapToObj(i -> PerformanceSchedule.builder()
 				.performance(performance)
 				.startAt(LocalDateTime.of(2025, 1, 1, 19, 0).plusDays(i))
 				.roundNo(i + 1)
-				.bookingType(i % 2 == 0 ? BookingType.SEAT : BookingType.LOTTERY)
-				.bookingOpenAt(LocalDateTime.of(2024, 12, 20, 12, 0))
-				.bookingCloseAt(LocalDateTime.of(2024, 12, 25, 23, 59))
+				.bookingType(i % 2 == 0 ? BookingType.FIRST_COME : BookingType.LOTTERY)
+				.bookingOpenAt(LocalDateTime.now().minusHours(1))
+				.bookingCloseAt(LocalDateTime.now().plusDays(30))
 				.build()
 			).toList();
 		performanceScheduleRepository.saveAll(schedules);
 		performanceSchedule = schedules.getFirst();
 		performanceSchedule2 = schedules.get(1);
+
+		// 신청예매 테스트용 회차 추가 (25~27회차)
+		List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(24, 26)
+			.mapToObj(i -> PerformanceSchedule.builder()
+				.performance(performance)
+				.startAt(LocalDateTime.of(2025, 1, 1, 19, 0).plusDays(i))
+				.roundNo(i + 1)
+				.bookingType(BookingType.PRERESERVE)
+				.bookingOpenAt(LocalDateTime.now().minusHours(1))
+				.bookingCloseAt(LocalDateTime.now().plusDays(30))
+				.build()
+			).toList();
+		performanceScheduleRepository.saveAll(prereserveSchedules);
 
 		// 구역 생성
 		sectionA = sectionRepository.save(Section.builder().venueId(venueId).sectionName("A").build());
@@ -213,6 +230,30 @@ public class DataInitializer implements CommandLineRunner {
 
 		// 구역 설정 리스트
 		List<Section> sections = List.of(sectionA, sectionB, sectionC);
+
+		// 신청 예매(BookingType.PRERESERVE) 시간표 시드 생성
+		List<PrereservationTimeTable> timeTables = prereserveSchedules.stream()
+			.flatMap(schedule -> IntStream.range(0, sections.size())
+				.mapToObj(idx -> {
+					LocalDateTime bookingOpenAt = schedule.getBookingOpenAt();
+					LocalDateTime startAt = bookingOpenAt.plusHours(idx);
+					LocalDateTime endAt = startAt.plusHours(1).minusSeconds(1);
+
+					LocalDateTime bookingCloseAt = schedule.getBookingCloseAt();
+					if (bookingCloseAt != null && bookingCloseAt.isBefore(endAt)) {
+						endAt = bookingCloseAt;
+					}
+
+					return PrereservationTimeTable.builder()
+						.performanceScheduleId(schedule.getPerformanceScheduleId())
+						.sectionId(sections.get(idx).getId())
+						.bookingStartAt(startAt)
+						.bookingEndAt(endAt)
+						.build();
+				}))
+			.toList();
+		prereservationTimeTableRepository.saveAll(timeTables);
+		log.info("[DataInit/Test] Prereservation time tables initialized. count={}", timeTables.size());
 
 		// 모든 구역의 좌석 생성
 		List<Seat> seats = sections.stream()
@@ -303,12 +344,20 @@ public class DataInitializer implements CommandLineRunner {
 			Reservation reservation = Reservation.builder()
 				.scheduleId(performanceSchedule.getPerformanceScheduleId())
 				.memberId(user1.getId())
-				.seatId(reservedSeat.getId())
 				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 
-			reservation.complete(LocalDateTime.now());
 			Reservation savedReservation = reservationRepository.save(reservation);
+
+			// Reservation ↔ ScheduleSeat 연결
+			reservationSeatRepository.save(
+				ReservationSeat.builder()
+					.reservationId(savedReservation.getId())
+					.scheduleSeatId(reservedScheduleSeat.getId())
+					.build()
+			);
+
+			reservation.complete(LocalDateTime.now());
 
 			// 결제 생성 (DONE 상태)
 			Payment payment = Payment.builder()
@@ -361,11 +410,18 @@ public class DataInitializer implements CommandLineRunner {
 		Reservation paidReservation = Reservation.builder()
 			.scheduleId(performanceSchedule.getPerformanceScheduleId())
 			.memberId(user1.getId())
-			.seatId(paidSeat.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 
 		Reservation savedPaidReservation = reservationRepository.save(paidReservation);
+
+		// Reservation ↔ ScheduleSeat 연결
+		reservationSeatRepository.save(
+			ReservationSeat.builder()
+				.reservationId(savedPaidReservation.getId())
+				.scheduleSeatId(paidScheduleSeat.getId())
+				.build()
+		);
 
 		// codeisneverodd@gmail.com에 2개의 티켓 생성
 		Member user3 = memberRepository.findByEmail("codeisneverodd@gmail.com")
@@ -389,12 +445,19 @@ public class DataInitializer implements CommandLineRunner {
 			Reservation reservation = Reservation.builder()
 				.scheduleId(performanceSchedule.getPerformanceScheduleId())
 				.memberId(user3.getId())
-				.seatId(reservedSeat.getId())
 				.expiresAt(LocalDateTime.now().plusMinutes(5))
 				.build();
 
-			reservation.complete(LocalDateTime.now());
 			Reservation savedReservation = reservationRepository.save(reservation);
+
+			reservationSeatRepository.save(
+				ReservationSeat.builder()
+					.reservationId(savedReservation.getId())
+					.scheduleSeatId(reservedScheduleSeat.getId())
+					.build()
+			);
+
+			reservation.complete(LocalDateTime.now());
 
 			// 결제 생성 (DONE 상태)
 			Payment payment = Payment.builder()
@@ -428,6 +491,73 @@ public class DataInitializer implements CommandLineRunner {
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
+		}
+	}
+
+	private void seedPrereservationTimeTablesIfMissing() {
+		List<PerformanceSchedule> prereserveSchedules = performanceScheduleRepository.findAll().stream()
+			.filter(schedule -> schedule.getBookingType() == BookingType.PRERESERVE)
+			.filter(schedule -> schedule.getBookingOpenAt() != null)
+			.filter(schedule -> schedule.getPerformance() != null)
+			.filter(schedule -> schedule.getPerformance().getTitle() != null)
+			.filter(schedule -> TEST_PERFORMANCE_TITLE.equals(schedule.getPerformance().getTitle()))
+			.toList();
+
+		if (prereserveSchedules.isEmpty()) {
+			return;
+		}
+
+		int createdCount = 0;
+		for (PerformanceSchedule schedule : prereserveSchedules) {
+			Long scheduleId = schedule.getPerformanceScheduleId();
+			var existing = prereservationTimeTableRepository
+				.findAllByPerformanceScheduleIdOrderByBookingStartAtAscSectionIdAsc(scheduleId);
+			var existingSectionIds = existing.stream().map(PrereservationTimeTable::getSectionId).collect(java.util.stream.Collectors.toSet());
+
+			Long venueId = schedule.getPerformance().getVenue().getVenueId();
+			List<Section> sections = sectionRepository.findByVenueId(venueId).stream()
+				.sorted(java.util.Comparator.comparingLong(Section::getId))
+				.toList();
+			if (sections.isEmpty()) {
+				continue;
+			}
+
+			LocalDateTime bookingOpenAt = schedule.getBookingOpenAt();
+			LocalDateTime bookingCloseAt = schedule.getBookingCloseAt();
+
+			List<PrereservationTimeTable> toCreate = new java.util.ArrayList<>();
+			for (int idx = 0; idx < sections.size(); idx++) {
+				Section section = sections.get(idx);
+				if (existingSectionIds.contains(section.getId())) {
+					continue;
+				}
+
+				LocalDateTime startAt = bookingOpenAt.plusHours(idx);
+				LocalDateTime endAt = startAt.plusHours(1).minusSeconds(1);
+
+				if (bookingCloseAt != null && bookingCloseAt.isBefore(endAt)) {
+					endAt = bookingCloseAt;
+				}
+				if (!endAt.isAfter(startAt)) {
+					continue;
+				}
+
+				toCreate.add(PrereservationTimeTable.builder()
+					.performanceScheduleId(scheduleId)
+					.sectionId(section.getId())
+					.bookingStartAt(startAt)
+					.bookingEndAt(endAt)
+					.build());
+			}
+
+			if (!toCreate.isEmpty()) {
+				prereservationTimeTableRepository.saveAll(toCreate);
+				createdCount += toCreate.size();
+			}
+		}
+
+		if (createdCount > 0) {
+			log.info("[DataInit/Test] Prereservation time tables ensured. created={}", createdCount);
 		}
 	}
 
@@ -513,10 +643,10 @@ public class DataInitializer implements CommandLineRunner {
 				.venue(venue)
 				.title("테스트 공연")
 				.category("콘서트")
-				.posterUrl("")
+				.posterKey(null)
 				.startDate(LocalDateTime.now())
 				.endDate(LocalDateTime.now().plusDays(7))
-				.status(PerformanceStatus.ON_SALE)
+				.status(PerformanceStatus.ACTIVE)
 				.build()
 		);
 	}
@@ -538,8 +668,8 @@ public class DataInitializer implements CommandLineRunner {
 					.roundNo(i)
 					.startAt(LocalDateTime.now().plusDays(i))
 					.bookingType(bookingType)
-					.bookingOpenAt(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.MIDNIGHT))
-					.bookingCloseAt(LocalDateTime.of(LocalDate.now().minusDays(1), LocalTime.of(12, 0)))
+					.bookingOpenAt(LocalDateTime.now().minusHours(1))
+					.bookingCloseAt(LocalDateTime.now().plusDays(30))
 					.build()
 				)
 				.toList()

@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Queue 관리 서비스
+ *
  * Queue 엔티티 생성/조회/수정/삭제 담당
  */
 @Service
@@ -82,8 +83,9 @@ public class QueueManagementService {
 		// 2. Redis 실시간 정보 조회 (Fallback)
 		int currentWaiting = getRedisCountWithFallback(() ->
 			queueRedisRepository.getTotalWaitingCount(queueId));
+		// 현재 enterable 수 사용
 		int currentEnterable = getRedisCountWithFallback(() ->
-			queueRedisRepository.getEnterableCount(queueId));
+			queueRedisRepository.getTotalEnterableCount(queueId));
 
 		return QueueRes.of(queue, currentWaiting, currentEnterable);
 	}
@@ -103,7 +105,7 @@ public class QueueManagementService {
 				int currentWaiting = getRedisCountWithFallback(() ->
 					queueRedisRepository.getTotalWaitingCount(queue.getId()));
 				int currentEnterable = getRedisCountWithFallback(() ->
-					queueRedisRepository.getEnterableCount(queue.getId()));
+					queueRedisRepository.getTotalEnterableCount(queue.getId()));
 
 				return QueueRes.of(queue, currentWaiting, currentEnterable);
 			})
@@ -159,7 +161,7 @@ public class QueueManagementService {
 
 	/**
 	 * 대기열 삭제
-	 * 주의: Redis 데이터도 함께 삭제
+	 * Redis 데이터도 함께 삭제
 	 *
 	 * @param queueId 대기열 ID
 	 */
@@ -169,7 +171,15 @@ public class QueueManagementService {
 		Queue queue = validateQueue(queueId);
 
 		// 2. Redis 데이터 삭제
-		queueRedisRepository.clearAll(queueId);
+		// learAll()은 테스트 전용
+		// 테스트 환경에서는 clearAll() 사용 가능 (queue.test.enabled=true)
+		try {
+			queueRedisRepository.clearAll(queueId);
+		} catch (Exception e) {
+			// clearAll()이 비활성화된 경우 개별 키 삭제
+			log.warn("clearAll() 사용 불가, 개별 키 삭제 시도 - queueId: {}", queueId, e);
+			// 개별 키 삭제는 보정 스케줄러가 처리하므로 여기서는 로그만 남김
+		}
 
 		// 3. DB 삭제
 		try {

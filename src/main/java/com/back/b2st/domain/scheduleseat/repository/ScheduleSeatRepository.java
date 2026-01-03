@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 
 import jakarta.persistence.LockModeType;
 
@@ -50,5 +51,50 @@ public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long
 	Optional<ScheduleSeat> findByScheduleIdAndSeatIdWithLock(
 		@Param("scheduleId") Long scheduleId,
 		@Param("seatId") Long seatId
+	);
+
+	/** 특정 회차의 특정 등급 AVAILABLE 좌석 조회 */
+	@Query("""
+		SELECT s
+		FROM ScheduleSeat s
+		JOIN SeatGrade sg ON s.seatId = sg.seatId
+		WHERE s.scheduleId = :scheduleId
+		  AND s.status = 'AVAILABLE'
+		  AND sg.grade = :grade
+		""")
+	List<ScheduleSeat> findAvailableSeatsByGrade(
+		@Param("scheduleId") Long scheduleId,
+		@Param("grade") SeatGradeType grade
+	);
+
+	/* === LOTTERY === */
+
+	/** scheduleId + scheduleSeatId(PK) 목록으로 좌석 조회 (검증용) */
+	@Query("""
+		select s
+		  from ScheduleSeat s
+		 where s.scheduleId = :scheduleId
+		   and s.id in :scheduleSeatIds
+		""")
+	List<ScheduleSeat> findByScheduleIdAndScheduleSeatIdIn(
+		@Param("scheduleId") Long scheduleId,
+		@Param("scheduleSeatIds") List<Long> scheduleSeatIds
+	);
+
+	/** scheduleId + scheduleSeatId(PK) 목록을 SOLD로 일괄 업데이트 (추첨 확정용) */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+		update ScheduleSeat s
+		   set s.status = :sold,
+		       s.holdExpiredAt = null
+		 where s.scheduleId = :scheduleId
+		   and s.id in :scheduleSeatIds
+		   and s.status = :available
+		""")
+	int updateStatusToSoldByScheduleSeatIds(
+		@Param("scheduleId") Long scheduleId,
+		@Param("scheduleSeatIds") List<Long> scheduleSeatIds,
+		@Param("available") SeatStatus available,
+		@Param("sold") SeatStatus sold
 	);
 }

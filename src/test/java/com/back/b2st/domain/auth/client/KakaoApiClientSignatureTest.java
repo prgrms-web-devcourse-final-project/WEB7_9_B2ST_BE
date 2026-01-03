@@ -32,8 +32,6 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
-import tools.jackson.databind.ObjectMapper;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("KakaoApiClientImpl - ID Token 서명 검증 테스트")
 class KakaoApiClientSignatureTest {
@@ -48,7 +46,6 @@ class KakaoApiClientSignatureTest {
 	private RestTemplate restTemplate;
 	@Mock
 	private KakaoJwksClient jwksClient;
-	private ObjectMapper objectMapper;
 	// 테스트용 RSA 키 쌍
 	private RSAPublicKey publicKey;
 	private RSAPrivateKey privateKey;
@@ -56,8 +53,7 @@ class KakaoApiClientSignatureTest {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		objectMapper = new ObjectMapper();
-		kakaoApiClient = new KakaoApiClientImpl(restTemplate, objectMapper, jwksClient);
+		kakaoApiClient = new KakaoApiClientImpl(restTemplate, jwksClient);
 
 		ReflectionTestUtils.setField(kakaoApiClient, "clientId", CLIENT_ID);
 		ReflectionTestUtils.setField(kakaoApiClient, "clientSecret", "test-secret");
@@ -69,59 +65,59 @@ class KakaoApiClientSignatureTest {
 		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
 		keyGen.initialize(2048);
 		KeyPair keyPair = keyGen.generateKeyPair();
-		publicKey = (RSAPublicKey)keyPair.getPublic();
-		privateKey = (RSAPrivateKey)keyPair.getPrivate();
+		publicKey = (RSAPublicKey) keyPair.getPublic();
+		privateKey = (RSAPrivateKey) keyPair.getPrivate();
 
 		// JWK 형태로 변환
 		rsaKey = new RSAKey.Builder(publicKey)
-			.privateKey(privateKey)
-			.keyID(KID)
-			.build();
+				.privateKey(privateKey)
+				.keyID(KID)
+				.build();
 	}
 
 	private String createValidIdToken(String sub, String email, String nickname, String nonce) throws Exception {
 		return createIdTokenWithKey(sub, email, nickname, privateKey, KID, ISSUER, CLIENT_ID, nonce,
-			new Date(System.currentTimeMillis() + 3600000)); // 1시간 후 만료
+				new Date(System.currentTimeMillis() + 3600000)); // 1시간 후 만료
 	}
 
 	private String createExpiredIdToken(String sub, String email, String nickname) throws Exception {
 		return createIdTokenWithKey(sub, email, nickname, privateKey, KID, ISSUER, CLIENT_ID, null,
-			new Date(System.currentTimeMillis() - 3600000)); // 1시간 전 만료
+				new Date(System.currentTimeMillis() - 3600000)); // 1시간 전 만료
 	}
 
 	// 헬퍼 메서드
 
 	private String createIdTokenWithWrongIssuer(String sub, String email, String nickname) throws Exception {
 		return createIdTokenWithKey(sub, email, nickname, privateKey, KID,
-			"https://wrong-issuer.com", CLIENT_ID, null,
-			new Date(System.currentTimeMillis() + 3600000));
+				"https://wrong-issuer.com", CLIENT_ID, null,
+				new Date(System.currentTimeMillis() + 3600000));
 	}
 
 	private String createIdTokenWithWrongAudience(String sub, String email, String nickname) throws Exception {
 		return createIdTokenWithKey(sub, email, nickname, privateKey, KID,
-			ISSUER, "wrong-client-id", null,
-			new Date(System.currentTimeMillis() + 3600000));
+				ISSUER, "wrong-client-id", null,
+				new Date(System.currentTimeMillis() + 3600000));
 	}
 
 	private String createIdTokenWithKey(String sub, String email, String nickname,
-		RSAPrivateKey signingKey, String kid) throws Exception {
+			RSAPrivateKey signingKey, String kid) throws Exception {
 		return createIdTokenWithKey(sub, email, nickname, signingKey, kid, ISSUER, CLIENT_ID, null,
-			new Date(System.currentTimeMillis() + 3600000));
+				new Date(System.currentTimeMillis() + 3600000));
 	}
 
 	private String createIdTokenWithKey(String sub, String email, String nickname,
-		RSAPrivateKey signingKey, String kid, String issuer, String audience,
-		String nonce, Date expiration) throws Exception {
+			RSAPrivateKey signingKey, String kid, String issuer, String audience,
+			String nonce, Date expiration) throws Exception {
 
 		JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
-			.issuer(issuer)
-			.audience(audience)
-			.subject(sub)
-			.issueTime(new Date())
-			.expirationTime(expiration)
-			.claim("auth_time", System.currentTimeMillis() / 1000)
-			.claim("nickname", nickname)
-			.claim("email", email);
+				.issuer(issuer)
+				.audience(audience)
+				.subject(sub)
+				.issueTime(new Date())
+				.expirationTime(expiration)
+				.claim("auth_time", System.currentTimeMillis() / 1000)
+				.claim("nickname", nickname)
+				.claim("email", email);
 
 		if (nonce != null) {
 			claimsBuilder.claim("nonce", nonce);
@@ -130,8 +126,8 @@ class KakaoApiClientSignatureTest {
 		JWTClaimsSet claims = claimsBuilder.build();
 
 		JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
-			.keyID(kid)
-			.build();
+				.keyID(kid)
+				.build();
 
 		SignedJWT signedJWT = new SignedJWT(header, claims);
 		signedJWT.sign(new RSASSASigner(signingKey));
@@ -151,15 +147,15 @@ class KakaoApiClientSignatureTest {
 
 			// 유효한 ID Token 생성
 			String idToken = createValidIdToken(
-				"123456789", "test@kakao.com", "테스트유저", null);
+					"123456789", "test@kakao.com", "테스트유저", null);
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-				"bearer", "access-token", 21599,
-				"refresh-token", 5183999, "openid",
-				idToken);
+					"bearer", "access-token", 21599,
+					"refresh-token", 5183999, "openid",
+					idToken);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-				.willReturn(ResponseEntity.ok(tokenRes));
+					.willReturn(ResponseEntity.ok(tokenRes));
 			given(jwksClient.getKey(KID)).willReturn(rsaKey);
 
 			// when
@@ -181,15 +177,15 @@ class KakaoApiClientSignatureTest {
 			String nonce = "test-nonce-12345";
 
 			String idToken = createValidIdToken(
-				"987654321", "nonce@kakao.com", "논스유저", nonce);
+					"987654321", "nonce@kakao.com", "논스유저", nonce);
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-				"bearer", "access-token", 21599,
-				null, 0, "openid",
-				idToken);
+					"bearer", "access-token", 21599,
+					null, 0, "openid",
+					idToken);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-				.willReturn(ResponseEntity.ok(tokenRes));
+					.willReturn(ResponseEntity.ok(tokenRes));
 			given(jwksClient.getKey(KID)).willReturn(rsaKey);
 
 			// when
@@ -210,21 +206,21 @@ class KakaoApiClientSignatureTest {
 			// given
 			String code = "test-code";
 			String idToken = createValidIdToken(
-				"123456789", "test@kakao.com", "유저", null);
+					"123456789", "test@kakao.com", "유저", null);
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-				"bearer", "access-token", 21599,
-				null, 0, "openid", idToken);
+					"bearer", "access-token", 21599,
+					null, 0, "openid", idToken);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-				.willReturn(ResponseEntity.ok(tokenRes));
+					.willReturn(ResponseEntity.ok(tokenRes));
 			given(jwksClient.getKey(KID)).willReturn(null); // 키 없음
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
 		@Test
@@ -237,25 +233,25 @@ class KakaoApiClientSignatureTest {
 			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
 			keyGen.initialize(2048);
 			KeyPair wrongKeyPair = keyGen.generateKeyPair();
-			RSAPrivateKey wrongPrivateKey = (RSAPrivateKey)wrongKeyPair.getPrivate();
+			RSAPrivateKey wrongPrivateKey = (RSAPrivateKey) wrongKeyPair.getPrivate();
 
 			String idToken = createIdTokenWithKey(
-				"123456789", "test@kakao.com", "위조유저",
-				wrongPrivateKey, KID);
+					"123456789", "test@kakao.com", "위조유저",
+					wrongPrivateKey, KID);
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-				"bearer", "access-token", 21599,
-				null, 0, "openid", idToken);
+					"bearer", "access-token", 21599,
+					null, 0, "openid", idToken);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-				.willReturn(ResponseEntity.ok(tokenRes));
+					.willReturn(ResponseEntity.ok(tokenRes));
 			given(jwksClient.getKey(KID)).willReturn(rsaKey); // 정상 검증 키 반환
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
 		@Test
@@ -264,21 +260,21 @@ class KakaoApiClientSignatureTest {
 			// given
 			String code = "test-code";
 			String expiredToken = createExpiredIdToken(
-				"123456789", "test@kakao.com", "만료유저");
+					"123456789", "test@kakao.com", "만료유저");
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-				"bearer", "access-token", 21599,
-				null, 0, "openid", expiredToken);
+					"bearer", "access-token", 21599,
+					null, 0, "openid", expiredToken);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-				.willReturn(ResponseEntity.ok(tokenRes));
+					.willReturn(ResponseEntity.ok(tokenRes));
 			given(jwksClient.getKey(KID)).willReturn(rsaKey);
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
 		@Test
@@ -287,21 +283,21 @@ class KakaoApiClientSignatureTest {
 			// given
 			String code = "test-code";
 			String tokenWithWrongIssuer = createIdTokenWithWrongIssuer(
-				"123456789", "test@kakao.com", "유저");
+					"123456789", "test@kakao.com", "유저");
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-				"bearer", "access-token", 21599,
-				null, 0, "openid", tokenWithWrongIssuer);
+					"bearer", "access-token", 21599,
+					null, 0, "openid", tokenWithWrongIssuer);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-				.willReturn(ResponseEntity.ok(tokenRes));
+					.willReturn(ResponseEntity.ok(tokenRes));
 			given(jwksClient.getKey(KID)).willReturn(rsaKey);
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
 		@Test
@@ -310,21 +306,21 @@ class KakaoApiClientSignatureTest {
 			// given
 			String code = "test-code";
 			String tokenWithWrongAud = createIdTokenWithWrongAudience(
-				"123456789", "test@kakao.com", "유저");
+					"123456789", "test@kakao.com", "유저");
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-				"bearer", "access-token", 21599,
-				null, 0, "openid", tokenWithWrongAud);
+					"bearer", "access-token", 21599,
+					null, 0, "openid", tokenWithWrongAud);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-				.willReturn(ResponseEntity.ok(tokenRes));
+					.willReturn(ResponseEntity.ok(tokenRes));
 			given(jwksClient.getKey(KID)).willReturn(rsaKey);
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 	}
 }

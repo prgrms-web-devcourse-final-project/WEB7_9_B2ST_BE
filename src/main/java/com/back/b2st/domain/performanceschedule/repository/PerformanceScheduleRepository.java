@@ -50,11 +50,9 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 					ps.performanceScheduleId
 			)
 			FROM PerformanceSchedule ps
-			JOIN ps.performance
 			WHERE ps.bookingCloseAt >= :start
 			  AND ps.bookingCloseAt < :end
 			  AND ps.drawCompleted = false
-			  AND ps.performance.performanceId = ps.performance.performanceId
 		""")
 	List<DrawTargetPerformance> findByClosedBetweenAndNotDrawn(
 		@Param("start") LocalDateTime startDate,
@@ -71,4 +69,24 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 		where ps.performanceScheduleId = :scheduleId
 		""")
 	void updateStautsById(@Param("scheduleId") Long scheduleId);
+
+	/**
+	 * n일 뒤 오픈되는 추첨 공연을 조회 - 좌석 배치 미진행
+	 */
+	@Query("""
+			SELECT new com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance(
+					ps.performance.performanceId,
+					ps.performanceScheduleId
+			)
+			FROM PerformanceSchedule ps
+			JOIN ps.performance
+			WHERE ps.startAt >= :start
+			  AND ps.startAt < :end
+			  AND ps.seatAllocated = false
+			  AND ps.performance.performanceId = ps.performance.performanceId
+		""")
+	List<DrawTargetPerformance> findByOpenBetween(
+		@Param("start") LocalDateTime startDate,
+		@Param("end") LocalDateTime endDate);
+
 }

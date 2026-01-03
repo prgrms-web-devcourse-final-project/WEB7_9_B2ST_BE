@@ -120,6 +120,26 @@ public class TestFixture {
 		);
 	}
 
+	public static List<PerformanceSchedule> createSchedulesSeatAllocation(
+		Performance performance,
+		int count,
+		PerformanceScheduleRepository repo
+	) {
+		return repo.saveAll(
+			IntStream.rangeClosed(1, count)
+				.mapToObj(i -> PerformanceSchedule.builder()
+					.performance(performance)
+					.roundNo(i)
+					.startAt(LocalDate.now().plusDays(3).atTime(10, 0))
+					.bookingType(BookingType.LOTTERY)
+					.bookingOpenAt(LocalDate.now().minusDays(5).atStartOfDay())
+					.bookingCloseAt(LocalDate.now().minusDays(1).atTime(12, 0))
+					.build()
+				)
+				.toList()
+		);
+	}
+
 	/**
 	 * 구역 생성
 	 * createSections(venueId, sectionRepo, "A", "B", "C");

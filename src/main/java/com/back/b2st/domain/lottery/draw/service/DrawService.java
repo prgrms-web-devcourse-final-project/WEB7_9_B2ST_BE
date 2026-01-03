@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 public class DrawService {
 
 	private final PerformanceDrawService performanceDrawService;
+	private final SeatAllocationService seatAllocationService;
 
 	public void executeDraws() {
 		List<DrawTargetPerformance> targetPerformances = performanceDrawService.findBookingClosedPerformances();
@@ -27,6 +28,26 @@ public class DrawService {
 
 			try {
 				performanceDrawService.drawForPerformance(performanceId, scheduleId);
+				log.debug("공연 추첨 완료 - scheduleId: {}", scheduleId);
+			} catch (Exception e) {
+				log.error("공연 추첨 실패 - scheduleId: {}", scheduleId, e);
+			}
+		}
+	}
+
+	/**
+	 * 좌석 할당 실행
+	 */
+	public void executeAllocation() {
+		// 좌석 할당이 필요한 공연 조회
+		List<DrawTargetPerformance> targetPerformances = seatAllocationService.findBookingOpenPerformances();
+		log.debug("좌석 할당 공연 수 : {}", targetPerformances.size());
+
+		for (DrawTargetPerformance performance : targetPerformances) {
+			Long scheduleId = performance.performanceScheduleId();
+
+			try {
+				seatAllocationService.allocateSeats(scheduleId);
 				log.debug("공연 추첨 완료 - scheduleId: {}", scheduleId);
 			} catch (Exception e) {
 				log.error("공연 추첨 실패 - scheduleId: {}", scheduleId, e);

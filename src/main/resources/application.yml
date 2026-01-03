@@ -1,7 +1,4 @@
 spring:
-  profiles:
-    active: dev # 나중에 배포할 때는 수정해야 할 부분
-
   application:
     name: b2st
 

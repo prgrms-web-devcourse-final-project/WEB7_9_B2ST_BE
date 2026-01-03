@@ -35,15 +35,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: 🗂️ Make application-test.yml
-        run: |
-          mkdir -p ./src/main/resources
-          
-          echo "${{ secrets.APPLICATION_TEST_YML }}" > src/main/resources/application-test.yml
-          # Queue 시스템 비활성화 (CI 테스트용)
-                   echo "" >> src/main/resources/application-test.yml
-                   echo "queue:" >> src/main/resources/application-test.yml
-                   echo "  enabled: false" >> src/main/resources/application-test.yml
       - name: ✨ Gradlew 권한 설정
         run: chmod +x ./gradlew
 

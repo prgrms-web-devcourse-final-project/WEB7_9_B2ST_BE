@@ -68,7 +68,7 @@ class NotificationEmailListenerTest {
 			.venue(venue)
 			.title("테스트공연")
 			.category("CAT")
-			.posterUrl(null)
+			.posterKey(null)
 			.description(null)
 			.startDate(java.time.LocalDateTime.now())
 			.endDate(java.time.LocalDateTime.now().plusDays(1))

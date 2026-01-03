@@ -76,7 +76,7 @@ class ScheduleSeatServiceTest {
 				.venue(venue)
 				.title("테스트 공연")
 				.category("콘서트")
-				.posterUrl("")
+				.posterKey("")
 				.description(null)
 				.startDate(LocalDateTime.now().plusDays(1))
 				.endDate(LocalDateTime.now().plusDays(2))

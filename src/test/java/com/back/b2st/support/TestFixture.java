@@ -87,7 +87,7 @@ public class TestFixture {
 				.venue(venue)
 				.title("테스트 공연")
 				.category("콘서트")
-				.posterUrl("")
+				.posterKey(null)
 				.startDate(LocalDateTime.now())
 				.endDate(LocalDateTime.now().plusDays(7))
 				.status(PerformanceStatus.ACTIVE)

@@ -127,7 +127,10 @@ public class AdminPerformanceController {
 	public BaseResponse<PresignedUrlRes> generatePresignedUrl(
 		@Valid @RequestBody CreatePresignedUrlReq request
 	) {
-		return BaseResponse.success(performanceService.generatePosterPresign(request.contentType(), request.fileSize().longValue()));
+		return BaseResponse.success(performanceService.generatePosterPresign(
+			request.contentType(),
+			request.fileSize()
+		));
 	}
 }
 

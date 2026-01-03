@@ -57,6 +57,7 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		JOIN LotteryEntry le ON lr.lotteryEntryId = le.id
 		JOIN Reservation r ON r.memberId = lr.memberId AND r.scheduleId = le.scheduleId
 		WHERE lr.paid = true
+		  AND le.scheduleId = :scheduleId
 		""")
-	List<LotteryReservationInfo> findReservationInfoByPaidIsTrue();
+	List<LotteryReservationInfo> findReservationInfoByPaidIsTrue(Long scheduleId);
 }

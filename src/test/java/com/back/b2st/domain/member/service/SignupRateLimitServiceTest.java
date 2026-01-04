@@ -22,13 +22,13 @@ import com.back.b2st.global.error.exception.BusinessException;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SignupRateLimitService 단위 테스트")
 class SignupRateLimitServiceTest {
+	private static final String TEST_IP = "192.168.1.100";
 	@Mock
 	private StringRedisTemplate redisTemplate;
 	@Mock
 	private ValueOperations<String, String> valueOperations;
 	@InjectMocks
 	private SignupRateLimitService signupRateLimitService;
-	private static final String TEST_IP = "192.168.1.100";
 
 	@Nested
 	@DisplayName("checkSignupLimit 메서드")

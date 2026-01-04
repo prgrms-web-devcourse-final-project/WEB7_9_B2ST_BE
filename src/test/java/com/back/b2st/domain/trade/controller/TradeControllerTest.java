@@ -11,6 +11,9 @@ import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
+import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.ticket.entity.Ticket;
@@ -45,7 +48,9 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -83,6 +88,9 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	private SeatRepository seatRepository;
 
 	@Autowired
+	private SeatGradeRepository seatGradeRepository;
+
+	@Autowired
 	private ReservationRepository reservationRepository;
 
 	@Autowired
@@ -111,6 +119,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 		tradeRepository.deleteAll();
 		ticketRepository.deleteAll();
 		reservationRepository.deleteAll();
+		seatGradeRepository.deleteAll();
 		seatRepository.deleteAll();
 		sectionRepository.deleteAll();
 		performanceScheduleRepository.deleteAll();
@@ -119,14 +128,14 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 		memberRepository.deleteAll();
 		ticketIds.clear();
 
-		String email = "trade@test.com";
-		String password = "Password123!";
+		String email = "user1@tt.com";
+		String password = "1234567a!";
 
-		// Create test member
+		// Create test member (user1)
 		Member testMember = Member.builder()
 			.email(email)
 			.password(passwordEncoder.encode(password))
-			.name("Test User")
+			.name("유저일")
 			.birth(LocalDate.of(1990, 1, 1))
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
@@ -185,6 +194,15 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 				.build();
 			Seat savedSeat = seatRepository.save(seat);
 
+			// SeatGrade 생성 (양도 가격 테스트를 위해 100000원으로 통일)
+			SeatGrade seatGrade = SeatGrade.builder()
+				.performanceId(savedPerformance.getPerformanceId())
+				.seatId(savedSeat.getId())
+				.grade(SeatGradeType.VIP)
+				.price(100000)
+				.build();
+			seatGradeRepository.save(seatGrade);
+
 			Reservation reservation = Reservation.builder()
 				.scheduleId(savedSchedule.getPerformanceScheduleId())
 				.memberId(testMemberId)
@@ -214,6 +232,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 			tradeRepository.deleteAll();
 			ticketRepository.deleteAll();
 			reservationRepository.deleteAll();
+			seatGradeRepository.deleteAll();
 			seatRepository.deleteAll();
 			sectionRepository.deleteAll();
 			performanceScheduleRepository.deleteAll();
@@ -368,6 +387,29 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 
 	@Test
 	@Order(6)
+	@DisplayName("양도 - 원가격 초과 시 실패")
+	void createTransferTrade_fail_priceExceedsOriginal() throws Exception {
+		// given
+		String requestBody = String.format("""
+			{
+				"ticketIds": [%d],
+				"type": "TRANSFER",
+				"price": 150000
+			}
+			""", ticketIds.get(6));
+
+		// when & then
+		mockMvc.perform(post("/api/trades")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestBody))
+			.andDo(print())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value(400));
+	}
+
+	@Test
+	@Order(7)
 	@DisplayName("필수 필드 누락 시 검증 실패")
 	void createTrade_fail_missingFields() throws Exception {
 		// given
@@ -387,7 +429,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(7)
+	@Order(8)
 	@DisplayName("Trade 상세 조회 성공")
 	void getTrade_success() throws Exception {
 		String createRequest = String.format("""
@@ -420,7 +462,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(8)
+	@Order(9)
 	@DisplayName("Trade 상세 조회 실패 - 존재하지 않는 ID")
 	void getTrade_fail_notFound() throws Exception {
 		mockMvc.perform(get("/api/trades/99999")
@@ -430,7 +472,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(9)
+	@Order(10)
 	@DisplayName("Trade 목록 조회 성공")
 	void getTrades_success() throws Exception {
 		mockMvc.perform(post("/api/trades")
@@ -465,7 +507,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(10)
+	@Order(11)
 	@DisplayName("Trade 목록 조회 - type 필터")
 	void getTrades_withTypeFilter() throws Exception {
 		mockMvc.perform(post("/api/trades")
@@ -499,7 +541,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(11)
+	@Order(12)
 	@DisplayName("Trade 목록 조회 - status 필터")
 	void getTrades_withStatusFilter() throws Exception {
 		mockMvc.perform(post("/api/trades")
@@ -522,7 +564,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(12)
+	@Order(13)
 	@DisplayName("Trade 목록 조회 - 페이징")
 	void getTrades_withPaging() throws Exception {
 		for (int i = 49; i < 54; i++) {

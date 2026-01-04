@@ -59,13 +59,13 @@ class KakaoApiClientImplTest {
 			String code = "test-code";
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-					.willReturn(ResponseEntity.ok(null));
+				.willReturn(ResponseEntity.ok(null));
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
 		@Test
@@ -75,13 +75,13 @@ class KakaoApiClientImplTest {
 			String code = "test-code";
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-					.willThrow(new RestClientException("Connection refused"));
+				.willThrow(new RestClientException("Connection refused"));
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
 		@Test
@@ -91,19 +91,19 @@ class KakaoApiClientImplTest {
 			String code = "test-code";
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-					"bearer", "access-token", 21599,
-					"refresh-token", 5183999, "profile_nickname account_email",
-					null // id_token 없음
+				"bearer", "access-token", 21599,
+				"refresh-token", 5183999, "profile_nickname account_email",
+				null // id_token 없음
 			);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-					.willReturn(ResponseEntity.ok(tokenRes));
+				.willReturn(ResponseEntity.ok(tokenRes));
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
 		@Test
@@ -113,19 +113,19 @@ class KakaoApiClientImplTest {
 			String code = "test-code";
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-					"bearer", "access-token", 21599,
-					"refresh-token", 5183999, "openid",
-					"" // 빈 문자열
+				"bearer", "access-token", 21599,
+				"refresh-token", 5183999, "openid",
+				"" // 빈 문자열
 			);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-					.willReturn(ResponseEntity.ok(tokenRes));
+				.willReturn(ResponseEntity.ok(tokenRes));
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 	}
 
@@ -141,18 +141,18 @@ class KakaoApiClientImplTest {
 			String malformedToken = "not.a.valid.jwt.token";
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-					"bearer", "access-token", 21599,
-					null, 0, "openid",
-					malformedToken);
+				"bearer", "access-token", 21599,
+				null, 0, "openid",
+				malformedToken);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-					.willReturn(ResponseEntity.ok(tokenRes));
+				.willReturn(ResponseEntity.ok(tokenRes));
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 
 		@Test
@@ -163,18 +163,18 @@ class KakaoApiClientImplTest {
 			String invalidToken = "this-is-not-jwt";
 
 			KakaoTokenRes tokenRes = new KakaoTokenRes(
-					"bearer", "access-token", 21599,
-					null, 0, "openid",
-					invalidToken);
+				"bearer", "access-token", 21599,
+				null, 0, "openid",
+				invalidToken);
 
 			given(restTemplate.postForEntity(eq(TOKEN_URI), any(HttpEntity.class), eq(KakaoTokenRes.class)))
-					.willReturn(ResponseEntity.ok(tokenRes));
+				.willReturn(ResponseEntity.ok(tokenRes));
 
 			// when & then
 			assertThatThrownBy(() -> kakaoApiClient.getTokenAndParseIdToken(code))
-					.isInstanceOf(BusinessException.class)
-					.extracting("errorCode")
-					.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(AuthErrorCode.OAUTH_AUTHENTICATION_FAILED);
 		}
 	}
 

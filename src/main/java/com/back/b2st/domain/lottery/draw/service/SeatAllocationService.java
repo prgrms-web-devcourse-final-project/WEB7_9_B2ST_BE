@@ -13,12 +13,11 @@ import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
-import com.back.b2st.domain.reservation.entity.Reservation;
-import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.reservation.service.LotteryReservationService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.ticket.service.TicketService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,20 +28,20 @@ import lombok.extern.slf4j.Slf4j;
 public class SeatAllocationService {
 
 	private final ScheduleSeatRepository scheduleSeatRepository;
-	private final ReservationRepository reservationRepository;
 	private final LotteryResultRepository lotteryResultRepository;
 	private final LotteryReservationService lotteryReservationService;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final ReservationSeatRepository reservationSeatRepository;
+	private final TicketService ticketService;
 
 	/**
-	 * 공연 시작 3일전 조회
+	 * 공연 시작 4일 이내인 추첨 공연 조회 - 좌석 배치 미진행
 	 */
 	public List<DrawTargetPerformance> findBookingOpenPerformances() {
-		LocalDateTime startDate = LocalDate.now().plusDays(3).atStartOfDay();
-		LocalDateTime endDate = LocalDate.now().plusDays(3).atTime(23, 59, 59);
+		LocalDateTime today = LocalDate.now().atStartOfDay();
+		LocalDateTime threeDaysLater = LocalDate.now().plusDays(4).atTime(23, 59, 59);
 
-		return performanceScheduleRepository.findByOpenBetween(startDate, endDate);
+		return performanceScheduleRepository.findByOpenBetween(today, threeDaysLater);
 	}
 
 	/**
@@ -108,11 +107,15 @@ public class SeatAllocationService {
 			.toList();
 
 		// 좌석 확정 + 예매 매핑
-		lotteryReservationService.confirmAssignedSeats(
-			info.reservationId(), info.scheduleId(), seatsIds);
+		lotteryReservationService.confirmAssignedSeats(info.reservationId(), info.scheduleId(), seatsIds);
 
 		log.info("좌석 배정 완료 - resultId: {}, memberId: {}, 배정 좌석 수: {}",
 			info.resultId(), info.memberId(), allocatedSeats.size());
+
+		// 티켓 생성
+		for (ScheduleSeat seat : allocatedSeats) {
+			ticketService.createTicket(info.reservationId(), info.memberId(), seat.getSeatId());
+		}
 
 		return allocatedSeats;
 	}
@@ -124,36 +127,5 @@ public class SeatAllocationService {
 		return scheduleSeatRepository.findAvailableSeatsByGrade(
 			info.scheduleId(),
 			info.grade());
-	}
-
-	/**
-	 * 예매 생성
-	 */
-
-	private List<Reservation> createReservation(
-		LotteryReservationInfo info, List<ScheduleSeat> seats
-	) {
-		List<Reservation> reservations = seats.stream()
-			.map(seat -> createReservation(info, seat))
-			.toList();
-
-		reservationRepository.saveAll(reservations);
-
-		log.info("좌석 배정 완료 - resultId: {}, memberId: {}, 배정 좌석 수: {}",
-			info.resultId(), info.memberId(), reservations.size());
-
-		return reservations;
-	}
-
-	private Reservation createReservation(LotteryReservationInfo info, ScheduleSeat seat) {
-		Reservation reservation = Reservation.builder()
-			.scheduleId(info.scheduleId())
-			.memberId(info.memberId())
-			.expiresAt(null) // todo 결제 완료, 만료 기한 없음 (결제 만료 시간을 기준)
-			.build();
-
-		reservation.complete(LocalDateTime.now());
-
-		return reservation;
 	}
 }

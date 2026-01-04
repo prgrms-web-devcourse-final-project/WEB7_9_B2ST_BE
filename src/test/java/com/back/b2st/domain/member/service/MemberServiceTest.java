@@ -35,29 +35,22 @@ import com.back.b2st.global.error.exception.BusinessException;
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
 
-	@InjectMocks
-	private MemberService memberService;
-
-	@Mock
-	private MemberRepository memberRepository;
-
-	@Mock
-	private PasswordEncoder passwordEncoder;
-
-	@Mock
-	private RefreshTokenRepository refreshTokenRepository;
-
-	@Mock
-	private RefundAccountRepository refundAccountRepository;
-
-	@Mock
-	private SignupRateLimitService signupRateLimitService;
-
-	@Mock
-	private ApplicationEventPublisher eventPublisher;
-
 	// 테스트용 상수
 	private static final String TEST_CLIENT_IP = "192.168.1.100";
+	@InjectMocks
+	private MemberService memberService;
+	@Mock
+	private MemberRepository memberRepository;
+	@Mock
+	private PasswordEncoder passwordEncoder;
+	@Mock
+	private RefreshTokenRepository refreshTokenRepository;
+	@Mock
+	private RefundAccountRepository refundAccountRepository;
+	@Mock
+	private SignupRateLimitService signupRateLimitService;
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
 
 	// 헬퍼 메서드
 	private SignupReq buildSignupReq() {

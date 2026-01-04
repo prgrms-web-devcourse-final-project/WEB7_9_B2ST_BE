@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,7 @@ import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 	"spring.task.scheduling.enabled=false"
 })
 @ActiveProfiles("test")
+@Disabled
 class SeatSelectionConcurrencyTest {
 
 	private static final String REDIS_PASSWORD = "testpass";

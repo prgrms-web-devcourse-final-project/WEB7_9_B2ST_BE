@@ -28,7 +28,7 @@ public class AdminReservationController {
 
 	@GetMapping
 	public BaseResponse<Page<AdminReservationSummaryRes>> getList(
-		@RequestParam ReservationStatus status,
+		@RequestParam(required = false) ReservationStatus status,
 		@RequestParam(required = false) Long scheduleId,
 		@RequestParam(required = false) Long memberId,
 		@RequestParam(defaultValue = "0") int page

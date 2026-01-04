@@ -195,7 +195,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 			SeatGrade seatGrade = SeatGrade.builder()
 				.performanceId(savedPerformance.getPerformanceId())
 				.seatId(savedSeat.getId())
-				.type(SeatGradeType.R)
+				.type(SeatGradeType.A)
 				.price(100000)
 				.build();
 			seatGradeRepository.save(seatGrade);

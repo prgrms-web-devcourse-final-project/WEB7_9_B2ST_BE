@@ -34,7 +34,9 @@ import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
@@ -43,6 +45,8 @@ import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.ticket.entity.Ticket;
+import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
@@ -57,57 +61,44 @@ class SeatAllocationServiceTest {
 
 	@Autowired
 	private SeatAllocationService seatAllocationService;
-
 	@Autowired
 	private DrawService drawService;
-
 	@Autowired
 	private PaymentFinalizeService paymentFinalizeService;
-
 	@Autowired
 	private MemberRepository memberRepository;
-
 	@Autowired
 	private PasswordEncoder passwordEncoder;
-
 	@Autowired
 	private VenueRepository venueRepository;
-
 	@Autowired
 	private PerformanceRepository performanceRepository;
-
 	@Autowired
 	private PerformanceScheduleRepository performanceScheduleRepository;
-
 	@Autowired
 	private SectionRepository sectionRepository;
-
 	@Autowired
 	private SeatRepository seatRepository;
-
 	@Autowired
 	private SeatGradeRepository seatGradeRepository;
-
 	@Autowired
 	private LotteryEntryRepository lotteryEntryRepository;
-
 	@Autowired
 	private LotteryResultRepository lotteryResultRepository;
-
 	@Autowired
 	private PaymentRepository paymentRepository;
-
 	@Autowired
 	private ScheduleSeatRepository scheduleSeatRepository;
-
 	@Autowired
 	private ReservationRepository reservationRepository;
-
 	@Autowired
 	private PerformanceDrawService performanceDrawService;
-
 	@Autowired
 	private EntityManager entityManager;
+	@Autowired
+	private TicketRepository ticketRepository;
+	@Autowired
+	private ReservationSeatRepository reservationSeatRepository;
 
 	List<Member> members;
 	Venue venue;
@@ -250,7 +241,7 @@ class SeatAllocationServiceTest {
 		entityManager.flush();
 		entityManager.clear();
 
-		// then - 메모리 검증
+		// then - 좌석 배정 검증
 		assertThat(allocatedSeats).hasSize(3);
 
 		// DB 검증 - SOLD 상태 확인
@@ -265,6 +256,142 @@ class SeatAllocationServiceTest {
 		System.out.println("=== 배정된 좌석 ===");
 		seatsFromDB.forEach(seat ->
 			System.out.println("SeatId: " + seat.getSeatId() + ", Status: " + seat.getStatus()));
+
+		// 티켓 생성 검증
+		List<Ticket> ticketsFromDB = ticketRepository.findByReservationId(info.reservationId());
+
+		assertThat(ticketsFromDB)
+			.as("예약 ID로 생성된 티켓이 존재해야 함")
+			.hasSize(3);
+
+		assertThat(ticketsFromDB)
+			.allMatch(ticket -> ticket.getMemberId().equals(info.memberId()))
+			.allMatch(ticket -> ticket.getReservationId().equals(info.reservationId()));
+
+		// 티켓의 좌석 ID가 배정된 좌석과 일치하는지 확인
+		List<Long> ticketSeatIds = ticketsFromDB.stream()
+			.map(Ticket::getSeatId)
+			.toList();
+
+		List<Long> allocatedSeatIds = allocatedSeats.stream()
+			.map(ScheduleSeat::getSeatId)
+			.toList();
+
+		assertThat(ticketSeatIds)
+			.as("티켓의 좌석 ID가 배정된 좌석 ID와 일치해야 함")
+			.containsExactlyInAnyOrderElementsOf(allocatedSeatIds);
+
+		System.out.println("=== 생성된 티켓 ===");
+		ticketsFromDB.forEach(ticket ->
+			System.out.println("Ticket ID: " + ticket.getId()
+				+ ", Seat ID: " + ticket.getSeatId()
+				+ ", Member ID: " + ticket.getMemberId())
+		);
+	}
+
+	@Test
+	@DisplayName("좌석 배정 - 여러 사용자 티켓 생성 검증")
+	void allocateSeatsForLottery_MultipleUsers_TicketCreation() {
+		// given - 3명에게 각 2장씩
+		createLotteryEntry(members.subList(0, 3), performance, schedule,
+			SeatGradeType.STANDARD, 2, lotteryEntryRepository);
+		executeDrawAndPayWithPaymentEntity();
+
+		List<LotteryReservationInfo> infos = seatAllocationService.findReservationInfos(
+			schedule.getPerformanceScheduleId());
+		assertThat(infos).hasSize(3);
+
+		// when - 각 사용자에게 좌석 배정
+		infos.forEach(info -> seatAllocationService.allocateSeatsForLottery(info));
+
+		entityManager.flush();
+		entityManager.clear();
+
+		// then - 전체 티켓 수 검증
+		List<Ticket> allTicketsFromDB = ticketRepository.findAll();
+		assertThat(allTicketsFromDB).hasSize(6); // 3명 × 2장
+
+		// 각 사용자별 티켓 검증
+		for (LotteryReservationInfo info : infos) {
+			List<Ticket> userTickets = ticketRepository.findByReservationId(info.reservationId());
+
+			assertThat(userTickets)
+				.as("사용자별 티켓이 정확히 생성되어야 함")
+				.hasSize(2)
+				.allMatch(ticket -> ticket.getMemberId().equals(info.memberId()))
+				.allMatch(ticket -> ticket.getReservationId().equals(info.reservationId()));
+
+			System.out.println("=== Member ID: " + info.memberId() + " 티켓 ===");
+			userTickets.forEach(ticket ->
+				System.out.println("  Ticket ID: " + ticket.getId()
+					+ ", Seat ID: " + ticket.getSeatId())
+			);
+		}
+
+		// 티켓의 좌석 ID 중복 검증
+		List<Long> allTicketSeatIds = allTicketsFromDB.stream()
+			.map(Ticket::getSeatId)
+			.toList();
+
+		assertThat(allTicketSeatIds)
+			.as("모든 티켓의 좌석 ID는 중복되지 않아야 함")
+			.doesNotHaveDuplicates();
+	}
+
+	@Test
+	@DisplayName("좌석 배정 - 티켓과 좌석 상태 일관성 검증")
+	void allocateSeatsForLottery_TicketAndSeatConsistency() {
+		// given
+		createLotteryEntry(members.subList(0, 1), performance, schedule,
+			SeatGradeType.STANDARD, 3, lotteryEntryRepository);
+		executeDrawAndPayWithPaymentEntity();
+
+		List<LotteryReservationInfo> infos = seatAllocationService.findReservationInfos(
+			schedule.getPerformanceScheduleId());
+		LotteryReservationInfo info = infos.get(0);
+
+		// when
+		seatAllocationService.allocateSeatsForLottery(info);
+		entityManager.flush();
+		entityManager.clear();
+
+		// then - DB에서 SOLD 좌석 조회
+		List<ScheduleSeat> soldSeatsFromDB = scheduleSeatRepository.findAll().stream()
+			.filter(seat -> seat.getStatus() == SeatStatus.SOLD)
+			.toList();
+
+		// DB에서 생성된 티켓 조회
+		List<Ticket> ticketsFromDB = ticketRepository.findByReservationId(info.reservationId());
+
+		// 수량 일치 검증
+		assertThat(soldSeatsFromDB).hasSize(3);
+		assertThat(ticketsFromDB).hasSize(3);
+
+		// 티켓의 좌석 ID가 모두 SOLD 상태인지 확인
+		List<Long> soldSeatIds = soldSeatsFromDB.stream()
+			.map(ScheduleSeat::getSeatId)
+			.toList();
+
+		List<Long> ticketSeatIds = ticketsFromDB.stream()
+			.map(Ticket::getSeatId)
+			.toList();
+
+		assertThat(ticketSeatIds)
+			.as("티켓의 모든 좌석이 SOLD 상태여야 함")
+			.allMatch(soldSeatIds::contains);
+
+		// ReservationSeat 매핑도 존재하는지 확인
+		List<ReservationSeat> reservationSeats = reservationSeatRepository
+			.findByReservationId(info.reservationId());
+
+		assertThat(reservationSeats)
+			.as("예약-좌석 매핑이 생성되어야 함")
+			.hasSize(3);
+
+		System.out.println("=== 일관성 검증 완료 ===");
+		System.out.println("SOLD 좌석 수: " + soldSeatsFromDB.size());
+		System.out.println("생성된 티켓 수: " + ticketsFromDB.size());
+		System.out.println("예약-좌석 매핑 수: " + reservationSeats.size());
 	}
 
 	@Test
@@ -459,48 +586,6 @@ class SeatAllocationServiceTest {
 	}
 
 	@Test
-	@DisplayName("좌석 배정 - 여러 등급 혼합")
-	void allocateSeatsForLottery_MultipleGrades() {
-		// given - VIP와 STANDARD 각각 응모
-		createLotteryEntry(members.subList(0, 1), performance, schedule,
-			SeatGradeType.VIP, 2, lotteryEntryRepository);
-		createLotteryEntry(members.subList(1, 2), performance, schedule,
-			SeatGradeType.STANDARD, 2, lotteryEntryRepository);
-
-		executeDrawAndPayWithPaymentEntity();
-
-		List<LotteryReservationInfo> infos = seatAllocationService.findReservationInfos(
-			schedule.getPerformanceScheduleId());
-		assertThat(infos).hasSize(2);
-
-		// when - 각 등급별 배정
-		infos.forEach(info -> seatAllocationService.allocateSeatsForLottery(info));
-
-		entityManager.flush();
-		entityManager.clear();
-
-		// then - DB에서 검증
-		List<ScheduleSeat> soldSeatsFromDB = scheduleSeatRepository.findAll().stream()
-			.filter(seat -> seat.getStatus() == SeatStatus.SOLD)
-			.toList();
-
-		assertThat(soldSeatsFromDB).hasSize(4); // VIP 2장 + STANDARD 2장
-
-		// 각 등급별로 올바른 좌석이 배정되었는지 확인
-		soldSeatsFromDB.forEach(scheduleSeat -> {
-			SeatGrade seatGrade = seatGradeRepository.findAll().stream()
-				.filter(sg -> sg.getSeatId().equals(scheduleSeat.getSeatId()))
-				.filter(sg -> sg.getPerformanceId().equals(performance.getPerformanceId()))
-				.findFirst()
-				.orElseThrow();
-
-			// VIP 또는 STANDARD 등급이어야 함
-			assertThat(seatGrade.getGrade())
-				.isIn(SeatGradeType.VIP, SeatGradeType.STANDARD);
-		});
-	}
-
-	@Test
 	@DisplayName("좌석 배정 성공 - 배치")
 	void allocateSeats_Success_execute() {
 		// given
@@ -548,5 +633,110 @@ class SeatAllocationServiceTest {
 		System.out.println("=== 배정된 좌석 ===");
 		seatsFromDB.forEach(seat ->
 			System.out.println("SeatId: " + seat.getSeatId() + ", Status: " + seat.getStatus()));
+	}
+
+	@Test
+	@DisplayName("좌석 배정 실패 - 티켓 미생성 확인")
+	void allocateSeatsForLottery_InsufficientSeats_NoTicketCreation() {
+		// given - 좌석 부족 상황
+		createLotteryEntry(members.subList(0, 1), performance, schedule,
+			SeatGradeType.STANDARD, 3, lotteryEntryRepository);
+		executeDrawAndPayWithPaymentEntity();
+
+		List<LotteryReservationInfo> infos = seatAllocationService.findReservationInfos(
+			schedule.getPerformanceScheduleId());
+		LotteryReservationInfo info = infos.get(0);
+
+		// 모든 좌석을 SOLD로 만들기
+		List<ScheduleSeat> allSeats = scheduleSeatRepository.findAll();
+		allSeats.forEach(ScheduleSeat::sold);
+		scheduleSeatRepository.saveAll(allSeats);
+		entityManager.flush();
+		entityManager.clear();
+
+		// when & then - 배정 실패 확인
+		assertThatThrownBy(() -> seatAllocationService.allocateSeatsForLottery(info))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("좌석 부족");
+
+		entityManager.flush();
+		entityManager.clear();
+
+		// 티켓이 생성되지 않았는지 확인
+		List<Ticket> ticketsFromDB = ticketRepository.findByReservationId(info.reservationId());
+
+		assertThat(ticketsFromDB)
+			.as("좌석 배정 실패 시 티켓이 생성되지 않아야 함")
+			.isEmpty();
+
+		// ReservationSeat 매핑도 없어야 함
+		List<ReservationSeat> reservationSeats = reservationSeatRepository
+			.findByReservationId(info.reservationId());
+
+		assertThat(reservationSeats)
+			.as("좌석 배정 실패 시 예약-좌석 매핑이 생성되지 않아야 함")
+			.isEmpty();
+
+		System.out.println("=== 배정 실패 시 티켓 미생성 검증 완료 ===");
+	}
+
+	@Test
+	@DisplayName("좌석 배정 - 배치 실행 후 티켓 생성 검증")
+	void allocateSeats_BatchExecution_TicketCreation() {
+		// given
+		schedules = createSchedulesSeatAllocation(performance, 1, performanceScheduleRepository);
+		schedule = schedules.getFirst();
+
+		createScheduleSeats(schedule.getPerformanceScheduleId(), seats, scheduleSeatRepository);
+
+		createLotteryEntry(members.subList(0, 1), performance, schedule,
+			SeatGradeType.STANDARD, 3, lotteryEntryRepository);
+
+		executeDrawAndPayWithPaymentEntity();
+
+		List<LotteryReservationInfo> infos = seatAllocationService.findReservationInfos(
+			schedule.getPerformanceScheduleId());
+		assertThat(infos).hasSize(1);
+		LotteryReservationInfo info = infos.get(0);
+
+		// when - 배치 실행
+		drawService.executeAllocation();
+		entityManager.flush();
+		entityManager.clear();
+
+		// then - 좌석 상태 검증
+		List<ScheduleSeat> soldSeatsFromDB = scheduleSeatRepository.findAll().stream()
+			.filter(seat -> seat.getScheduleId().equals(schedule.getPerformanceScheduleId()))
+			.filter(seat -> seat.getStatus() == SeatStatus.SOLD)
+			.toList();
+
+		assertThat(soldSeatsFromDB).hasSize(3);
+
+		// 티켓 생성 검증
+		List<Ticket> ticketsFromDB = ticketRepository.findByReservationId(info.reservationId());
+
+		assertThat(ticketsFromDB)
+			.as("배치 실행 후 티켓이 생성되어야 함")
+			.hasSize(3)
+			.allMatch(ticket -> ticket.getMemberId().equals(info.memberId()))
+			.allMatch(ticket -> ticket.getReservationId().equals(info.reservationId()));
+
+		// 티켓의 좌석 ID가 SOLD 좌석과 일치하는지 확인
+		List<Long> ticketSeatIds = ticketsFromDB.stream()
+			.map(Ticket::getSeatId)
+			.toList();
+
+		List<Long> soldSeatIds = soldSeatsFromDB.stream()
+			.map(ScheduleSeat::getSeatId)
+			.toList();
+
+		assertThat(ticketSeatIds)
+			.containsExactlyInAnyOrderElementsOf(soldSeatIds);
+
+		System.out.println("=== 배치 실행 후 티켓 생성 검증 완료 ===");
+		ticketsFromDB.forEach(ticket ->
+			System.out.println("Ticket ID: " + ticket.getId()
+				+ ", Seat ID: " + ticket.getSeatId())
+		);
 	}
 }

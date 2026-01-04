@@ -27,7 +27,11 @@ import lombok.NoArgsConstructor;
 
 /**
  * 대기열 입장 기록 엔티티
- * - UNIQUE (queue_id, user_id): 재진입 시 findOrCreate 패턴 필수
+ *
+ * 인덱스 전략:
+ * - UNIQUE 제약이 자동으로 인덱스 생성 (uk_queue_user, uk_entry_token)
+ * - cleanup 쿼리용: (status, expires_at)
+ * - 통계 쿼리용: (queue_id, status)
  */
 @Entity
 @Getter
@@ -35,22 +39,19 @@ import lombok.NoArgsConstructor;
 @Table(
 	name = "queue_entries",
 	indexes = {
-		@Index(name = "idx_queue_entries_user_queue", columnList = "user_id, queue_id"),
-		@Index(name = "idx_queue_entries_queue_status", columnList = "queue_id, status"),
-		@Index(name = "idx_queue_entries_queue_status_expires", columnList = "queue_id, status, expires_at"),
-		@Index(name = "idx_queue_entries_token", columnList = "entry_token"),
-		@Index(name = "idx_queue_entries_status_expires", columnList = "status, expires_at"),
-		@Index(name = "idx_queue_entries_user_status", columnList = "user_id, status")
+		// cleanup 쿼리용 (필수)
+		@Index(name = "idx_queue_entries_status_expires",
+			columnList = "status, expires_at"),
+
+		// 통계 쿼리용 (권장)
+		@Index(name = "idx_queue_entries_queue_status",
+			columnList = "queue_id, status")
 	},
 	uniqueConstraints = {
-		@UniqueConstraint(
-			name = "uk_queue_user",
-			columnNames = {"queue_id", "user_id"}
-		),
-		@UniqueConstraint(
-			name = "uk_entry_token",
-			columnNames = {"entry_token"}
-		)
+		@UniqueConstraint(name = "uk_queue_user",
+			columnNames = {"queue_id", "user_id"}),
+		@UniqueConstraint(name = "uk_entry_token",
+			columnNames = {"entry_token"})
 	}
 )
 @SequenceGenerator(
@@ -111,23 +112,23 @@ public class QueueEntry extends BaseEntity {
 	public QueueEntry(
 		Long queueId,
 		Long userId,
+		UUID entryToken,
+		QueueEntryStatus status,
 		LocalDateTime joinedAt,
 		LocalDateTime enterableAt,
 		LocalDateTime expiresAt
 	) {
 		this.queueId = queueId;
 		this.userId = userId;
+		this.entryToken = entryToken;
+		this.status = (status != null) ? status : QueueEntryStatus.EXPIRED;
 		this.joinedAt = joinedAt;
 		this.enterableAt = enterableAt;
 		this.expiresAt = expiresAt;
-		this.status = QueueEntryStatus.ENTERABLE;
 	}
 
 	// ===== 상태 전이 메서드 =====
 
-	/**
-	 * ENTERABLE 상태로 전환
-	 */
 	public void updateToEnterable(
 		UUID newEntryToken,
 		LocalDateTime joinedAt,
@@ -142,19 +143,12 @@ public class QueueEntry extends BaseEntity {
 		this.completedAt = null;
 	}
 
-	/**
-	 * EXPIRED 상태로 전환
-	 */
 	public void updateToExpired() {
 		this.status = QueueEntryStatus.EXPIRED;
 	}
 
-	/**
-	 * COMPLETED 상태로 전환
-	 */
 	public void updateToCompleted(LocalDateTime completedAt) {
 		this.status = QueueEntryStatus.COMPLETED;
 		this.completedAt = completedAt;
 	}
 }
-

@@ -110,6 +110,21 @@ public class ScheduleSeatStateService {
 		seat.release();
 	}
 
+	@Transactional
+	public void forceToAvailable(Long scheduleId, Long seatId) {
+		ScheduleSeat seat = getScheduleSeatWithLock(scheduleId, seatId);
+
+		if (seat.getStatus() == SeatStatus.AVAILABLE) {
+			seatHoldTokenService.remove(scheduleId, seatId);
+			return;
+		}
+
+		// SOLD든 HOLD든 운영 복구 목적으로 AVAILABLE로 강제
+		seat.release(); // 없으면 seat 엔티티에 최소 메서드 추가 or 상태/만료값 직접 초기화
+
+		seatHoldTokenService.remove(scheduleId, seatId);
+	}
+
 	// === 상태 변경 HOLD → SOLD === //
 	@Transactional
 	public void changeToSold(Long scheduleId, Long seatId) {

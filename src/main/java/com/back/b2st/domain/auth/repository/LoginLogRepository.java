@@ -64,4 +64,10 @@ public interface LoginLogRepository extends JpaRepository<LoginLog, Long> {
 	 */
 	@Query("SELECT COUNT(l) FROM LoginLog l WHERE l.success = false AND l.attemptedAt >= :since")
 	long countFailuresByAttemptedAtAfter(@Param("since") LocalDateTime since);
+	
+	/**
+	 * 특정 시간 이후 활성 IP 목록 조회
+	 */
+	@Query("SELECT DISTINCT l.clientIp FROM LoginLog l WHERE l.attemptedAt >= :since")
+	List<String> findDistinctClientIpsSince(@Param("since") LocalDateTime since);
 }

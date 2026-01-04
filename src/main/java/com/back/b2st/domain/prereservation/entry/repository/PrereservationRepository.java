@@ -11,6 +11,8 @@ public interface PrereservationRepository extends JpaRepository<Prereservation, 
 	boolean existsByPerformanceScheduleIdAndMemberIdAndSectionId(Long performanceScheduleId, Long memberId,
 		Long sectionId);
 
+	List<Prereservation> findAllByMemberIdOrderByCreatedAtDesc(Long memberId);
+
 	List<Prereservation> findAllByPerformanceScheduleIdAndMemberIdOrderByCreatedAtDesc(
 		Long performanceScheduleId,
 		Long memberId

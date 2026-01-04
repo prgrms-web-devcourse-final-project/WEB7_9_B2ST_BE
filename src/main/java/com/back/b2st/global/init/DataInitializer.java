@@ -58,6 +58,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DataInitializer implements CommandLineRunner {
 
 	private static final String TEST_PERFORMANCE_TITLE = "2024 아이유 콘서트 - HEREH WORLD TOUR";
+	private static final String TEST_PRERESERVE_PLAY_TITLE = "연극 - B2ST 신청예매 테스트";
 
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
@@ -191,32 +192,60 @@ public class DataInitializer implements CommandLineRunner {
 		Long venueId = venue.getVenueId();
 
 		// 기존 회차 24개 생성 (일반예매/추첨 - 신청예매 구현 전 원래 데이터)
-		List<PerformanceSchedule> schedules = IntStream.rangeClosed(0, 23)
-			.mapToObj(i -> PerformanceSchedule.builder()
-				.performance(performance)
-				.startAt(LocalDateTime.of(2025, 1, 1, 19, 0).plusDays(i))
-				.roundNo(i + 1)
-				.bookingType(i % 2 == 0 ? BookingType.FIRST_COME : BookingType.LOTTERY)
-				.bookingOpenAt(LocalDateTime.now().minusHours(1))
-				.bookingCloseAt(LocalDateTime.now().plusDays(30))
-				.build()
-			).toList();
-		performanceScheduleRepository.saveAll(schedules);
-		performanceSchedule = schedules.getFirst();
-		performanceSchedule2 = schedules.get(1);
+			List<PerformanceSchedule> schedules = IntStream.rangeClosed(0, 23)
+				.mapToObj(i -> PerformanceSchedule.builder()
+					.performance(performance)
+					.startAt(LocalDateTime.of(2025, 1, 1, 19, 0).plusDays(i))
+					.roundNo(i + 1)
+					.bookingType(i % 2 == 0 ? BookingType.FIRST_COME : BookingType.LOTTERY)
+					.bookingOpenAt(LocalDateTime.now().minusHours(1))
+					.bookingCloseAt(LocalDateTime.now().plusDays(30))
+					.build()
+				).toList();
+			performanceScheduleRepository.saveAll(schedules);
+			performanceSchedule = schedules.getFirst();
+			performanceSchedule2 = schedules.get(1);
 
-		// 신청예매 테스트용 회차 추가 (25~27회차)
-		List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(24, 26)
-			.mapToObj(i -> PerformanceSchedule.builder()
-				.performance(performance)
-				.startAt(LocalDateTime.of(2025, 1, 1, 19, 0).plusDays(i))
-				.roundNo(i + 1)
-				.bookingType(BookingType.PRERESERVE)
-				.bookingOpenAt(LocalDateTime.now().minusHours(1))
-				.bookingCloseAt(LocalDateTime.now().plusDays(30))
-				.build()
-			).toList();
-		performanceScheduleRepository.saveAll(prereserveSchedules);
+			// 신청 기간: bookingOpenAt 1일 전 ~ bookingOpenAt 직전
+			// 테스트 편의를 위해 "오늘/내일" 기준으로 신청 가능 상태가 되도록 bookingOpenAt을 미래(약 +23h)로 설정
+			LocalDateTime prereserveBookingOpenAt = LocalDateTime.now()
+				.plusDays(1)
+				.minusHours(1)
+				.withMinute(0)
+				.withSecond(0)
+				.withNano(0);
+			LocalDateTime prereserveStartAtBase = LocalDateTime.now()
+				.plusDays(2)
+				.withHour(19)
+				.withMinute(0)
+				.withSecond(0)
+				.withNano(0);
+
+			// 신청예매 테스트 전용 공연(연극) 추가: 기존(1~24회차) 데이터와 겹치지 않게 별도 공연으로 분리
+			// 구성은 기존 콘서트 데이터와 동일하게 맞추되(venue/필수 필드), 내용만 다르게 한다.
+			Performance prereservePlay = performanceRepository.save(Performance.builder()
+				.venue(venue)
+				.title(TEST_PRERESERVE_PLAY_TITLE)
+				.category("연극")
+				.posterKey(null)
+				.description("신청예매(사전신청) 기능 테스트용 연극 공연입니다.")
+				.startDate(prereserveStartAtBase.minusDays(1))
+				.endDate(prereserveStartAtBase.plusDays(3))
+				.status(PerformanceStatus.ACTIVE)
+				.build());
+
+			// 신청예매 테스트용 회차 추가 (1~3회차)
+			List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 2)
+				.mapToObj(idx -> PerformanceSchedule.builder()
+					.performance(prereservePlay)
+					.startAt(prereserveStartAtBase.plusDays(idx))
+					.roundNo(1 + idx)
+					.bookingType(BookingType.PRERESERVE)
+					.bookingOpenAt(prereserveBookingOpenAt)
+					.bookingCloseAt(LocalDateTime.now().plusDays(30))
+					.build()
+				).toList();
+			performanceScheduleRepository.saveAll(prereserveSchedules);
 
 		// 구역 생성
 		sectionA = sectionRepository.save(Section.builder().venueId(venueId).sectionName("A").build());
@@ -292,18 +321,50 @@ public class DataInitializer implements CommandLineRunner {
 					.build();
 			}).toList();
 
-		seatGradeRepository.saveAll(allSeatGrades);
+			seatGradeRepository.saveAll(allSeatGrades);
 
-		// 회차별 좌석 생성
-		List<ScheduleSeat> allScheduleSeats = IntStream.range(0, savedSeats.size())
-			.mapToObj(idx -> {
-				return ScheduleSeat.builder()
-					.scheduleId(performanceSchedule.getPerformanceScheduleId())
-					.seatId(savedSeats.get(idx).getId())
-					.build();
-			})
-			.toList();
-		scheduleSeatRepository.saveAll(allScheduleSeats);
+			// 회차별 좌석 생성
+			List<ScheduleSeat> allScheduleSeats = IntStream.range(0, savedSeats.size())
+				.mapToObj(idx -> {
+					return ScheduleSeat.builder()
+						.scheduleId(performanceSchedule.getPerformanceScheduleId())
+						.seatId(savedSeats.get(idx).getId())
+						.build();
+				})
+				.toList();
+			scheduleSeatRepository.saveAll(allScheduleSeats);
+
+			// 신청예매 회차에도 좌석을 붙여서(선점/예매 테스트 가능) 별도 생성
+			List<ScheduleSeat> prereserveScheduleSeats = prereserveSchedules.stream()
+				.flatMap(schedule -> savedSeats.stream()
+					.map(seat -> ScheduleSeat.builder()
+						.scheduleId(schedule.getPerformanceScheduleId())
+						.seatId(seat.getId())
+						.build()))
+				.toList();
+			scheduleSeatRepository.saveAll(prereserveScheduleSeats);
+
+			// 신청예매 공연에도 좌석 등급(정가)을 별도 생성 (SeatGrade는 performanceId 기준)
+			List<SeatGrade> prereserveSeatGrades = IntStream.range(0, savedSeats.size())
+				.mapToObj(idx -> {
+					int seatInSection = idx % 15;
+					int gradeGroup = seatInSection / 5;
+					return SeatGrade.builder()
+						.performanceId(prereservePlay.getPerformanceId())
+						.seatId(savedSeats.get(idx).getId())
+						.grade(switch (gradeGroup) {
+							case 0 -> SeatGradeType.VIP;
+							case 1 -> SeatGradeType.ROYAL;
+							default -> SeatGradeType.STANDARD;
+						})
+						.price(switch (gradeGroup) {
+							case 0 -> 30000;
+							case 1 -> 20000;
+							default -> 10000;
+						})
+						.build();
+				}).toList();
+			seatGradeRepository.saveAll(prereserveSeatGrades);
 
 		/**
 		 * A구역 (0~14):
@@ -494,14 +555,15 @@ public class DataInitializer implements CommandLineRunner {
 		}
 	}
 
-	private void seedPrereservationTimeTablesIfMissing() {
-		List<PerformanceSchedule> prereserveSchedules = performanceScheduleRepository.findAll().stream()
-			.filter(schedule -> schedule.getBookingType() == BookingType.PRERESERVE)
-			.filter(schedule -> schedule.getBookingOpenAt() != null)
-			.filter(schedule -> schedule.getPerformance() != null)
-			.filter(schedule -> schedule.getPerformance().getTitle() != null)
-			.filter(schedule -> TEST_PERFORMANCE_TITLE.equals(schedule.getPerformance().getTitle()))
-			.toList();
+		private void seedPrereservationTimeTablesIfMissing() {
+			List<PerformanceSchedule> prereserveSchedules = performanceScheduleRepository.findAll().stream()
+				.filter(schedule -> schedule.getBookingType() == BookingType.PRERESERVE)
+				.filter(schedule -> schedule.getBookingOpenAt() != null)
+				.filter(schedule -> schedule.getPerformance() != null)
+				.filter(schedule -> schedule.getPerformance().getTitle() != null)
+				.filter(schedule -> TEST_PERFORMANCE_TITLE.equals(schedule.getPerformance().getTitle())
+					|| TEST_PRERESERVE_PLAY_TITLE.equals(schedule.getPerformance().getTitle()))
+				.toList();
 
 		if (prereserveSchedules.isEmpty()) {
 			return;

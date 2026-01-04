@@ -2,6 +2,10 @@ package com.back.b2st.domain.prereservation.entry.service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -93,6 +97,24 @@ public class PrereservationApplyService {
 			.findAllByPerformanceScheduleIdAndMemberIdOrderByCreatedAtDesc(scheduleId, memberId);
 		var sectionIds = applications.stream().map(Prereservation::getSectionId).distinct().toList();
 		return PrereservationRes.of(scheduleId, sectionIds);
+	}
+
+	@Transactional(readOnly = true)
+	public List<PrereservationRes> getMyApplicationList(Long memberId) {
+		var applications = prereservationRepository.findAllByMemberIdOrderByCreatedAtDesc(memberId);
+
+		var sectionIdsByScheduleId = new TreeMap<Long, TreeSet<Long>>();
+		for (Prereservation application : applications) {
+			sectionIdsByScheduleId
+				.computeIfAbsent(application.getPerformanceScheduleId(), ignored -> new TreeSet<>())
+				.add(application.getSectionId());
+		}
+
+		var response = new ArrayList<PrereservationRes>(sectionIdsByScheduleId.size());
+		for (var entry : sectionIdsByScheduleId.entrySet()) {
+			response.add(PrereservationRes.of(entry.getKey(), new ArrayList<>(entry.getValue())));
+		}
+		return response;
 	}
 
 	private PerformanceSchedule getScheduleOrThrow(Long scheduleId) {

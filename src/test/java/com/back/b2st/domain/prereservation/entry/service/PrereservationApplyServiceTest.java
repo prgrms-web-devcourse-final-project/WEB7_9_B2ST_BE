@@ -328,4 +328,74 @@ class PrereservationApplyServiceTest {
 		assertThat(result.scheduleId()).isEqualTo(SCHEDULE_ID);
 		assertThat(result.sectionIds()).containsExactly(1L, 2L);
 	}
+
+	@Test
+	@DisplayName("getMyApplicationList(): 전체 회차별 신청 구역 목록을 조회한다")
+	void getMyApplicationList_success() {
+		// given
+		Prereservation prereservation1 = mock(Prereservation.class);
+		Prereservation prereservation2 = mock(Prereservation.class);
+		Prereservation prereservation3 = mock(Prereservation.class);
+
+		given(prereservation1.getPerformanceScheduleId()).willReturn(10L);
+		given(prereservation1.getSectionId()).willReturn(1L);
+
+		given(prereservation2.getPerformanceScheduleId()).willReturn(10L);
+		given(prereservation2.getSectionId()).willReturn(2L);
+
+		given(prereservation3.getPerformanceScheduleId()).willReturn(20L);
+		given(prereservation3.getSectionId()).willReturn(3L);
+
+		given(prereservationRepository.findAllByMemberIdOrderByCreatedAtDesc(MEMBER_ID))
+			.willReturn(java.util.List.of(prereservation1, prereservation2, prereservation3));
+
+		// when
+		var result = prereservationApplyService.getMyApplicationList(MEMBER_ID);
+
+		// then
+		assertThat(result).hasSize(2);
+		assertThat(result.get(0).scheduleId()).isEqualTo(10L);
+		assertThat(result.get(0).sectionIds()).containsExactly(1L, 2L);
+		assertThat(result.get(1).scheduleId()).isEqualTo(20L);
+		assertThat(result.get(1).sectionIds()).containsExactly(3L);
+	}
+
+	@Test
+	@DisplayName("getMyApplicationList(): 신청 내역이 없으면 빈 리스트를 반환한다")
+	void getMyApplicationList_empty() {
+		// given
+		given(prereservationRepository.findAllByMemberIdOrderByCreatedAtDesc(MEMBER_ID))
+			.willReturn(java.util.List.of());
+
+		// when
+		var result = prereservationApplyService.getMyApplicationList(MEMBER_ID);
+
+		// then
+		assertThat(result).isEmpty();
+	}
+
+	@Test
+	@DisplayName("getMyApplicationList(): 같은 회차에 여러 구역 신청 시 중복 제거하여 반환한다")
+	void getMyApplicationList_duplicateSectionInSameSchedule() {
+		// given
+		Prereservation prereservation1 = mock(Prereservation.class);
+		Prereservation prereservation2 = mock(Prereservation.class);
+
+		given(prereservation1.getPerformanceScheduleId()).willReturn(10L);
+		given(prereservation1.getSectionId()).willReturn(1L);
+
+		given(prereservation2.getPerformanceScheduleId()).willReturn(10L);
+		given(prereservation2.getSectionId()).willReturn(1L);
+
+		given(prereservationRepository.findAllByMemberIdOrderByCreatedAtDesc(MEMBER_ID))
+			.willReturn(java.util.List.of(prereservation1, prereservation2));
+
+		// when
+		var result = prereservationApplyService.getMyApplicationList(MEMBER_ID);
+
+		// then
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).scheduleId()).isEqualTo(10L);
+		assertThat(result.get(0).sectionIds()).containsExactly(1L);
+	}
 }

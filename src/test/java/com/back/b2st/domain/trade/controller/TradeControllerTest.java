@@ -192,6 +192,14 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 				.build();
 			Seat savedSeat = seatRepository.save(seat);
 
+			SeatGrade seatGrade = SeatGrade.builder()
+				.performanceId(savedPerformance.getPerformanceId())
+				.seatId(savedSeat.getId())
+				.type(SeatGradeType.R)
+				.price(100000)
+				.build();
+			seatGradeRepository.save(seatGrade);
+
 			Reservation reservation = Reservation.builder()
 				.scheduleId(savedSchedule.getPerformanceScheduleId())
 				.memberId(testMemberId)

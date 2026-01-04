@@ -77,7 +77,7 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			.andReturn().getResponse().getContentAsString();
 
 		JsonNode jsonNode = objectMapper.readTree(response);
-		return jsonNode.path("data").path("accessToken").asText();
+		return jsonNode.path("data").path("accessToken").asString();
 	}
 
 	@Nested

@@ -3,6 +3,8 @@ package com.back.b2st.domain.member.repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,4 +35,10 @@ public interface SignupLogRepository extends JpaRepository<SignupLog, Long> {
 	@Query("SELECT DISTINCT s.email FROM SignupLog s " +
 		"WHERE s.clientIp = :ip AND s.createdAt >= :since")
 	List<String> findDistinctEmailsByIpSince(@Param("ip") String clientIp, @Param("since") LocalDateTime since);
+
+	/**
+	 * 회원가입 로그 검색 - 시간 범위 + 페이징
+	 */
+	@Query("SELECT s FROM SignupLog s WHERE s.createdAt >= :since ORDER BY s.createdAt DESC")
+	Page<SignupLog> findByCreatedAtAfter(@Param("since") LocalDateTime since, Pageable pageable);
 }

@@ -11,6 +11,9 @@ import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
+import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.ticket.entity.Ticket;
@@ -83,6 +86,9 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	private SeatRepository seatRepository;
 
 	@Autowired
+	private SeatGradeRepository seatGradeRepository;
+
+	@Autowired
 	private ReservationRepository reservationRepository;
 
 	@Autowired
@@ -111,6 +117,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 		tradeRepository.deleteAll();
 		ticketRepository.deleteAll();
 		reservationRepository.deleteAll();
+		seatGradeRepository.deleteAll();
 		seatRepository.deleteAll();
 		sectionRepository.deleteAll();
 		performanceScheduleRepository.deleteAll();
@@ -214,6 +221,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 			tradeRepository.deleteAll();
 			ticketRepository.deleteAll();
 			reservationRepository.deleteAll();
+			seatGradeRepository.deleteAll();
 			seatRepository.deleteAll();
 			sectionRepository.deleteAll();
 			performanceScheduleRepository.deleteAll();

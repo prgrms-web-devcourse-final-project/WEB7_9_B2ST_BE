@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -47,4 +49,20 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 		@Param("pending") ReservationStatus pending,
 		@Param("expired") ReservationStatus expired
 	);
+
+	@Query("""
+			select r
+			from Reservation r
+			where r.status = :status
+			  and (:scheduleId is null or r.scheduleId = :scheduleId)
+			  and (:memberId is null or r.memberId = :memberId)
+			order by r.id desc
+		""")
+	Page<Reservation> findByStatusWithOptionalFilters(
+		@Param("status") ReservationStatus status,
+		@Param("scheduleId") Long scheduleId,
+		@Param("memberId") Long memberId,
+		Pageable pageable
+	);
+
 }

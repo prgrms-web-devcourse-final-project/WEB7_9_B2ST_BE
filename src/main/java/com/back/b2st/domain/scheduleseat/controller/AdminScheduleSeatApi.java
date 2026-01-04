@@ -50,7 +50,7 @@ public interface AdminScheduleSeatApi {
 		@ApiResponse(responseCode = "404", description = "좌석 정보 없음 (SEAT_NOT_FOUND)")
 	})
 	@PostMapping("/{seatId}/release-hold")
-	void releaseHold(
+	BaseResponse<Void> releaseHold(
 		@Parameter(description = "공연 회차 ID", example = "1")
 		@PathVariable Long scheduleId,
 

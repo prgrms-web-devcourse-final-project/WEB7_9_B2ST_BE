@@ -37,11 +37,11 @@ public class AdminScheduleSeatController implements AdminScheduleSeatApi {
 	}
 
 	@PostMapping("/{seatId}/release-hold")
-	public void releaseHold(
+	public BaseResponse<Void> releaseHold(
 		@PathVariable Long scheduleId,
 		@PathVariable Long seatId
 	) {
 		adminScheduleSeatService.releaseHold(scheduleId, seatId);
+		return BaseResponse.created(null);
 	}
-
 }

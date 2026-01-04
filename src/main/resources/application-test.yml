@@ -74,6 +74,18 @@ oauth:
     issuer: https://kauth.kakao.com
     jwks-uri: https://kauth.kakao.com/.well-known/jwks.json
 
+aws:
+  s3:
+    bucket: test-bucket
+    region: ap-northeast-2
+    put-presign-expiration-seconds: 300
+    get-presign-expiration-seconds: 300
+    max-file-size: 10485760
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+
 queue:
   enabled: false
 

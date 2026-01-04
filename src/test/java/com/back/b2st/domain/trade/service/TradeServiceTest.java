@@ -19,13 +19,15 @@ import org.springframework.dao.DataIntegrityViolationException;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
-import com.back.b2st.domain.reservation.entity.Reservation;
-import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.seat.seat.entity.Seat;
-import com.back.b2st.domain.seat.seat.repository.SeatRepository;
-import com.back.b2st.domain.ticket.entity.Ticket;
-import com.back.b2st.domain.ticket.repository.TicketRepository;
-import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
+	import com.back.b2st.domain.reservation.entity.Reservation;
+	import com.back.b2st.domain.reservation.repository.ReservationRepository;
+	import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+	import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
+	import com.back.b2st.domain.seat.seat.entity.Seat;
+	import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+	import com.back.b2st.domain.ticket.entity.Ticket;
+	import com.back.b2st.domain.ticket.repository.TicketRepository;
+	import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
 import com.back.b2st.domain.trade.dto.request.UpdateTradeReq;
 import com.back.b2st.domain.trade.dto.response.CreateTradeRes;
 import com.back.b2st.domain.trade.entity.Trade;
@@ -55,6 +57,9 @@ class TradeServiceTest {
 
 	@Mock
 	private SeatRepository seatRepository;
+
+	@Mock
+	private SeatGradeRepository seatGradeRepository;
 
 	@Mock
 	private ReservationRepository reservationRepository;
@@ -168,6 +173,15 @@ class TradeServiceTest {
 		given(performance.getPerformanceId()).willReturn(1L);
 		given(performanceScheduleRepository.findById(anyLong())).willReturn(Optional.of(schedule));
 
+		SeatGrade seatGrade = SeatGrade.builder()
+			.performanceId(1L)
+			.seatId(1L)
+			.grade(com.back.b2st.domain.seat.grade.entity.SeatGradeType.STANDARD)
+			.price(50000)
+			.build();
+		given(seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(1L, 1L))
+			.willReturn(Optional.of(seatGrade));
+
 		Trade mockTrade = Trade.builder()
 			.memberId(memberId)
 			.performanceId(1L)
@@ -192,6 +206,61 @@ class TradeServiceTest {
 		assertThat(response.get(0).price()).isEqualTo(50000);
 		assertThat(response.get(0).totalCount()).isEqualTo(1);
 		verify(tradeRepository).save(any(Trade.class));
+	}
+
+	@Test
+	@DisplayName("양도 - price 검증 실패 (정가 초과)")
+	void createTransferTrade_fail_priceAboveOriginal() {
+		// given
+		CreateTradeReq request = new CreateTradeReq(java.util.List.of(1L), TradeType.TRANSFER, 60000);
+		Long memberId = 100L;
+
+		given(tradeRepository.existsByTicketIdAndStatus(1L, TradeStatus.ACTIVE))
+			.willReturn(false);
+
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+
+		Seat mockSeat = Seat.builder()
+			.venueId(1L)
+			.sectionId(1L)
+			.sectionName("A구역")
+			.rowLabel("5열")
+			.seatNumber(12)
+			.build();
+
+		Reservation mockReservation = Reservation.builder()
+			.scheduleId(1L)
+			.memberId(memberId)
+			.build();
+
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+		given(seatRepository.findById(1L)).willReturn(Optional.of(mockSeat));
+		given(reservationRepository.findById(1L)).willReturn(Optional.of(mockReservation));
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		Performance performance = mock(Performance.class);
+		given(schedule.getPerformance()).willReturn(performance);
+		given(performance.getPerformanceId()).willReturn(1L);
+		given(performanceScheduleRepository.findById(anyLong())).willReturn(Optional.of(schedule));
+
+		SeatGrade seatGrade = SeatGrade.builder()
+			.performanceId(1L)
+			.seatId(1L)
+			.grade(com.back.b2st.domain.seat.grade.entity.SeatGradeType.STANDARD)
+			.price(50000)
+			.build();
+		given(seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(1L, 1L))
+			.willReturn(Optional.of(seatGrade));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test
@@ -357,12 +426,71 @@ class TradeServiceTest {
 			.build();
 
 		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+		SeatGrade seatGrade = SeatGrade.builder()
+			.performanceId(1L)
+			.seatId(1L)
+			.grade(com.back.b2st.domain.seat.grade.entity.SeatGradeType.STANDARD)
+			.price(60000)
+			.build();
+		given(seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(1L, 1L))
+			.willReturn(Optional.of(seatGrade));
 
 		// when
 		tradeService.updateTrade(tradeId, request, memberId);
 
 		// then
 		assertThat(trade.getPrice()).isEqualTo(60000);
+	}
+
+	@Test
+	@DisplayName("양도 게시글 수정 실패 - 정가 초과")
+	void updateTrade_fail_priceAboveOriginal() {
+		// given
+		Long tradeId = 1L;
+		Long memberId = 100L;
+		UpdateTradeReq request = new UpdateTradeReq(70000);
+
+		Trade trade = Trade.builder()
+			.memberId(memberId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(1L)
+			.type(TradeType.TRANSFER)
+			.price(50000)
+			.totalCount(1)
+			.section("A")
+			.row("5열")
+			.seatNumber("12석")
+			.build();
+
+		given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+		Ticket mockTicket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(memberId)
+			.seatId(1L)
+			.qrCode("QR123")
+			.build();
+		given(ticketRepository.findById(1L)).willReturn(Optional.of(mockTicket));
+		SeatGrade seatGrade = SeatGrade.builder()
+			.performanceId(1L)
+			.seatId(1L)
+			.grade(com.back.b2st.domain.seat.grade.entity.SeatGradeType.STANDARD)
+			.price(60000)
+			.build();
+		given(seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(1L, 1L))
+			.willReturn(Optional.of(seatGrade));
+
+		// when & then
+		assertThatThrownBy(() -> tradeService.updateTrade(tradeId, request, memberId))
+			.isInstanceOf(BusinessException.class)
+			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
 	}
 
 	@Test

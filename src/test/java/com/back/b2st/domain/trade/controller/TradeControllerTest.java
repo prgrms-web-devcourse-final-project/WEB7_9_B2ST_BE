@@ -48,7 +48,9 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -126,14 +128,14 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 		memberRepository.deleteAll();
 		ticketIds.clear();
 
-		String email = "trade@test.com";
-		String password = "Password123!";
+		String email = "user1@tt.com";
+		String password = "1234567a!";
 
-		// Create test member
+		// Create test member (user1)
 		Member testMember = Member.builder()
 			.email(email)
 			.password(passwordEncoder.encode(password))
-			.name("Test User")
+			.name("유저일")
 			.birth(LocalDate.of(1990, 1, 1))
 			.role(Member.Role.MEMBER)
 			.provider(Member.Provider.EMAIL)
@@ -192,10 +194,11 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 				.build();
 			Seat savedSeat = seatRepository.save(seat);
 
+			// SeatGrade 생성 (양도 가격 테스트를 위해 100000원으로 통일)
 			SeatGrade seatGrade = SeatGrade.builder()
 				.performanceId(savedPerformance.getPerformanceId())
 				.seatId(savedSeat.getId())
-				.type(SeatGradeType.A)
+				.grade(SeatGradeType.VIP)
 				.price(100000)
 				.build();
 			seatGradeRepository.save(seatGrade);
@@ -384,6 +387,29 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 
 	@Test
 	@Order(6)
+	@DisplayName("양도 - 원가격 초과 시 실패")
+	void createTransferTrade_fail_priceExceedsOriginal() throws Exception {
+		// given
+		String requestBody = String.format("""
+			{
+				"ticketIds": [%d],
+				"type": "TRANSFER",
+				"price": 150000
+			}
+			""", ticketIds.get(6));
+
+		// when & then
+		mockMvc.perform(post("/api/trades")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(requestBody))
+			.andDo(print())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value(400));
+	}
+
+	@Test
+	@Order(7)
 	@DisplayName("필수 필드 누락 시 검증 실패")
 	void createTrade_fail_missingFields() throws Exception {
 		// given
@@ -403,7 +429,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(7)
+	@Order(8)
 	@DisplayName("Trade 상세 조회 성공")
 	void getTrade_success() throws Exception {
 		String createRequest = String.format("""
@@ -436,7 +462,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(8)
+	@Order(9)
 	@DisplayName("Trade 상세 조회 실패 - 존재하지 않는 ID")
 	void getTrade_fail_notFound() throws Exception {
 		mockMvc.perform(get("/api/trades/99999")
@@ -446,7 +472,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(9)
+	@Order(10)
 	@DisplayName("Trade 목록 조회 성공")
 	void getTrades_success() throws Exception {
 		mockMvc.perform(post("/api/trades")
@@ -481,7 +507,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(10)
+	@Order(11)
 	@DisplayName("Trade 목록 조회 - type 필터")
 	void getTrades_withTypeFilter() throws Exception {
 		mockMvc.perform(post("/api/trades")
@@ -515,7 +541,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(11)
+	@Order(12)
 	@DisplayName("Trade 목록 조회 - status 필터")
 	void getTrades_withStatusFilter() throws Exception {
 		mockMvc.perform(post("/api/trades")
@@ -538,7 +564,7 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 	}
 
 	@Test
-	@Order(12)
+	@Order(13)
 	@DisplayName("Trade 목록 조회 - 페이징")
 	void getTrades_withPaging() throws Exception {
 		for (int i = 49; i < 54; i++) {
@@ -561,5 +587,124 @@ public class TradeControllerTest extends AbstractContainerBaseTest {
 			.andExpect(jsonPath("$.data.content.length()").value(3))
 			.andExpect(jsonPath("$.data.size").value(3))
 			.andExpect(jsonPath("$.data.totalElements").exists());
+	}
+
+	@Test
+	@Order(14)
+	@DisplayName("Trade 가격 수정 성공")
+	void updateTrade_success() throws Exception {
+		// given - 양도 게시글 생성
+		String createRequest = String.format("""
+			{
+				"ticketIds": [%d],
+				"type": "TRANSFER",
+				"price": 50000
+			}
+			""", ticketIds.get(7));
+
+		String response = mockMvc.perform(post("/api/trades")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(createRequest))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		Long tradeId = objectMapper.readTree(response).get("data").get(0).get("tradeId").asLong();
+
+		// when - 가격 수정
+		String updateRequest = """
+			{
+				"price": 30000
+			}
+			""";
+
+		mockMvc.perform(patch("/api/trades/" + tradeId)
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(updateRequest))
+			.andDo(print())
+			.andExpect(status().isOk());
+
+		// then - 수정된 가격 확인
+		mockMvc.perform(get("/api/trades/" + tradeId)
+				.header("Authorization", "Bearer " + accessToken))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.price").value(30000));
+	}
+
+	@Test
+	@Order(15)
+	@DisplayName("Trade 가격 수정 실패 - 원가격 초과")
+	void updateTrade_fail_priceExceedsOriginal() throws Exception {
+		// given - 양도 게시글 생성
+		String createRequest = String.format("""
+			{
+				"ticketIds": [%d],
+				"type": "TRANSFER",
+				"price": 50000
+			}
+			""", ticketIds.get(8));
+
+		String response = mockMvc.perform(post("/api/trades")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(createRequest))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		Long tradeId = objectMapper.readTree(response).get("data").get(0).get("tradeId").asLong();
+
+		// when & then - 원가격 초과 가격으로 수정 시도
+		String updateRequest = """
+			{
+				"price": 150000
+			}
+			""";
+
+		mockMvc.perform(patch("/api/trades/" + tradeId)
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(updateRequest))
+			.andDo(print())
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value(400));
+	}
+
+	@Test
+	@Order(16)
+	@DisplayName("Trade 삭제 성공")
+	void deleteTrade_success() throws Exception {
+		// given - 게시글 생성
+		String createRequest = String.format("""
+			{
+				"ticketIds": [%d],
+				"type": "EXCHANGE",
+				"price": null
+			}
+			""", ticketIds.get(10));
+
+		String response = mockMvc.perform(post("/api/trades")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(createRequest))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		Long tradeId = objectMapper.readTree(response).get("data").get(0).get("tradeId").asLong();
+
+		// when - 삭제
+		mockMvc.perform(delete("/api/trades/" + tradeId)
+				.header("Authorization", "Bearer " + accessToken))
+			.andDo(print())
+			.andExpect(status().isOk());
+
+		// then - 삭제된 게시글은 상태가 CANCELED로 변경됨
+		mockMvc.perform(get("/api/trades/" + tradeId)
+				.header("Authorization", "Bearer " + accessToken))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("CANCELED"));
 	}
 }

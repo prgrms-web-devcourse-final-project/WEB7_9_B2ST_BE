@@ -35,13 +35,13 @@ public class SeatAllocationService {
 	private final TicketService ticketService;
 
 	/**
-	 * 공연 시작 3일전 조회
+	 * 공연 시작 4일 이내인 추첨 공연 조회 - 좌석 배치 미진행
 	 */
 	public List<DrawTargetPerformance> findBookingOpenPerformances() {
-		LocalDateTime startDate = LocalDate.now().plusDays(3).atStartOfDay();
-		LocalDateTime endDate = LocalDate.now().plusDays(3).atTime(23, 59, 59);
+		LocalDateTime today = LocalDate.now().atStartOfDay();
+		LocalDateTime threeDaysLater = LocalDate.now().plusDays(4).atTime(23, 59, 59);
 
-		return performanceScheduleRepository.findByOpenBetween(startDate, endDate);
+		return performanceScheduleRepository.findByOpenBetween(today, threeDaysLater);
 	}
 
 	/**

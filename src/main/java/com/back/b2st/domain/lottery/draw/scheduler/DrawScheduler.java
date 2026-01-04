@@ -23,4 +23,13 @@ public class DrawScheduler {
 			log.error("Error, drawService.executeDraws()", e);
 		}
 	}
+
+	@Scheduled(cron = "${lottery.allocation.cron:0 0 5 * * *}")
+	public void executeAllocation() {
+		try {
+			drawService.executeAllocation();
+		} catch (Exception e) {
+			log.error("Error, drawService.executeAllocation()", e);
+		}
+	}
 }

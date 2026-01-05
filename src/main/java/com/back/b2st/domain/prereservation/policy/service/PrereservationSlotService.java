@@ -22,7 +22,10 @@ public class PrereservationSlotService {
 		validateBookingTimeConfigured(schedule);
 
 		var timeTable = prereservationTimeTableRepository
-			.findByPerformanceScheduleIdAndSectionId(schedule.getPerformanceScheduleId(), section.getId())
+			.findTopByPerformanceScheduleIdAndSectionIdOrderByIdDesc(
+				schedule.getPerformanceScheduleId(),
+				section.getId()
+			)
 			.orElseThrow(() -> new BusinessException(PrereservationErrorCode.TIME_TABLE_NOT_CONFIGURED));
 
 		return new Slot(timeTable.getBookingStartAt(), timeTable.getBookingEndAt());

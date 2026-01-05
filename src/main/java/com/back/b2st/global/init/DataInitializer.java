@@ -161,6 +161,9 @@ public class DataInitializer implements CommandLineRunner {
 
 	// 데이터 생성 1
 	private void initConnectedSet() {
+		// 신청예매 테스트 공연 강제 재생성 (날짜 업데이트를 위해)
+		recreatePrereservePerformance();
+
 		// 중복 생성 방지: 이미 공연장이 있으면 스킵
 		if (venueRepository.count() > 0) {
 			log.info("[DataInit] 이미 데이터 존재하여 초기화 스킵");
@@ -884,6 +887,139 @@ public class DataInitializer implements CommandLineRunner {
 			}).toList();
 
 		return repo.saveAll(lotteryEntries);
+	}
+
+	/**
+	 * 신청예매 테스트 공연 강제 재생성
+	 * - 기존 공연 삭제 후 최신 날짜로 재생성
+	 */
+	private void recreatePrereservePerformance() {
+		// 기존 신청예매 테스트 공연 찾기
+		performanceRepository.findAll().stream()
+			.filter(p -> TEST_PRERESERVE_PLAY_TITLE.equals(p.getTitle()))
+			.forEach(oldPerformance -> {
+				log.info("[DataInit] 기존 신청예매 공연 삭제: ID={}", oldPerformance.getPerformanceId());
+				performanceRepository.delete(oldPerformance);
+			});
+
+		// 공연장이 없으면 신청예매 공연도 생성 불가
+		if (venueRepository.count() == 0) {
+			return;
+		}
+
+		Venue venue = venueRepository.findAll().stream().findFirst().orElse(null);
+		if (venue == null) {
+			return;
+		}
+
+		List<Section> sections = sectionRepository.findByVenueId(venue.getVenueId());
+		if (sections.isEmpty()) {
+			return;
+		}
+
+		// 신청예매 테스트 공연 재생성
+		LocalDateTime prereserveBookingOpenAt = LocalDateTime.now()
+			.withMinute(0)
+			.withSecond(0)
+			.withNano(0);
+		LocalDateTime prereserveStartAtBase = LocalDateTime.now()
+			.withHour(19)
+			.withMinute(0)
+			.withSecond(0)
+			.withNano(0);
+
+		Performance prereservePlay = performanceRepository.save(Performance.builder()
+			.venue(venue)
+			.title(TEST_PRERESERVE_PLAY_TITLE)
+			.category("연극")
+			.posterKey(null)
+			.description("신청예매(사전신청) 기능 테스트용 연극 공연입니다.")
+			.startDate(prereserveStartAtBase)
+			.endDate(prereserveStartAtBase.plusDays(5))
+			.status(PerformanceStatus.ACTIVE)
+			.build());
+
+		log.info("[DataInit] 신청예매 공연 재생성: 날짜={} ~ {}", prereserveStartAtBase.toLocalDate(), prereserveStartAtBase.plusDays(5).toLocalDate());
+
+		// 회차 생성
+		List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 5)
+			.mapToObj(idx -> PerformanceSchedule.builder()
+				.performance(prereservePlay)
+				.startAt(prereserveStartAtBase.plusDays(idx))
+				.roundNo(1 + idx)
+				.bookingType(BookingType.PRERESERVE)
+				.bookingOpenAt(prereserveBookingOpenAt)
+				.bookingCloseAt(LocalDateTime.now().plusDays(30))
+				.build()
+			).toList();
+		performanceScheduleRepository.saveAll(prereserveSchedules);
+
+		log.info("[DataInit] 신청예매 회차 생성: {}개 (1~6회차)", prereserveSchedules.size());
+
+		// 시간표 생성
+		List<PrereservationTimeTable> timeTables = prereserveSchedules.stream()
+			.flatMap(schedule -> IntStream.range(0, sections.size())
+				.mapToObj(idx -> {
+					LocalDateTime bookingOpenAt = schedule.getBookingOpenAt();
+					LocalDateTime startAt = bookingOpenAt.plusHours(idx);
+					LocalDateTime endAt = startAt.plusHours(1).minusSeconds(1);
+
+					LocalDateTime bookingCloseAt = schedule.getBookingCloseAt();
+					if (bookingCloseAt != null && bookingCloseAt.isBefore(endAt)) {
+						endAt = bookingCloseAt;
+					}
+
+					return PrereservationTimeTable.builder()
+						.performanceScheduleId(schedule.getPerformanceScheduleId())
+						.sectionId(sections.get(idx).getId())
+						.bookingStartAt(startAt)
+						.bookingEndAt(endAt)
+						.build();
+				}))
+			.toList();
+		prereservationTimeTableRepository.saveAll(timeTables);
+
+		log.info("[DataInit] 신청예매 시간표 생성: {}개", timeTables.size());
+
+		// 좌석 등급 생성
+		List<Seat> seats = seatRepository.findAll();
+		if (!seats.isEmpty()) {
+			List<SeatGrade> prereserveSeatGrades = IntStream.range(0, seats.size())
+				.mapToObj(idx -> {
+					int seatInSection = idx % 15;
+					int gradeGroup = seatInSection / 5;
+					return SeatGrade.builder()
+						.performanceId(prereservePlay.getPerformanceId())
+						.seatId(seats.get(idx).getId())
+						.grade(switch (gradeGroup) {
+							case 0 -> SeatGradeType.VIP;
+							case 1 -> SeatGradeType.ROYAL;
+							default -> SeatGradeType.STANDARD;
+						})
+						.price(switch (gradeGroup) {
+							case 0 -> 30000;
+							case 1 -> 20000;
+							default -> 10000;
+						})
+						.build();
+				}).toList();
+			seatGradeRepository.saveAll(prereserveSeatGrades);
+
+			// 회차별 좌석 생성
+			List<ScheduleSeat> prereserveScheduleSeats = prereserveSchedules.stream()
+				.flatMap(schedule -> seats.stream()
+					.map(seat -> ScheduleSeat.builder()
+						.scheduleId(schedule.getPerformanceScheduleId())
+						.seatId(seat.getId())
+						.build()))
+				.toList();
+			scheduleSeatRepository.saveAll(prereserveScheduleSeats);
+
+			log.info("[DataInit] 신청예매 좌석 등급 및 회차별 좌석 생성 완료");
+		}
+
+		// 사전 신청 데이터 시드
+		seedPrereservationApplications(prereserveSchedules, sections);
 	}
 
 }

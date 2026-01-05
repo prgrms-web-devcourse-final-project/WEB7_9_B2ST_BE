@@ -217,7 +217,6 @@ public class DataInitializer implements CommandLineRunner {
 				.withSecond(0)
 				.withNano(0);
 			LocalDateTime prereserveStartAtBase = LocalDateTime.now()
-				.minusDays(1)
 				.withHour(19)
 				.withMinute(0)
 				.withSecond(0)
@@ -231,14 +230,14 @@ public class DataInitializer implements CommandLineRunner {
 				.category("연극")
 				.posterKey(null)
 				.description("신청예매(사전신청) 기능 테스트용 연극 공연입니다.")
-				.startDate(prereserveStartAtBase.minusDays(1))
-				.endDate(prereserveStartAtBase.plusDays(7))
+				.startDate(prereserveStartAtBase)
+				.endDate(prereserveStartAtBase.plusDays(5))
 				.status(PerformanceStatus.ACTIVE)
 				.build());
 
-			// 신청예매 테스트용 회차 추가 (1~7회차)
-			// - 예: 오늘이 1/5이면 1/4~1/10까지 선택 가능하도록 구성
-			List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 6)
+			// 신청예매 테스트용 회차 추가 (1~6회차)
+			// - 예: 오늘이 1/5이면 1/5~1/10까지 선택 가능하도록 구성
+			List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 5)
 				.mapToObj(idx -> PerformanceSchedule.builder()
 					.performance(prereservePlay)
 					.startAt(prereserveStartAtBase.plusDays(idx))

@@ -49,8 +49,14 @@ public class SecurityConfig {
 				.requestMatchers("/api/admin/**").hasRole("ADMIN")
 				// 대기열 API - 인증 필요 (로그인 사용자만 접근 가능)
 				.requestMatchers("/api/queues/**").authenticated()
-				// Actuator (health/info만 공개)
-				.requestMatchers("/actuator/health", "/actuator/info","/actuator/scheduledtasks").permitAll()
+				// Actuator (개발/모니터링용)
+				.requestMatchers(
+					"/actuator/health",
+					"/actuator/info",
+					"/actuator/scheduledtasks",
+					"/actuator/circuitbreakers",        // Circuit Breaker 상태
+					"/actuator/circuitbreakerevents"    // Circuit Breaker 이벤트
+				).permitAll()
 				// 인증 필요한 auth 하위 경로 (link, logout)
 				.requestMatchers("/api/auth/link/**", "/api/auth/logout").authenticated()
 				// 공개 경로

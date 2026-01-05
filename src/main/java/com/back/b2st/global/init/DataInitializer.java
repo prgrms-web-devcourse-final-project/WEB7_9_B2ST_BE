@@ -967,7 +967,9 @@ public class DataInitializer implements CommandLineRunner {
 					})
 					.build();
 			})
-			.toList();
+				.
+
+			toList();
 
 		repo.saveAll(grades);
 	}
@@ -1212,16 +1214,19 @@ public class DataInitializer implements CommandLineRunner {
 		List<Seat> seats = createSeats(venue.getVenueId(), sections, 3, 5, seatRepository);
 
 		Performance performance = createPerformance(venue, performanceRepository);
+
+		LocalDateTime now = LocalDateTime.now();
+
 		PerformanceSchedule schedule = performanceScheduleRepository.save(
 			PerformanceSchedule.builder()
 				.performance(performance)
 				.roundNo(1)
 				.bookingType(BookingType.LOTTERY)
-				.bookingOpenAt(LocalDateTime.now().minusDays(3))
+				.bookingOpenAt(now.minusDays(3))
 				.bookingCloseAt(
 					LocalDate.now().minusDays(1).atTime(10, 0) // ✅ 어제
 				)
-				.startAt(LocalDateTime.now().plusDays(10)) // 의미 없음
+				.startAt(now.plusDays(10)) // 의미 없음
 				.build()
 		);
 
@@ -1281,27 +1286,6 @@ public class DataInitializer implements CommandLineRunner {
 	}
 
 	/**
-	 * 좌석 배치용 회차 생성 (4일 후 시작, 추첨 완료)
-	 */
-	public static PerformanceSchedule createScheduleForSeatAllocation(
-		Performance performance,
-		PerformanceScheduleRepository repo
-	) {
-		LocalDateTime now = LocalDateTime.now();
-
-		return repo.save(
-			PerformanceSchedule.builder()
-				.performance(performance)
-				.roundNo(1)
-				.startAt(now.plusDays(4))  // 4일 후 시작
-				.bookingType(BookingType.LOTTERY)
-				.bookingOpenAt(now.minusDays(5))
-				.bookingCloseAt(now.minusDays(3))
-				.build()
-		);
-	}
-
-	/**
 	 * 특정 회차에 대한 ScheduleSeat 생성
 	 */
 	public static List<ScheduleSeat> createScheduleSeatsForSchedule(
@@ -1318,4 +1302,5 @@ public class DataInitializer implements CommandLineRunner {
 				.toList()
 		);
 	}
+
 }

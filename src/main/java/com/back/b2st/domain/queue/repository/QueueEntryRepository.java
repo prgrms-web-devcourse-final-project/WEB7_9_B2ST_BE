@@ -25,26 +25,40 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 
 	List<QueueEntry> findAllByStatus(QueueEntryStatus status);
 
+	/* ==================== Circuit Breaker Fallback 메서드 ==================== */
+
+	/**
+	 * Circuit Breaker Fallback: isInEnterable
+	 * Redis 장애 시 DB에서 ENTERABLE 상태 확인
+	 */
+	boolean existsByQueueIdAndUserIdAndStatus(Long queueId, Long userId, QueueEntryStatus status);
+
+	/**
+	 * Circuit Breaker Fallback: getTotalEnterableCount
+	 * Redis 장애 시 DB에서 ENTERABLE 개수 조회
+	 */
+	long countByQueueIdAndStatus(Long queueId, QueueEntryStatus status);
+
 	/* ==================== Statistics ==================== */
 
 	@Query("""
-		SELECT qe.status as status, COUNT(qe) as count
-		FROM QueueEntry qe
-		WHERE qe.queueId = :queueId
-		GROUP BY qe.status
-	""")
+       SELECT qe.status as status, COUNT(qe) as count
+       FROM QueueEntry qe
+       WHERE qe.queueId = :queueId
+       GROUP BY qe.status
+    """)
 	List<QueueEntryStatusCount> countByStatusGrouped(@Param("queueId") Long queueId);
 
 	/* ==================== Cleanup Targets (Batch Read) ==================== */
 
 	@Query("""
-		SELECT qe
-		FROM QueueEntry qe
-		WHERE qe.status = :status
-		  AND qe.expiresAt IS NOT NULL
-		  AND qe.expiresAt <= :now
-		ORDER BY qe.expiresAt ASC
-	""")
+       SELECT qe
+       FROM QueueEntry qe
+       WHERE qe.status = :status
+         AND qe.expiresAt IS NOT NULL
+         AND qe.expiresAt <= :now
+       ORDER BY qe.expiresAt ASC
+    """)
 	List<QueueEntry> findExpiredByStatus(
 		@Param("status") QueueEntryStatus status,
 		@Param("now") LocalDateTime now,
@@ -52,13 +66,13 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 	);
 
 	@Query("""
-		SELECT qe
-		FROM QueueEntry qe
-		WHERE qe.status = :status
-		  AND qe.expiresAt IS NOT NULL
-		  AND qe.expiresAt > :now
-		ORDER BY qe.expiresAt ASC
-	""")
+       SELECT qe
+       FROM QueueEntry qe
+       WHERE qe.status = :status
+         AND qe.expiresAt IS NOT NULL
+         AND qe.expiresAt > :now
+       ORDER BY qe.expiresAt ASC
+    """)
 	List<QueueEntry> findNonExpiredByStatus(
 		@Param("status") QueueEntryStatus status,
 		@Param("now") LocalDateTime now,
@@ -68,14 +82,14 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 	/* ==================== Active Existence ==================== */
 
 	@Query("""
-		SELECT (COUNT(qe) > 0)
-		FROM QueueEntry qe
-		WHERE qe.queueId = :queueId
-		  AND qe.userId = :userId
-		  AND qe.status = :status
-		  AND qe.expiresAt IS NOT NULL
-		  AND qe.expiresAt > :now
-	""")
+       SELECT (COUNT(qe) > 0)
+       FROM QueueEntry qe
+       WHERE qe.queueId = :queueId
+         AND qe.userId = :userId
+         AND qe.status = :status
+         AND qe.expiresAt IS NOT NULL
+         AND qe.expiresAt > :now
+    """)
 	boolean existsActive(
 		@Param("queueId") Long queueId,
 		@Param("userId") Long userId,
@@ -87,12 +101,12 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("""
-		UPDATE QueueEntry qe
-		SET qe.status = :toStatus
-		WHERE qe.queueId = :queueId
-		  AND qe.userId IN :userIds
-		  AND qe.status = :fromStatus
-	""")
+       UPDATE QueueEntry qe
+       SET qe.status = :toStatus
+       WHERE qe.queueId = :queueId
+         AND qe.userId IN :userIds
+         AND qe.status = :fromStatus
+    """)
 	int bulkUpdateStatus(
 		@Param("queueId") Long queueId,
 		@Param("userIds") List<Long> userIds,

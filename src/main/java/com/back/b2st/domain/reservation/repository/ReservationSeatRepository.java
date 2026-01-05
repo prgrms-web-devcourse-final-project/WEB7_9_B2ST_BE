@@ -14,4 +14,6 @@ public interface ReservationSeatRepository
 	List<ReservationSeat> findByReservationId(Long reservationId);
 
 	boolean existsByReservationId(Long reservationId);
+
+	int countByReservationId(Long reservationId);
 }

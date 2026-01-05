@@ -92,11 +92,6 @@ public class Reservation extends BaseEntity {
 
 	/** === 임시 호환 코드 === */
 	@Deprecated
-	@Column(name = "seat_id")
-	// TODO: ReservationSeat 전환 완료 후 제거 예정
-	private Long seatId;    // 좌석 FK
-
-	@Deprecated
 	public static class ReservationBuilder {
 
 		public ReservationBuilder performanceId(Long performanceId) {

@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.back.b2st.domain.auth.dto.response.LoginEvent;
 import com.back.b2st.domain.auth.entity.LoginLog;
 import com.back.b2st.domain.auth.repository.LoginLogRepository;
+import com.back.b2st.domain.auth.service.SecurityThreatDetectionService;
+import com.back.b2st.global.alert.AlertService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 public class LoginEventListener {
 
 	private final LoginLogRepository loginLogRepository;
+	private final SecurityThreatDetectionService threatDetectionService;
+	private final AlertService alertService;
 
 	/**
 	 * 로그인 이벤트 처리
@@ -49,6 +53,13 @@ public class LoginEventListener {
 				.build();
 
 			loginLogRepository.save(loginLog);
+
+			// 실패한 로그인에 대해 보안 위협 탐지
+			if (!event.isSuccess()) {
+				threatDetectionService.detectThreatForIp(event.clientIp())
+					.ifPresent(alertService::sendSecurityAlert);
+			}
+
 			log.info("로그인 로그 저장 완료: email={}, success={}, ip={}",
 				maskEmail(event.email()), event.isSuccess(), event.clientIp());
 		} catch (Exception e) {

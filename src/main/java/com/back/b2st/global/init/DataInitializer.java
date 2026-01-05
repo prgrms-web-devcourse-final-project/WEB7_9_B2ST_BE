@@ -161,7 +161,7 @@ public class DataInitializer implements CommandLineRunner {
 
 	// 데이터 생성 1
 	private void initConnectedSet() {
-		// 신청예매 테스트 공연 강제 재생성 (날짜 업데이트를 위해)
+		// 신청예매 테스트 공연 강제 재생성 (1/6, 1/7 사전 신청 제외 적용)
 		recreatePrereservePerformance();
 
 		// 중복 생성 방지: 이미 공연장이 있으면 스킵
@@ -574,6 +574,11 @@ public class DataInitializer implements CommandLineRunner {
 		int created = 0;
 
 		for (PerformanceSchedule schedule : prereserveSchedules) {
+			// 1/6(회차2), 1/7(회차3)은 사전 신청 없음
+			if (schedule.getRoundNo() == 2 || schedule.getRoundNo() == 3) {
+				continue;
+			}
+
 			Long scheduleId = schedule.getPerformanceScheduleId();
 			for (var member : members) {
 				for (Section section : sections) {
@@ -595,7 +600,7 @@ public class DataInitializer implements CommandLineRunner {
 		}
 
 		if (created > 0) {
-			log.info("[DataInit/Test] Prereservation applications seeded. created={}", created);
+			log.info("[DataInit/Test] Prereservation applications seeded. created={} (1/6, 1/7 제외)", created);
 		}
 	}
 

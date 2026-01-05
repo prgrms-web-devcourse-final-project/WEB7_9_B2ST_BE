@@ -23,6 +23,7 @@ import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.ticket.service.TicketService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,9 +35,12 @@ class ReservationServiceTest {
 	@Mock
 	private ReservationSeatManager reservationSeatManager;
 
+	@Mock
+	private TicketService ticketService;
+
 	@InjectMocks
 	private ReservationService reservationService;
-
+	
 	private static final Long MEMBER_ID = 1L;
 	private static final Long OTHER_MEMBER_ID = 999L;
 	private static final Long RESERVATION_ID = 10L;
@@ -131,7 +135,7 @@ class ReservationServiceTest {
 	}
 
 	@Test
-	@DisplayName("cancelReservation(): 정상 취소 시 좌석 해제")
+	@DisplayName("cancelReservation(): 정상 취소 시 티켓 취소 + 예매 상태 변경 + 좌석 강제 해제")
 	void cancelReservation_success() {
 		// given
 		Reservation reservation = mock(Reservation.class);
@@ -139,17 +143,22 @@ class ReservationServiceTest {
 		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
 			.thenReturn(Optional.of(reservation));
 		when(reservation.getMemberId()).thenReturn(MEMBER_ID);
-		when(reservation.getStatus()).thenReturn(ReservationStatus.PENDING);
+		when(reservation.getStatus()).thenReturn(ReservationStatus.PENDING); // canCancel() = true
 
 		// when
 		reservationService.cancelReservation(RESERVATION_ID, MEMBER_ID);
 
 		// then
-		ArgumentCaptor<LocalDateTime> captor =
-			ArgumentCaptor.forClass(LocalDateTime.class);
+		ArgumentCaptor<LocalDateTime> captor = ArgumentCaptor.forClass(LocalDateTime.class);
 
+		// 1) 티켓 취소 호출
+		verify(ticketService).cancelTicketsByReservation(RESERVATION_ID, MEMBER_ID);
+
+		// 2) 예매 취소(시간 인자 포함)
 		verify(reservation).cancel(captor.capture());
-		verify(reservationSeatManager).releaseAllSeats(RESERVATION_ID);
+
+		// 3) 좌석 강제 해제 (서비스 코드와 메서드명 일치)
+		verify(reservationSeatManager).releaseForceAllSeats(RESERVATION_ID);
 	}
 
 	@Test

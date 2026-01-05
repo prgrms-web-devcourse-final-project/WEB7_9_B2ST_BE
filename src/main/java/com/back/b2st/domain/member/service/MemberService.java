@@ -97,23 +97,29 @@ public class MemberService {
 
 	/**
 	 * 회원 탈퇴 처리 - Soft Delete + Redis 토큰 삭제 + 환불 계좌 삭제 + 마스킹 로그
+	 * - 일반 회원(EMAIL): 비밀번호 검증 필수
+	 * - 소셜 회원(KAKAO): 비밀번호 검증 생략 (JWT로 본인 확인 완료)
 	 *
 	 * @param memberId 회원 ID
-	 * @param request  탈퇴 요청 정보 (비밀번호)
+	 * @param request  탈퇴 요청 정보 (비밀번호 - 일반회원만 필수)
 	 */
 	@Transactional
 	public void withdraw(Long memberId, WithdrawReq request) {
 		Member member = validateMember(memberId);
-
 		validateNotWithdrawn(member);
-		validateCurrentPassword(request.password(), member);
+
+		// 일반 회원(EMAIL)은 비밀번호 검증 필수
+		if (member.getProvider() == Member.Provider.EMAIL) {
+			validatePasswordForWithdraw(request.password(), member);
+		}
+		// 소셜 회원(KAKAO)은 JWT 인증으로 본인 확인 완료되어 비밀번호 검증 생략
 
 		refreshTokenRepository.deleteById(member.getEmail());
 		refundAccountRepository.findByMember(member).ifPresent(refundAccountRepository::delete);
 
 		member.softDelete();
 
-		log.info("회원 탈퇴 처리 완료: MemberID={}, Email={}", memberId, maskEmail(member.getEmail()));
+		log.info("회원 탈퇴 처리 완료: MemberID={}, Provider={}", memberId, member.getProvider());
 	}
 
 	// 밑으로 validate 모음
@@ -149,5 +155,12 @@ public class MemberService {
 		if (member.isDeleted()) {
 			throw new BusinessException(MemberErrorCode.ALREADY_WITHDRAWN);
 		}
+	}
+
+	private void validatePasswordForWithdraw(String password, Member member) {
+		if (password == null || password.isBlank()) {
+			throw new BusinessException(MemberErrorCode.PASSWORD_REQUIRED);
+		}
+		validateCurrentPassword(password, member);
 	}
 }

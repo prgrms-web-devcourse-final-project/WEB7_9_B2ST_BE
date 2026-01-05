@@ -23,7 +23,8 @@ public enum MemberErrorCode implements ErrorCode {
 	// 환불 계좌
 	REFUND_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "M406", "등록된 환불 계좌가 없습니다."),
 	// 회원 탈퇴
-	ALREADY_WITHDRAWN(HttpStatus.BAD_REQUEST, "M407", "이미 탈퇴한 회원입니다.");
+	ALREADY_WITHDRAWN(HttpStatus.BAD_REQUEST, "M407", "이미 탈퇴한 회원입니다."),
+	PASSWORD_REQUIRED(HttpStatus.BAD_REQUEST, "M409", "비밀번호를 입력해주세요.");
 
 	private final HttpStatus status;
 	private final String code;

@@ -17,7 +17,7 @@ public enum ReservationStatus {
 	}
 
 	public boolean canCancel() {
-		return this == PENDING;
+		return this == PENDING || this == COMPLETED;
 	}
 
 	public boolean canExpire() {

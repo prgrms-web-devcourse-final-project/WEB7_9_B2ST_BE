@@ -72,6 +72,12 @@ public class ScheduleSeatStateService {
 	}
 
 	@Transactional
+	public void releaseForceHold(Long scheduleId, Long seatId) {
+		forceToAvailable(scheduleId, seatId);
+		seatHoldTokenService.remove(scheduleId, seatId);
+	}
+
+	@Transactional
 	public void confirmHold(Long scheduleId, Long seatId) {
 		changeToSold(scheduleId, seatId);
 		seatHoldTokenService.remove(scheduleId, seatId);

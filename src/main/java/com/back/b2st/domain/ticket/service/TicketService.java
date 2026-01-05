@@ -142,4 +142,25 @@ public class TicketService {
 			})
 			.collect(Collectors.toList());
 	}
+
+	@Transactional
+	public void cancelTicketsByReservation(Long reservationId, Long memberId) {
+
+		List<Ticket> tickets =
+			ticketRepository.findAllByReservationIdAndMemberId(reservationId, memberId);
+
+		if (tickets.isEmpty()) {
+			return;
+		}
+
+		for (Ticket ticket : tickets) {
+			switch (ticket.getStatus()) {
+				case ISSUED -> ticket.cancel();
+				case CANCELED -> {
+				}
+				default -> throw new BusinessException(TicketErrorCode.TICKET_NOT_CANCELABLE);
+			}
+		}
+	}
+
 }

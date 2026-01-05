@@ -20,15 +20,11 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Service
 @Slf4j
-public non-sealed class SlackAlertService implements AlertService {
+public class SlackAlertService implements AlertService {
 
 	// 심각도별 이모지 매핑
-	private static final Map<SeverityLevel, String> SEVERITY_EMOJIS = Map.of(
-		SeverityLevel.LOW, "🟢",
-		SeverityLevel.MEDIUM, "🟡",
-		SeverityLevel.HIGH, "🟠",
-		SeverityLevel.CRITICAL, "🔴"
-	);
+	private static final Map<SeverityLevel, String> SEVERITY_EMOJIS = Map.of(SeverityLevel.LOW, "🟢",
+		SeverityLevel.MEDIUM, "🟡", SeverityLevel.HIGH, "🟠", SeverityLevel.CRITICAL, "🔴");
 
 	private final RestClient restClient;
 	private final boolean enabled;
@@ -37,10 +33,8 @@ public non-sealed class SlackAlertService implements AlertService {
 	/**
 	 * 생성자 - 설정 값 주입
 	 */
-	public SlackAlertService(
-		@Value("${alert.enabled:false}") boolean enabled,
-		@Value("${alert.slack.webhook-url:}") String webhookUrl
-	) {
+	public SlackAlertService(@Value("${alert.enabled:false}") boolean enabled,
+		@Value("${alert.slack.webhook-url:}") String webhookUrl) {
 		this.enabled = enabled;
 		this.webhookUrl = webhookUrl;
 		this.restClient = RestClient.builder().build();

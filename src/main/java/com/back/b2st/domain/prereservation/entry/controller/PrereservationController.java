@@ -16,6 +16,8 @@ import com.back.b2st.domain.prereservation.entry.service.PrereservationApplyServ
 import com.back.b2st.domain.prereservation.entry.service.PrereservationSectionService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
+import com.back.b2st.global.error.code.CommonErrorCode;
+import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,7 +51,8 @@ public class PrereservationController {
 		@Parameter(hidden = true) @CurrentUser UserPrincipal user,
 		@Valid @RequestBody PrereservationReq request
 	) {
-		prereservationApplyService.apply(scheduleId, user.getId(), user.getEmail(), request.sectionId());
+		Long memberId = requireMemberId(user);
+		prereservationApplyService.apply(scheduleId, memberId, user.getEmail(), request.sectionId());
 		return BaseResponse.created(null);
 	}
 
@@ -67,7 +70,7 @@ public class PrereservationController {
 		@PathVariable Long scheduleId,
 		@Parameter(hidden = true) @CurrentUser UserPrincipal user
 	) {
-		return BaseResponse.success(prereservationSectionService.getSections(scheduleId, user.getId()));
+		return BaseResponse.success(prereservationSectionService.getSections(scheduleId, requireMemberId(user)));
 	}
 
 	@GetMapping("/me")
@@ -80,6 +83,13 @@ public class PrereservationController {
 		@PathVariable Long scheduleId,
 		@Parameter(hidden = true) @CurrentUser UserPrincipal user
 	) {
-		return BaseResponse.success(prereservationApplyService.getMyApplications(scheduleId, user.getId()));
+		return BaseResponse.success(prereservationApplyService.getMyApplications(scheduleId, requireMemberId(user)));
+	}
+
+	private Long requireMemberId(UserPrincipal user) {
+		if (user == null) {
+			throw new BusinessException(CommonErrorCode.UNAUTHORIZED);
+		}
+		return user.getId();
 	}
 }

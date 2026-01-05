@@ -8,96 +8,63 @@ import org.springframework.data.redis.core.script.RedisScript;
 /**
  * Redis Lua Script 설정
  *
- * 개발 초기 단계 - 대기열 기능 활성화 시에만 로드
- * application.yml에서 `queue.enabled: true` 설정 필요
+ * ✅ WAITING: ZSET(score=timestampMillis)
+ * ✅ ENTERABLE: ZSET(score=expiresAtSeconds) (SoT)
  */
 @Configuration
 @ConditionalOnProperty(name = "queue.enabled", havingValue = "true", matchIfMissing = false)
 public class RedisScriptConfig {
 
 	/**
-	 * WAITING → ENTERABLE 이동 스크립트
+	 * WAITING → ENTERABLE 이동 스크립트 (원자적 승격 + 상한 게이트)
 	 *
-	 * @return RedisScript<Long>
+	 * KEYS[1]: waitingKey (ZSET)
+	 * KEYS[2]: enterableKey (ZSET, score=expiresAtSeconds)
+	 *
+	 * ARGV[1]: userId
+	 * ARGV[2]: expiresAtSeconds
+	 * ARGV[3]: nowSeconds
+	 * ARGV[4]: maxActiveUsers
+	 *
+	 * Return:
+	 *  1: MOVED
+	 *  0: SKIPPED (WAITING에 없거나 이미 유효 ENTERABLE)
+	 *  2: REJECTED_FULL
 	 */
 	@Bean
 	public RedisScript<Long> moveToEnterableScript() {
 		String script = """
-			-- KEYS[1]: waiting key (ZSET, Hash Tag: {queueId})
-			-- KEYS[2]: enterableToken:{queueId}:{userId} (STRING + TTL, Hash Tag: {queueId})
-			-- KEYS[3]: enterableIndex:{queueId} (ZSET, score=expiresAt, Hash Tag: {queueId})
-			-- ARGV[1]: userId (String)
-			-- ARGV[2]: ttl (seconds, Integer)
-			-- ARGV[3]: expiresAt (timestamp, seconds)
-			
-			--  ZREM 결과 체크: WAITING에 없으면 토큰 발급 안 함 (중복 발급/순서 무시 방지)
-			local removed = redis.call('ZREM', KEYS[1], ARGV[1])
-			if removed == 0 then
-				return 0  -- 이미 처리됨 또는 WAITING에 없음
+			local userId = ARGV[1]
+			local expiresAt = tonumber(ARGV[2])
+			local now = tonumber(ARGV[3])
+			local maxActive = tonumber(ARGV[4])
+
+			-- 0) 이미 ENTERABLE이고 유효하면 idempotent skip
+			local current = redis.call('ZSCORE', KEYS[2], userId)
+			if current and tonumber(current) >= now then
+				return 0
 			end
-			
-			-- 2. 토큰 키 생성 + TTL 설정 (SETEX tokenKey ttl "1")
-			redis.call('SETEX', KEYS[2], ARGV[2], '1')
-			
-			-- 3. 인덱스 ZSET에 추가 (ZADD indexKey expiresAt userId)
-			redis.call('ZADD', KEYS[3], ARGV[3], ARGV[1])
-			
-			return 1  -- 성공
-			""";
 
-		return RedisScript.of(script, Long.class);
-	}
+			-- 1) WAITING에 있는지 확인 + 기존 score 확보(순번 보존)
+			local waitingScore = redis.call('ZSCORE', KEYS[1], userId)
+			if not waitingScore then
+				return 0
+			end
 
-	/**
-	 * 대기열에 사용자 추가 + 카운트 증가 스크립트
-	 *
-	 * @return RedisScript<Long>
-	 */
-	@Bean
-	public RedisScript<Long> addToWaitingWithCountScript() {
-		String script = """
-			-- KEYS[1]: waiting key (ZSET, Hash Tag: {queueId})
-			-- KEYS[2]: count key (STRING, Hash Tag: {queueId})
-			-- ARGV[1]: userId (String)
-			-- ARGV[2]: timestamp (score)
-			
-			-- 클러스터 호환: KEYS[1]과 KEYS[2]는 같은 {queueId} Hash Tag를 포함해야 함
-			-- 예: b2st:prod:queue:{1}:waiting, b2st:prod:queue:{1}:count
-			
-			-- 1. WAITING ZSET에 추가
-			redis.call('ZADD', KEYS[1], ARGV[2], ARGV[1])
-			
-			-- 2. 카운트 증가
-			local count = redis.call('INCR', KEYS[2])
-			
-			return count
-			""";
+			-- 2) ENTERABLE 유효 인원 게이트
+			local activeCount = redis.call('ZCOUNT', KEYS[2], now, '+inf')
+			if activeCount >= maxActive then
+				-- WAITING 유지(순번 유지) - ZREM 하지 않음
+				return 2
+			end
 
-		return RedisScript.of(script, Long.class);
-	}
+			-- 3) 이동 수행
+			redis.call('ZREM', KEYS[1], userId)
+			redis.call('ZADD', KEYS[2], expiresAt, userId)
 
-	/**
-	 * ENTERABLE에서 제거 스크립트
-	 *
-	 * @return RedisScript<Long>
-	 */
-	@Bean
-	public RedisScript<Long> removeFromEnterableScript() {
-		String script = """
-			-- KEYS[1]: enterableToken:{queueId}:{userId} (STRING)
-			-- KEYS[2]: enterableIndex:{queueId} (ZSET)
-			-- ARGV[1]: userId (String)
-			
-			-- 1. 토큰 키 삭제 (DEL tokenKey)
-			redis.call('DEL', KEYS[1])
-			
-			-- 2. 인덱스 ZSET에서 제거 (ZREM indexKey userId)
-			redis.call('ZREM', KEYS[2], ARGV[1])
-			
 			return 1
 			""";
 
 		return RedisScript.of(script, Long.class);
 	}
 }
-

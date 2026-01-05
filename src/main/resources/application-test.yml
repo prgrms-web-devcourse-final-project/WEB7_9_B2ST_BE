@@ -1,8 +1,4 @@
 spring:
-  config:
-    activate:
-      on-profile: test
-
   ## AWS S3 자동 설정을 제외하여 테스트 시 인증 정보 에러 방지
   autoconfigure:
     exclude:
@@ -103,8 +99,8 @@ logging:
     com.sun.mail: DEBUG
     org.springframework.core.env: DEBUG
 
-    management:
-      health:
-        mail:
-          enabled: false
+management:
+  health:
+    mail:
+      enabled: false
 

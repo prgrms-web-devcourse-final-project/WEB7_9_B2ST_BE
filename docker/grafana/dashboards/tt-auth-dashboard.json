@@ -1,0 +1,22 @@
+# 1. 총 요청/분 (Stat 패널)
+sum(rate(http_server_requests_seconds_count[1m])) * 60
+# 2. 에러율 (Gauge 패널)
+sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m])) * 100
+# 3. 로그인 성공률 (Gauge 패널)
+sum(rate(auth_login_total{result="success"}[5m])) / sum(rate(auth_login_total[5m])) * 100
+# 4. 현재 잠긴 계정 수 (Stat 패널)
+auth_locked_accounts
+# 5. 로그인 시도 추이 (Graph 패널)
+sum by(result) (rate(auth_login_total[5m]))
+# 6. 보안 위협 (Table 패널)
+sum by(type, severity) (increase(security_threat_detected_total[1h]))
+# 7. P99 응답 시간 (Graph 패널)
+histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, uri))
+# 8. JVM 힙 메모리 (Graph 패널)
+jvm_memory_used_bytes{area="heap"} / 1024 / 1024
+# 9. DB 커넥션 풀 (Graph 패널)
+hikaricp_connections_active
+hikaricp_connections_idle
+hikaricp_connections_pending
+# 10. Redis 메모리 사용량 (Graph 패널)
+redis_memory_used_bytes / 1024 / 1024

@@ -15,6 +15,7 @@ import com.back.b2st.domain.member.dto.request.WithdrawReq;
 import com.back.b2st.domain.member.dto.response.MyInfoRes;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.error.MemberErrorCode;
+import com.back.b2st.domain.member.metrics.MemberMetrics;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.member.repository.RefundAccountRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -33,6 +34,7 @@ public class MemberService {
 	private final RefundAccountRepository refundAccountRepository;
 	private final SignupRateLimitService signupRateLimitService;
 	private final ApplicationEventPublisher eventPublisher;
+	private final MemberMetrics memberMetrics;
 
 	/**
 	 * 회원가입 처리 - 이메일 중복 검사 + BCrypt 암호화 + 기본 Role 설정 + 개인정보 마스킹 로그 + 감사 로그
@@ -62,8 +64,8 @@ public class MemberService {
 		// async 저장
 		eventPublisher.publishEvent(SignupEvent.of(saved.getEmail(), clientIp));
 
+		memberMetrics.recordSignup();
 		log.info("새로운 회원 가입: ID={}, Email={}, IP={}", member.getId(), maskEmail(member.getEmail()), clientIp);
-
 		return saved.getId();
 	}
 
@@ -92,6 +94,7 @@ public class MemberService {
 		validatePasswordChange(request, member);
 
 		member.updatePassword(passwordEncoder.encode(request.newPassword()));
+		memberMetrics.recordPasswordChange();
 		log.info("비밀번호 변경 완료: MemberID={}", memberId);
 	}
 
@@ -113,6 +116,7 @@ public class MemberService {
 
 		member.softDelete();
 
+		memberMetrics.recordWithdraw();
 		log.info("회원 탈퇴 처리 완료: MemberID={}, Email={}", memberId, maskEmail(member.getEmail()));
 	}
 

@@ -1,45 +1,35 @@
 spring:
   profiles:
-    active: dev
-
-  application:
-    name: b2st
+    active: dev # 나중에 배포할 때는 수정해야 할 부분
 
   datasource:
     url: jdbc:postgresql://localhost:5432/tt_db
-    username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD:postgres}
+    username: ${POSTGRES_USER}   # .env 값 참조
+    password: ${POSTGRES_PASSWORD} # .env 값 참조
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
+      # 운영/배치 때는 validate로 변경 필요
       ddl-auto: create
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        # show_sql: true # 로깅 설정으로 대체하여 주석 처리
 
   data:
     redis:
-      mode: ${REDIS_MODE:cluster}
       host: localhost
       port: 6379
-      password: ${REDIS_PASSWORD:}
-      timeout: 3000ms
-      cluster:
-        nodes: ${REDIS_CLUSTER_NODES:localhost:7000,localhost:7001,localhost:7002,localhost:7003,localhost:7004,localhost:7005}
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 2
+      # .env 값
+      password: ${REDIS_PASSWORD}
 
-  # ==================== MAIL 설정 (기본값 추가!) ====================
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:dummy@example.com}
-    password: ${MAIL_PASSWORD:dummy}
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -59,16 +49,16 @@ alert:
 
 app:
   mail:
-    from-address: ${MAIL_FROM_ADDRESS:noreply@b2st.com}
-    from-name: ${MAIL_FROM_NAME:B2ST TT}
+    from-address: ${MAIL_FROM_ADDRESS}
+    from-name: ${MAIL_FROM_NAME}
     verification:
       expire-minutes: 5
       code-length: 6
 
 oauth:
   kakao:
-    client-id: ${KAKAO_CLIENT_ID:dummy}
-    client-secret: ${KAKAO_CLIENT_SECRET:dummy}
+    client-id: ${KAKAO_CLIENT_ID}
+    client-secret: ${KAKAO_CLIENT_SECRET}
     redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/api/auth/kakao/callback}
     token-uri: https://kauth.kakao.com/oauth/token
     user-info-uri: https://kapi.kakao.com/v2/user/me
@@ -77,41 +67,38 @@ oauth:
     default-nickname: 카카오사용자
 
 jwt:
-  secret: ${JWT_SECRET:c2VjcmV0LWtleS1mb3ItYjJzdC1wcm9qZWN0LXR0LXNlcnZpY2UtbXVzdC1iZS1sb25nLWVub3VnaA==}
+  # .env 값
+  secret: ${JWT_SECRET}
   access-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
-
-queue:
-  enabled: true
-  scheduler:
-    batch-size: 100
-    fixed-delay: 3000
-    leader-lock:
-      wait-seconds: 3
-  cleanup:
-    expired:
-      fixedDelayMs: 60000
-    enterable:
-      fixedDelayMs: 5000
-    stale:
-      fixedDelayMs: 60000
-      enabled: false
-  test:
-    enabled: false
 
 logging:
   level:
     org.hibernate.SQL: debug
+    # 쿼리 파라미터바인딩(?에 뭐 들어가는지) 확인용
     org.hibernate.orm.jdbc.bind: TRACE
-    com.back.b2st.domain.queue: INFO
+    org.springframework.mail: DEBUG
+    com.sun.mail: DEBUG
 
-aws:
-  s3:
-    bucket: local-dummy-bucket
-    region: ap-northeast-2
-    presign-expiration-seconds: 300
-    max-file-size: 10485760
-    allowed-content-types:
-      - image/jpeg
-      - image/png
-      - image/webp
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: tt
+      team: b2st
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 100ms, 500ms, 1s

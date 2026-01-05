@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.auth.error.AuthErrorCode;
+import com.back.b2st.domain.auth.metrics.AuthMetrics;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class LoginSecurityService {
+
+	private final AuthMetrics authMetrics;
 
 	// 세팅 상수
 	private static final int MAX_ATTEMPTS = 5; // 최대 로그인 시도 횟수
@@ -93,6 +96,7 @@ public class LoginSecurityService {
 		// 최대 시도 초과 시 계정 잠금
 		if (attempts >= MAX_ATTEMPTS) {
 			lockAccount(email);
+			authMetrics.recordAccountLock();
 			// 내부 로그에만 잠금 정보 기록
 			log.warn("🔒 계정 잠금 발생: email={}, IP={}, 잠금시간={}분", maskEmail(email), clientIp,
 				LOCKOUT_DURATION.toMinutes());

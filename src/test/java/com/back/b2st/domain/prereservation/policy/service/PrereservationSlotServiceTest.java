@@ -60,7 +60,7 @@ class PrereservationSlotServiceTest {
 		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.of(2025, 1, 1, 14, 0));
 		given(section.getId()).willReturn(SECTION_ID);
 
-		given(prereservationTimeTableRepository.findByPerformanceScheduleIdAndSectionId(
+		given(prereservationTimeTableRepository.findTopByPerformanceScheduleIdAndSectionIdOrderByIdDesc(
 			SCHEDULE_ID, SECTION_ID
 		)).willReturn(Optional.empty());
 
@@ -88,7 +88,7 @@ class PrereservationSlotServiceTest {
 		given(schedule.getBookingOpenAt()).willReturn(bookingStartAt);
 		given(section.getId()).willReturn(SECTION_ID);
 
-		given(prereservationTimeTableRepository.findByPerformanceScheduleIdAndSectionId(
+		given(prereservationTimeTableRepository.findTopByPerformanceScheduleIdAndSectionIdOrderByIdDesc(
 			SCHEDULE_ID, SECTION_ID
 		)).willReturn(Optional.of(timeTable));
 

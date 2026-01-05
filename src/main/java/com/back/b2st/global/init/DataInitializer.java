@@ -18,6 +18,7 @@ import com.back.b2st.domain.prereservation.policy.entity.PrereservationTimeTable
 import com.back.b2st.domain.prereservation.policy.repository.PrereservationTimeTableRepository;
 import com.back.b2st.domain.prereservation.entry.entity.Prereservation;
 import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
+import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
@@ -78,6 +79,7 @@ public class DataInitializer implements CommandLineRunner {
 	private final LotteryEntryRepository lotteryEntryRepository;
 	private final PrereservationTimeTableRepository prereservationTimeTableRepository;
 	private final PrereservationRepository prereservationRepository;
+	private final PrereservationBookingRepository prereservationBookingRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -161,7 +163,7 @@ public class DataInitializer implements CommandLineRunner {
 
 	// 데이터 생성 1
 	private void initConnectedSet() {
-		// 신청예매 테스트 공연 강제 재생성 (1/6, 1/7 사전 신청 제외 적용)
+		// 신청예매 테스트 공연은 init 정책이 바뀐 경우에만 1회성으로 재생성
 		recreatePrereservePerformance();
 
 		// 중복 생성 방지: 이미 공연장이 있으면 스킵
@@ -212,18 +214,21 @@ public class DataInitializer implements CommandLineRunner {
 			performanceSchedule = schedules.getFirst();
 			performanceSchedule2 = schedules.get(1);
 
-			// 신청 기간: bookingOpenAt 1일 전 ~ bookingOpenAt 직전
-			// 테스트 편의를 위해 "지금 바로 HOLD/결제까지" 가능한 상태가 되도록 bookingOpenAt을 현재 시각(시 단위)으로 설정
-			// - 사전 신청 기간은 이미 지났으므로, 아래에서 테스트 계정에 대해 사전 신청 데이터를 미리 시드한다.
-			LocalDateTime prereserveBookingOpenAt = LocalDateTime.now()
-				.withMinute(0)
-				.withSecond(0)
-				.withNano(0);
-			LocalDateTime prereserveStartAtBase = LocalDateTime.now()
-				.withHour(19)
-				.withMinute(0)
-				.withSecond(0)
-				.withNano(0);
+				// 신청예매(PRERESERVE) 테스트 시간 세팅
+				// - 사전 신청: now < bookingOpenAt 이어야 신청 가능
+				// - 실제 예매(HOLD/booking): now >= bookingOpenAt 이어야 진행 가능
+				// 같은 회차에서 둘을 동시에 테스트할 수 없어서, 회차별로 bookingOpenAt을 다르게 세팅한다.
+				LocalDateTime nowHour = LocalDateTime.now()
+					.withMinute(0)
+					.withSecond(0)
+					.withNano(0);
+				LocalDateTime bookingOpenAtForHold = nowHour;          // 오픈됨 → HOLD/예매 테스트용
+				LocalDateTime bookingOpenAtForApply = nowHour.plusHours(24); // 오픈 전 → 사전 신청 테스트용
+				LocalDateTime prereserveStartAtBase = LocalDateTime.now()
+					.withHour(19)
+					.withMinute(0)
+					.withSecond(0)
+					.withNano(0);
 
 			// 신청예매 테스트 전용 공연(연극) 추가: 기존(1~24회차) 데이터와 겹치지 않게 별도 공연으로 분리
 			// 구성은 기존 콘서트 데이터와 동일하게 맞추되(venue/필수 필드), 내용만 다르게 한다.
@@ -240,17 +245,19 @@ public class DataInitializer implements CommandLineRunner {
 
 			// 신청예매 테스트용 회차 추가 (1~6회차)
 			// - 예: 오늘이 1/5이면 1/5~1/10까지 선택 가능하도록 구성
-			List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 5)
-				.mapToObj(idx -> PerformanceSchedule.builder()
-					.performance(prereservePlay)
-					.startAt(prereserveStartAtBase.plusDays(idx))
-					.roundNo(1 + idx)
-					.bookingType(BookingType.PRERESERVE)
-					.bookingOpenAt(prereserveBookingOpenAt)
-					.bookingCloseAt(LocalDateTime.now().plusDays(30))
-					.build()
-				).toList();
-			performanceScheduleRepository.saveAll(prereserveSchedules);
+				List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 5)
+					.mapToObj(idx -> PerformanceSchedule.builder()
+						.performance(prereservePlay)
+						.startAt(prereserveStartAtBase.plusDays(idx))
+						.roundNo(1 + idx)
+						.bookingType(BookingType.PRERESERVE)
+						// - 1~2회차: 예매 오픈(=HOLD 가능)
+						// - 3~6회차: 사전 신청 가능(예매 오픈 전)
+						.bookingOpenAt(idx < 2 ? bookingOpenAtForHold : bookingOpenAtForApply)
+						.bookingCloseAt(LocalDateTime.now().plusDays(30))
+						.build()
+					).toList();
+				performanceScheduleRepository.saveAll(prereserveSchedules);
 
 		// 구역 생성
 		sectionA = sectionRepository.save(Section.builder().venueId(venueId).sectionName("A").build());
@@ -289,8 +296,10 @@ public class DataInitializer implements CommandLineRunner {
 		prereservationTimeTableRepository.saveAll(timeTables);
 		log.info("[DataInit/Test] Prereservation time tables initialized. count={}", timeTables.size());
 
-		// 신청예매 테스트용 사전 신청 시드(user1/user2): 예매 오픈 이후(HOLD) 테스트를 바로 진행할 수 있도록 사전 신청 데이터를 미리 생성
-		seedPrereservationApplications(prereserveSchedules, sections);
+			// 신청예매 테스트용 사전 신청 시드(user1/user2)
+			// - 예매 오픈된 회차(HOLD 테스트용)에 한해서만 미리 신청을 만들어 둔다.
+			// - 사전 신청 테스트용 회차는 프론트에서 직접 신청 → 신청 성공/실패 케이스를 확인할 수 있도록 비워둔다.
+			seedPrereservationApplications(prereserveSchedules, sections);
 
 		// 모든 구역의 좌석 생성
 		List<Seat> seats = sections.stream()
@@ -573,9 +582,10 @@ public class DataInitializer implements CommandLineRunner {
 		var members = java.util.List.of(user1, user2).stream().filter(java.util.Objects::nonNull).toList();
 		int created = 0;
 
+		LocalDateTime now = LocalDateTime.now();
 		for (PerformanceSchedule schedule : prereserveSchedules) {
-			// 1/6(회차2), 1/7(회차3)은 사전 신청 없음
-			if (schedule.getRoundNo() == 2 || schedule.getRoundNo() == 3) {
+			// 예매 오픈 전(사전 신청 테스트용) 회차는 미리 신청을 생성하지 않는다.
+			if (now.isBefore(schedule.getBookingOpenAt())) {
 				continue;
 			}
 
@@ -600,7 +610,7 @@ public class DataInitializer implements CommandLineRunner {
 		}
 
 		if (created > 0) {
-			log.info("[DataInit/Test] Prereservation applications seeded. created={} (1/6, 1/7 제외)", created);
+			log.info("[DataInit/Test] Prereservation applications seeded. created={}", created);
 		}
 	}
 
@@ -895,17 +905,37 @@ public class DataInitializer implements CommandLineRunner {
 	}
 
 	/**
-	 * 신청예매 테스트 공연 강제 재생성
-	 * - 기존 공연 삭제 후 최신 날짜로 재생성
+	 * 신청예매 테스트 공연 재생성(필요 시)
+	 * - 기존 데이터가 현재 init 정책과 불일치하면 관련 데이터 정리 후 재생성
+	 * - 이미 정책에 맞게 생성되어 있으면 유지(매 실행마다 삭제하지 않음)
 	 */
 	private void recreatePrereservePerformance() {
-		// 기존 신청예매 테스트 공연 찾기
-		performanceRepository.findAll().stream()
+		List<Performance> candidates = performanceRepository.findAll().stream()
 			.filter(p -> TEST_PRERESERVE_PLAY_TITLE.equals(p.getTitle()))
-			.forEach(oldPerformance -> {
-				log.info("[DataInit] 기존 신청예매 공연 삭제: ID={}", oldPerformance.getPerformanceId());
-				performanceRepository.delete(oldPerformance);
-			});
+			.toList();
+
+		Performance keep = candidates.stream()
+			.filter(p -> isPrereservePerformanceCompatible(p.getPerformanceId()))
+			.findFirst()
+			.orElse(null);
+
+		if (keep != null) {
+			for (Performance p : candidates) {
+				if (p.getPerformanceId().equals(keep.getPerformanceId())) {
+					continue;
+				}
+				log.info("[DataInit] 중복 신청예매 공연 삭제: ID={}", p.getPerformanceId());
+				deletePrereserveRelatedData(p.getPerformanceId());
+				performanceRepository.delete(p);
+			}
+			return;
+		}
+
+		for (Performance oldPerformance : candidates) {
+			log.info("[DataInit] 기존 신청예매 공연 삭제(정책 불일치): ID={}", oldPerformance.getPerformanceId());
+			deletePrereserveRelatedData(oldPerformance.getPerformanceId());
+			performanceRepository.delete(oldPerformance);
+		}
 
 		// 공연장이 없으면 신청예매 공연도 생성 불가
 		if (venueRepository.count() == 0) {
@@ -922,15 +952,19 @@ public class DataInitializer implements CommandLineRunner {
 			return;
 		}
 
-		// 신청예매 테스트 공연 재생성
-		LocalDateTime prereserveBookingOpenAt = LocalDateTime.now()
-			.withMinute(0)
-			.withSecond(0)
-			.withNano(0);
-		LocalDateTime prereserveStartAtBase = LocalDateTime.now()
-			.withHour(19)
-			.withMinute(0)
-			.withSecond(0)
+			// 신청예매(PRERESERVE) 테스트 시간 세팅
+			// - 사전 신청: now < bookingOpenAt 이어야 신청 가능
+			// - 실제 예매(HOLD/booking): now >= bookingOpenAt 이어야 진행 가능
+			LocalDateTime nowHour = LocalDateTime.now()
+				.withMinute(0)
+				.withSecond(0)
+				.withNano(0);
+			LocalDateTime bookingOpenAtForHold = nowHour;
+			LocalDateTime bookingOpenAtForApply = nowHour.plusHours(24);
+			LocalDateTime prereserveStartAtBase = LocalDateTime.now()
+				.withHour(19)
+				.withMinute(0)
+				.withSecond(0)
 			.withNano(0);
 
 		Performance prereservePlay = performanceRepository.save(Performance.builder()
@@ -947,16 +981,16 @@ public class DataInitializer implements CommandLineRunner {
 		log.info("[DataInit] 신청예매 공연 재생성: 날짜={} ~ {}", prereserveStartAtBase.toLocalDate(), prereserveStartAtBase.plusDays(5).toLocalDate());
 
 		// 회차 생성
-		List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 5)
-			.mapToObj(idx -> PerformanceSchedule.builder()
-				.performance(prereservePlay)
-				.startAt(prereserveStartAtBase.plusDays(idx))
-				.roundNo(1 + idx)
-				.bookingType(BookingType.PRERESERVE)
-				.bookingOpenAt(prereserveBookingOpenAt)
-				.bookingCloseAt(LocalDateTime.now().plusDays(30))
-				.build()
-			).toList();
+			List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 5)
+				.mapToObj(idx -> PerformanceSchedule.builder()
+					.performance(prereservePlay)
+					.startAt(prereserveStartAtBase.plusDays(idx))
+					.roundNo(1 + idx)
+					.bookingType(BookingType.PRERESERVE)
+					.bookingOpenAt(idx < 2 ? bookingOpenAtForHold : bookingOpenAtForApply)
+					.bookingCloseAt(LocalDateTime.now().plusDays(30))
+					.build()
+				).toList();
 		performanceScheduleRepository.saveAll(prereserveSchedules);
 
 		log.info("[DataInit] 신청예매 회차 생성: {}개 (1~6회차)", prereserveSchedules.size());
@@ -1025,6 +1059,51 @@ public class DataInitializer implements CommandLineRunner {
 
 		// 사전 신청 데이터 시드
 		seedPrereservationApplications(prereserveSchedules, sections);
+	}
+
+	private void deletePrereserveRelatedData(Long performanceId) {
+		try {
+			List<Long> scheduleIds = performanceScheduleRepository
+				.findAllByPerformance_PerformanceIdOrderByStartAtAsc(performanceId)
+				.stream()
+				.map(PerformanceSchedule::getPerformanceScheduleId)
+				.toList();
+
+			if (!scheduleIds.isEmpty()) {
+				prereservationBookingRepository.deleteAllByScheduleIdIn(scheduleIds);
+				scheduleSeatRepository.deleteAllByScheduleIdIn(scheduleIds);
+				prereservationTimeTableRepository.deleteAllByPerformanceScheduleIdIn(scheduleIds);
+				prereservationRepository.deleteAllByPerformanceScheduleIdIn(scheduleIds);
+				performanceScheduleRepository.deleteAllByPerformanceId(performanceId);
+			}
+
+			seatGradeRepository.deleteAllByPerformanceId(performanceId);
+		} catch (Exception e) {
+			log.warn("[DataInit] 신청예매 관련 데이터 정리 실패 - performanceId={}", performanceId, e);
+		}
+	}
+
+	private boolean isPrereservePerformanceCompatible(Long performanceId) {
+		try {
+			List<PerformanceSchedule> schedules =
+				performanceScheduleRepository.findAllByPerformance_PerformanceIdOrderByStartAtAsc(performanceId);
+
+			List<PerformanceSchedule> prereserveSchedules = schedules.stream()
+				.filter(s -> s.getBookingType() == BookingType.PRERESERVE)
+				.toList();
+
+			if (prereserveSchedules.size() != 6) {
+				return false;
+			}
+
+			LocalDateTime now = LocalDateTime.now();
+			long openCount = prereserveSchedules.stream().filter(s -> !now.isBefore(s.getBookingOpenAt())).count();
+			long preOpenCount = prereserveSchedules.stream().filter(s -> now.isBefore(s.getBookingOpenAt())).count();
+
+			return openCount >= 1 && preOpenCount >= 1;
+		} catch (Exception e) {
+			return false;
+		}
 	}
 
 }

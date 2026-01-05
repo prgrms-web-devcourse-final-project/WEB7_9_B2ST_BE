@@ -17,4 +17,6 @@ public interface PrereservationRepository extends JpaRepository<Prereservation, 
 		Long performanceScheduleId,
 		Long memberId
 	);
+
+	void deleteAllByPerformanceScheduleIdIn(List<Long> performanceScheduleIds);
 }

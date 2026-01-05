@@ -1,63 +1,45 @@
 spring:
   profiles:
-    active: dev # 나중에 배포할 때는 수정해야 할 부분
+    active: dev
 
   application:
     name: b2st
 
   datasource:
     url: jdbc:postgresql://localhost:5432/tt_db
-    username: ${POSTGRES_USER}   # .env 값 참조
-    password: ${POSTGRES_PASSWORD} # .env 값 참조
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      # 운영/배치 때는 validate로 변경 필요
       ddl-auto: create
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        # show_sql: true # 로깅 설정으로 대체하여 주석 처리
 
   data:
     redis:
-      # Redis 모드 설정 (single, sentinel, cluster)
       mode: ${REDIS_MODE:cluster}
-
-      # 단일 Redis 모드 설정
       host: localhost
       port: 6379
-      # .env 값
-      password: ${REDIS_PASSWORD}
+      password: ${REDIS_PASSWORD:}
       timeout: 3000ms
-
-      # Redis Sentinel 모드 설정
       cluster:
         nodes: ${REDIS_CLUSTER_NODES:localhost:7000,localhost:7001,localhost:7002,localhost:7003,localhost:7004,localhost:7005}
-
-        # 대규모 트래픽 최적화 설정
-        master-connection-pool-size: ${REDIS_CLUSTER_MASTER_POOL_SIZE:64}
-        slave-connection-pool-size: ${REDIS_CLUSTER_SLAVE_POOL_SIZE:64}
-        master-connection-minimum-idle-size: ${REDIS_CLUSTER_MASTER_MIN_IDLE:10}
-        slave-connection-minimum-idle-size: ${REDIS_CLUSTER_SLAVE_MIN_IDLE:10}
-        scan-interval: ${REDIS_CLUSTER_SCAN_INTERVAL:2000}
-        timeout: ${REDIS_CLUSTER_TIMEOUT:5000}
-        connect-timeout: ${REDIS_CLUSTER_CONNECT_TIMEOUT:10000}
-
-      # Lettuce 연결 풀 설정 (단일 Redis 모드)
       lettuce:
         pool:
           max-active: 8
           max-idle: 8
           min-idle: 2
 
+  # ==================== MAIL 설정 (기본값 추가!) ====================
   mail:
-    host: ${MAIL_HOST}
-    port: ${MAIL_PORT}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:dummy@example.com}
+    password: ${MAIL_PASSWORD:dummy}
     properties:
       mail:
         smtp:
@@ -70,18 +52,23 @@ spring:
           writetimeout: 5000
     default-encoding: UTF-8
 
+alert:
+  enabled: true
+  slack:
+    webhook-url: ${SLACK_WEBHOOK_URL:}
+
 app:
   mail:
-    from-address: ${MAIL_FROM_ADDRESS}
-    from-name: ${MAIL_FROM_NAME}
+    from-address: ${MAIL_FROM_ADDRESS:noreply@b2st.com}
+    from-name: ${MAIL_FROM_NAME:B2ST TT}
     verification:
       expire-minutes: 5
       code-length: 6
 
 oauth:
   kakao:
-    client-id: ${KAKAO_CLIENT_ID}
-    client-secret: ${KAKAO_CLIENT_SECRET}
+    client-id: ${KAKAO_CLIENT_ID:dummy}
+    client-secret: ${KAKAO_CLIENT_SECRET:dummy}
     redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/api/auth/kakao/callback}
     token-uri: https://kauth.kakao.com/oauth/token
     user-info-uri: https://kapi.kakao.com/v2/user/me
@@ -90,44 +77,32 @@ oauth:
     default-nickname: 카카오사용자
 
 jwt:
-  # .env 값
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:c2VjcmV0LWtleS1mb3ItYjJzdC1wcm9qZWN0LXR0LXNlcnZpY2UtbXVzdC1iZS1sb25nLWVub3VnaA==}
   access-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
 
 queue:
   enabled: true
-  default:
-    max-active-users: 200
-    entry-ttl-minutes: 10
   scheduler:
     batch-size: 100
     fixed-delay: 3000
-  sync:
-    enabled: false  # 로컬 테스트에서는 비활성화
-    # - TTL 만료와 DB 만료 배치 사이의 지연은 최대 3분 (sync 주기)
-    # - 그 기간 동안 결제/검증 로직에서는 Redis 토큰을 우선 검증
-    grace-period-minutes: 1  # Redis에 없어도 expiresAt이 지나지 않았으면 대기 시간
-    max-consistency-delay-minutes: 3
-  lua:
-    enabled: true
-    fallback-enabled: true
-  test:
-    enabled: false  # clearAll() 메서드 활성화 (테스트 전용, 운영에서는 false)
+    leader-lock:
+      wait-seconds: 3
   cleanup:
     expired:
-      fixedDelayMs: 60000  # 만료 정리 주기 (기본 60초)
+      fixedDelayMs: 60000
+    enterable:
+      fixedDelayMs: 5000
     stale:
-      fixedDelayMs: 60000  # stale 정리 주기 (기본 60초)
-      enabled: false  # 기본 false 권장 (Redis 안정성 확보 후 true)
+      fixedDelayMs: 60000
+      enabled: false
+  test:
+    enabled: false
 
 logging:
   level:
     org.hibernate.SQL: debug
-    # 쿼리 파라미터바인딩(?에 뭐 들어가는지) 확인용
     org.hibernate.orm.jdbc.bind: TRACE
-    org.springframework.mail: DEBUG
-    com.sun.mail: DEBUG
     com.back.b2st.domain.queue: INFO
 
 aws:

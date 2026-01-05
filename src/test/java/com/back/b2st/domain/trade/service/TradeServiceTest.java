@@ -257,11 +257,11 @@ class TradeServiceTest {
 		given(seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(1L, 1L))
 			.willReturn(Optional.of(seatGrade));
 
-		// when & then
-		assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
-	}
+			// when & then
+			assertThatThrownBy(() -> tradeService.createTrade(request, memberId))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TRANSFER_PRICE_EXCEEDS_ORIGINAL);
+		}
 
 	@Test
 	@DisplayName("티켓 중복 등록 실패")
@@ -487,11 +487,11 @@ class TradeServiceTest {
 		given(seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(1L, 1L))
 			.willReturn(Optional.of(seatGrade));
 
-		// when & then
-		assertThatThrownBy(() -> tradeService.updateTrade(tradeId, request, memberId))
-			.isInstanceOf(BusinessException.class)
-			.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.INVALID_REQUEST);
-	}
+			// when & then
+			assertThatThrownBy(() -> tradeService.updateTrade(tradeId, request, memberId))
+				.isInstanceOf(BusinessException.class)
+				.hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TRANSFER_PRICE_EXCEEDS_ORIGINAL);
+		}
 
 	@Test
 	@DisplayName("존재하지 않는 Trade ID로 수정 실패")

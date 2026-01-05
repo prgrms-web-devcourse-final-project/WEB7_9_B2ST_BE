@@ -11,33 +11,33 @@ public record QueueEntryRes(
 	Long queueId,
 	Long userId,
 	String status,            // WAITING(Redis), ENTERABLE, EXPIRED, COMPLETED
-	Integer myRank,           // 내 순번 (1부터 시작)
-	Integer waitingAhead      // 내 앞에 대기 중인 사람 수
+	Integer aheadCount,      // 내 앞에 대기 중인 사람 수
+	Integer myRank           // 내 순번 (1부터 시작)
 ) {
 
 	/**
 	 * WAITING 상태 응답 (Redis에만 존재)
 	 */
-	public static QueueEntryRes waiting(Long queueId, Long userId, Integer myRank, Integer waitingAhead) {
+	public static QueueEntryRes waiting(Long queueId, Long userId, Integer aheadCount, Integer myRank) {
 		return new QueueEntryRes(
 			queueId,
 			userId,
 			"WAITING",
-			myRank,
-			waitingAhead
+			aheadCount,
+			myRank
 		);
 	}
 
 	/**
 	 * QueueEntry → Response 변환 (DB 저장된 상태)
 	 */
-	public static QueueEntryRes of(QueueEntry entry, Integer myRank, Integer waitingAhead) {
+	public static QueueEntryRes of(QueueEntry entry, Integer aheadCount, Integer myRank) {
 		return new QueueEntryRes(
 			entry.getQueueId(),
 			entry.getUserId(),
 			entry.getStatus().name(),
-			myRank,
-			waitingAhead
+			aheadCount,
+			myRank
 		);
 	}
 

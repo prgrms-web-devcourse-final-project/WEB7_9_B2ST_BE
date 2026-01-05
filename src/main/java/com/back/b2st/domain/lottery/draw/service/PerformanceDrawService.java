@@ -55,7 +55,7 @@ public class PerformanceDrawService {
 	 * @param scheduleId    회차 id
 	 */
 	@Transactional
-	protected void drawForPerformance(Long performanceId, Long scheduleId) {
+	public void drawForPerformance(Long performanceId, Long scheduleId) {
 		// 응모자 목록 가져오기
 		List<LotteryApplicantInfo> entryInfos = lotteryEntryRepository.findAppliedInfoByScheduleId(
 			scheduleId);

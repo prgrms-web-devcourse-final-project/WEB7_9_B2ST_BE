@@ -17,4 +17,6 @@ public interface PrereservationTimeTableRepository extends JpaRepository<Prerese
 	List<PrereservationTimeTable> findAllByPerformanceScheduleIdOrderByBookingStartAtAscSectionIdAsc(
 		Long performanceScheduleId
 	);
+
+	void deleteAllByPerformanceScheduleIdIn(List<Long> performanceScheduleIds);
 }

@@ -9,6 +9,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record QueueEntryRes(
 	Long queueId,
+	Long performanceId,
+	Long scheduleId,         // 프론트 UX용 진입 정보
 	Long userId,
 	String status,            // WAITING(Redis), ENTERABLE, EXPIRED, COMPLETED
 	Integer aheadCount,      // 내 앞에 대기 중인 사람 수
@@ -18,9 +20,11 @@ public record QueueEntryRes(
 	/**
 	 * WAITING 상태 응답 (Redis에만 존재)
 	 */
-	public static QueueEntryRes waiting(Long queueId, Long userId, Integer aheadCount, Integer myRank) {
+	public static QueueEntryRes waiting(Long queueId, Long performanceId, Long scheduleId, Long userId, Integer aheadCount, Integer myRank) {
 		return new QueueEntryRes(
 			queueId,
+			performanceId,
+			scheduleId,
 			userId,
 			"WAITING",
 			aheadCount,
@@ -31,9 +35,11 @@ public record QueueEntryRes(
 	/**
 	 * QueueEntry → Response 변환 (DB 저장된 상태)
 	 */
-	public static QueueEntryRes of(QueueEntry entry, Integer aheadCount, Integer myRank) {
+	public static QueueEntryRes of(QueueEntry entry, Long performanceId, Long scheduleId, Integer aheadCount, Integer myRank) {
 		return new QueueEntryRes(
 			entry.getQueueId(),
+			performanceId,
+			scheduleId,
 			entry.getUserId(),
 			entry.getStatus().name(),
 			aheadCount,
@@ -44,9 +50,11 @@ public record QueueEntryRes(
 	/**
 	 * 간단한 응답 (순번 정보 없음)
 	 */
-	public static QueueEntryRes simple(QueueEntry entry) {
+	public static QueueEntryRes simple(QueueEntry entry, Long performanceId, Long scheduleId) {
 		return new QueueEntryRes(
 			entry.getQueueId(),
+			performanceId,
+			scheduleId,
 			entry.getUserId(),
 			entry.getStatus().name(),
 			null,

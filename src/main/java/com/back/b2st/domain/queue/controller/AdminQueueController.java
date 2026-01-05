@@ -56,14 +56,14 @@ public class AdminQueueController {
 	 */
 	@Operation(
 		summary = "대기열 생성",
-		description = "새로운 대기열을 생성합니다. scheduleId와 queueType 조합은 중복될 수 없습니다."
+		description = "새로운 대기열을 생성합니다. 공연당 큐는 1개만 존재합니다 (UNIQUE 제약: performance_id)."
 	)
 	@PostMapping
 	public BaseResponse<QueueRes> createQueue(
 		@Valid @RequestBody CreateQueueReq request
 	) {
-		log.info("Admin creating queue - scheduleId: {}, queueType: {}",
-			request.scheduleId(), request.queueType());
+		log.info("Admin creating queue - performanceId: {}, queueType: {}",
+			request.performanceId(), request.queueType());
 		QueueRes response = queueManagementService.createQueue(request);
 		return BaseResponse.created(response);
 	}
@@ -71,23 +71,23 @@ public class AdminQueueController {
 	/**
 	 * 대기열 목록 조회 (필터링)
 	 * GET /api/admin/queues - 전체 목록 조회
-	 * GET /api/admin/queues?scheduleId=1 - 회차별 조회
+	 * GET /api/admin/queues?performanceId=1 - 공연별 조회
 	 * GET /api/admin/queues?queueType=BOOKING_ORDER - 타입별 조회
 	 */
 	@Operation(
 		summary = "대기열 목록 조회",
-		description = "전체 대기열 목록을 조회합니다. scheduleId 또는 queueType으로 필터링할 수 있습니다."
+		description = "전체 대기열 목록을 조회합니다. performanceId 또는 queueType으로 필터링할 수 있습니다."
 	)
 	@GetMapping
 	public BaseResponse<List<QueueRes>> getQueues(
-		@Parameter(description = "공연 회차 ID (선택)", example = "1")
-		@RequestParam(required = false) Long scheduleId,
+		@Parameter(description = "공연 ID (선택)", example = "1")
+		@RequestParam(required = false) Long performanceId,
 		@Parameter(description = "대기열 타입 (선택)", example = "BOOKING_ORDER")
 		@RequestParam(required = false) String queueType
 	) {
-		if (scheduleId != null) {
-			log.debug("Admin getting queues by schedule - scheduleId: {}", scheduleId);
-			return BaseResponse.success(queueManagementService.getQueuesBySchedule(scheduleId));
+		if (performanceId != null) {
+			log.debug("Admin getting queues by performance - performanceId: {}", performanceId);
+			return BaseResponse.success(queueManagementService.getQueuesByPerformance(performanceId));
 		}
 
 		if (queueType != null && !queueType.isBlank()) {

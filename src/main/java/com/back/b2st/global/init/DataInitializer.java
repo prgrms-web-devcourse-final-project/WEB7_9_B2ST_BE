@@ -16,6 +16,8 @@ import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.prereservation.policy.entity.PrereservationTimeTable;
 import com.back.b2st.domain.prereservation.policy.repository.PrereservationTimeTableRepository;
+import com.back.b2st.domain.prereservation.entry.entity.Prereservation;
+import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
@@ -75,6 +77,7 @@ public class DataInitializer implements CommandLineRunner {
 	private final TicketRepository ticketRepository;
 	private final LotteryEntryRepository lotteryEntryRepository;
 	private final PrereservationTimeTableRepository prereservationTimeTableRepository;
+	private final PrereservationRepository prereservationRepository;
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -207,15 +210,14 @@ public class DataInitializer implements CommandLineRunner {
 			performanceSchedule2 = schedules.get(1);
 
 			// 신청 기간: bookingOpenAt 1일 전 ~ bookingOpenAt 직전
-			// 테스트 편의를 위해 "오늘/내일" 기준으로 신청 가능 상태가 되도록 bookingOpenAt을 미래(약 +23h)로 설정
+			// 테스트 편의를 위해 "지금 바로 HOLD/결제까지" 가능한 상태가 되도록 bookingOpenAt을 현재 시각(시 단위)으로 설정
+			// - 사전 신청 기간은 이미 지났으므로, 아래에서 테스트 계정에 대해 사전 신청 데이터를 미리 시드한다.
 			LocalDateTime prereserveBookingOpenAt = LocalDateTime.now()
-				.plusDays(1)
-				.minusHours(1)
 				.withMinute(0)
 				.withSecond(0)
 				.withNano(0);
 			LocalDateTime prereserveStartAtBase = LocalDateTime.now()
-				.plusDays(2)
+				.minusDays(1)
 				.withHour(19)
 				.withMinute(0)
 				.withSecond(0)
@@ -230,12 +232,13 @@ public class DataInitializer implements CommandLineRunner {
 				.posterKey(null)
 				.description("신청예매(사전신청) 기능 테스트용 연극 공연입니다.")
 				.startDate(prereserveStartAtBase.minusDays(1))
-				.endDate(prereserveStartAtBase.plusDays(3))
+				.endDate(prereserveStartAtBase.plusDays(7))
 				.status(PerformanceStatus.ACTIVE)
 				.build());
 
-			// 신청예매 테스트용 회차 추가 (1~3회차)
-			List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 2)
+			// 신청예매 테스트용 회차 추가 (1~7회차)
+			// - 예: 오늘이 1/5이면 1/4~1/10까지 선택 가능하도록 구성
+			List<PerformanceSchedule> prereserveSchedules = IntStream.rangeClosed(0, 6)
 				.mapToObj(idx -> PerformanceSchedule.builder()
 					.performance(prereservePlay)
 					.startAt(prereserveStartAtBase.plusDays(idx))
@@ -283,6 +286,9 @@ public class DataInitializer implements CommandLineRunner {
 			.toList();
 		prereservationTimeTableRepository.saveAll(timeTables);
 		log.info("[DataInit/Test] Prereservation time tables initialized. count={}", timeTables.size());
+
+		// 신청예매 테스트용 사전 신청 시드(user1/user2): 예매 오픈 이후(HOLD) 테스트를 바로 진행할 수 있도록 사전 신청 데이터를 미리 생성
+		seedPrereservationApplications(prereserveSchedules, sections);
 
 		// 모든 구역의 좌석 생성
 		List<Seat> seats = sections.stream()
@@ -552,6 +558,42 @@ public class DataInitializer implements CommandLineRunner {
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
 			}
+		}
+	}
+
+	private void seedPrereservationApplications(List<PerformanceSchedule> prereserveSchedules, List<Section> sections) {
+		var user1 = memberRepository.findByEmail("user1@tt.com").orElse(null);
+		var user2 = memberRepository.findByEmail("user2@tt.com").orElse(null);
+		if (user1 == null && user2 == null) {
+			return;
+		}
+
+		var members = java.util.List.of(user1, user2).stream().filter(java.util.Objects::nonNull).toList();
+		int created = 0;
+
+		for (PerformanceSchedule schedule : prereserveSchedules) {
+			Long scheduleId = schedule.getPerformanceScheduleId();
+			for (var member : members) {
+				for (Section section : sections) {
+					if (prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
+						scheduleId, member.getId(), section.getId()
+					)) {
+						continue;
+					}
+					prereservationRepository.save(
+						Prereservation.builder()
+							.performanceScheduleId(scheduleId)
+							.memberId(member.getId())
+							.sectionId(section.getId())
+							.build()
+					);
+					created++;
+				}
+			}
+		}
+
+		if (created > 0) {
+			log.info("[DataInit/Test] Prereservation applications seeded. created={}", created);
 		}
 	}
 

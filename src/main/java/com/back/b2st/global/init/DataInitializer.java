@@ -161,9 +161,6 @@ public class DataInitializer implements CommandLineRunner {
 
 	// 데이터 생성 1
 	private void initConnectedSet() {
-		// 신청예매 테스트 공연 강제 재생성 (날짜 업데이트를 위해)
-		recreatePrereservePerformance();
-
 		// 중복 생성 방지: 이미 공연장이 있으면 스킵
 		if (venueRepository.count() > 0) {
 			log.info("[DataInit] 이미 데이터 존재하여 초기화 스킵");

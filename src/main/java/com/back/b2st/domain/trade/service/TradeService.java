@@ -200,7 +200,7 @@ import lombok.RequiredArgsConstructor;
 				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "좌석 가격 정보가 없습니다."));
 
 			if (price > originalPrice) {
-				throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "양도 가격은 정가 이하만 가능합니다.");
+				throw new BusinessException(TradeErrorCode.TRANSFER_PRICE_EXCEEDS_ORIGINAL);
 			}
 		}
 

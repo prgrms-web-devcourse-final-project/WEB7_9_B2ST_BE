@@ -71,7 +71,7 @@ spring:
     default-encoding: UTF-8
 
 alert:
-  enabled: false
+  enabled: true
   slack:
     webhook-url: ${SLACK_WEBHOOK_URL:}
 

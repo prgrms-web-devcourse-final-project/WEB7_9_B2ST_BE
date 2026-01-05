@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
  * - redisMode=single: 락 없이 실행
  * - redisMode=cluster: 리더 락 획득한 인스턴스만 실행
  *
- * ✅ watchdog 활성화: tryLock(waitTime, unit) (leaseTime 미지정)
+ * watchdog 활성화: tryLock(waitTime, unit) (leaseTime 미지정)
  */
 @Component
 @RequiredArgsConstructor
@@ -44,7 +44,7 @@ public class SchedulerLeaderLockExecutor {
 		RLock lock = redissonClient.getLock(lockKey);
 
 		try {
-			boolean acquired = lock.tryLock(waitSeconds, TimeUnit.SECONDS); // ✅ watchdog ON
+			boolean acquired = lock.tryLock(waitSeconds, TimeUnit.SECONDS); //watchdog ON
 			if (!acquired) {
 				log.debug("Leader lock not acquired - key={}", lockKey);
 				return;

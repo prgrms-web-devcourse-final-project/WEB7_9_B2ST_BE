@@ -46,7 +46,7 @@ public class QueueController {
 		@PathVariable Long queueId,
 		@AuthenticationPrincipal UserPrincipal principal
 	) {
-		// ✅ 방어 코드: Security 설정 실수/예외 케이스 대응
+		// 방어 코드: Security 설정 실수/예외 케이스 대응
 		if (principal == null) {
 			throw new BusinessException(CommonErrorCode.UNAUTHORIZED);
 		}

@@ -39,11 +39,11 @@ import lombok.NoArgsConstructor;
 @Table(
 	name = "queue_entries",
 	indexes = {
-		// cleanup 쿼리용 (필수)
+		// cleanup 쿼리용
 		@Index(name = "idx_queue_entries_status_expires",
 			columnList = "status, expires_at"),
 
-		// 통계 쿼리용 (권장)
+		// 통계 쿼리용
 		@Index(name = "idx_queue_entries_queue_status",
 			columnList = "queue_id, status")
 	},

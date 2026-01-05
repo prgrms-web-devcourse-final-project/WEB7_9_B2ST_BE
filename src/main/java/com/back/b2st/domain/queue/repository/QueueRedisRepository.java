@@ -6,7 +6,7 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Repository;
@@ -35,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 @ConditionalOnProperty(name = "queue.enabled", havingValue = "true", matchIfMissing = false)
 public class QueueRedisRepository {
 
-	private final RedisTemplate<String, Object> redisTemplate;
+	private final StringRedisTemplate stringRedisTemplate;
 
 	/**
 	 * Lua Script: WAITING -> ENTERABLE 원자적 이동 + 상한 제어
@@ -68,18 +68,18 @@ public class QueueRedisRepository {
 
 	public void addToWaitingQueue(Long queueId, Long userId, long timestampMillis) {
 		String key = getWaitingKey(queueId);
-		redisTemplate.opsForZSet().add(key, userId.toString(), timestampMillis);
+		stringRedisTemplate.opsForZSet().add(key, userId.toString(), timestampMillis);
 	}
 
 	public void removeFromWaitingQueue(Long queueId, Long userId) {
 		String key = getWaitingKey(queueId);
-		redisTemplate.opsForZSet().remove(key, userId.toString());
+		stringRedisTemplate.opsForZSet().remove(key, userId.toString());
 	}
 
 	/** 0-based rank */
 	public Long getMyRank0InWaiting(Long queueId, Long userId) {
 		String key = getWaitingKey(queueId);
-		return redisTemplate.opsForZSet().rank(key, userId.toString());
+		return stringRedisTemplate.opsForZSet().rank(key, userId.toString());
 	}
 
 	/** 1-based rank (테스트/편의용) */
@@ -90,26 +90,26 @@ public class QueueRedisRepository {
 
 	public Long getTotalWaitingCount(Long queueId) {
 		String key = getWaitingKey(queueId);
-		Long size = redisTemplate.opsForZSet().size(key);
+		Long size = stringRedisTemplate.opsForZSet().size(key);
 		return size != null ? size : 0L;
 	}
 
-	public Set<Object> getTopWaitingUsers(Long queueId, int count) {
+	public Set<String> getTopWaitingUsers(Long queueId, int count) {
 		if (count <= 0) return java.util.Collections.emptySet();
 		String key = getWaitingKey(queueId);
-		Set<Object> users = redisTemplate.opsForZSet().range(key, 0, count - 1);
+		Set<String> users = stringRedisTemplate.opsForZSet().range(key, 0, count - 1);
 		return users != null ? users : java.util.Collections.emptySet();
 	}
 
-	public Set<ZSetOperations.TypedTuple<Object>> getAllWaitingUsersWithScore(Long queueId) {
+	public Set<ZSetOperations.TypedTuple<String>> getAllWaitingUsersWithScore(Long queueId) {
 		String key = getWaitingKey(queueId);
-		Set<ZSetOperations.TypedTuple<Object>> result = redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
+		Set<ZSetOperations.TypedTuple<String>> result = stringRedisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
 		return result != null ? result : java.util.Collections.emptySet();
 	}
 
 	public boolean isInWaitingQueue(Long queueId, Long userId) {
 		String key = getWaitingKey(queueId);
-		Double score = redisTemplate.opsForZSet().score(key, userId.toString());
+		Double score = stringRedisTemplate.opsForZSet().score(key, userId.toString());
 		return score != null;
 	}
 
@@ -124,7 +124,7 @@ public class QueueRedisRepository {
 
 		final Long raw;
 		try {
-			raw = redisTemplate.execute(
+			raw = stringRedisTemplate.execute(
 				moveToEnterableScript,
 				Arrays.asList(waitingKey, enterableKey),
 				userId.toString(),
@@ -152,7 +152,7 @@ public class QueueRedisRepository {
 	public void removeFromEnterable(Long queueId, Long userId) {
 		String enterableKey = getEnterableKey(queueId);
 		try {
-			redisTemplate.opsForZSet().remove(enterableKey, userId.toString());
+			stringRedisTemplate.opsForZSet().remove(enterableKey, userId.toString());
 		} catch (Exception e) {
 			log.error("Redis removeFromEnterable failed - queueId: {}, userId: {}", queueId, userId, e);
 			throw new BusinessException(QueueErrorCode.REDIS_OPERATION_FAILED);
@@ -166,7 +166,7 @@ public class QueueRedisRepository {
 		String enterableKey = getEnterableKey(queueId);
 		long nowSeconds = System.currentTimeMillis() / 1000;
 
-		Double score = redisTemplate.opsForZSet().score(enterableKey, userId.toString());
+		Double score = stringRedisTemplate.opsForZSet().score(enterableKey, userId.toString());
 		if (score == null) return false;
 
 		return score.longValue() >= nowSeconds;
@@ -176,7 +176,7 @@ public class QueueRedisRepository {
 		String enterableKey = getEnterableKey(queueId);
 		long nowSeconds = System.currentTimeMillis() / 1000;
 
-		Long count = redisTemplate.opsForZSet().count(
+		Long count = stringRedisTemplate.opsForZSet().count(
 			enterableKey,
 			(double) nowSeconds,
 			Double.POSITIVE_INFINITY
@@ -184,11 +184,11 @@ public class QueueRedisRepository {
 		return count != null ? count : 0L;
 	}
 
-	public Set<Object> getAllEnterableUsers(Long queueId) {
+	public Set<String> getAllEnterableUsers(Long queueId) {
 		String enterableKey = getEnterableKey(queueId);
 		long nowSeconds = System.currentTimeMillis() / 1000;
 
-		Set<Object> users = redisTemplate.opsForZSet().rangeByScore(
+		Set<String> users = stringRedisTemplate.opsForZSet().rangeByScore(
 			enterableKey,
 			(double) nowSeconds,
 			Double.POSITIVE_INFINITY
@@ -204,7 +204,7 @@ public class QueueRedisRepository {
 		String enterableKey = getEnterableKey(queueId);
 		long nowSeconds = System.currentTimeMillis() / 1000;
 
-		Long removed = redisTemplate.opsForZSet().removeRangeByScore(
+		Long removed = stringRedisTemplate.opsForZSet().removeRangeByScore(
 			enterableKey,
 			Double.NEGATIVE_INFINITY,
 			(double) (nowSeconds - 1)
@@ -224,7 +224,7 @@ public class QueueRedisRepository {
 		String enterableKey = getEnterableKey(queueId);
 		long nowSeconds = System.currentTimeMillis() / 1000;
 
-		Double score = redisTemplate.opsForZSet().score(enterableKey, userId.toString());
+		Double score = stringRedisTemplate.opsForZSet().score(enterableKey, userId.toString());
 		if (score == null) return null;
 
 		long ttl = score.longValue() - nowSeconds;
@@ -256,14 +256,14 @@ public class QueueRedisRepository {
 		String waitingKey = getWaitingKey(queueId);
 		String enterableKey = getEnterableKey(queueId);
 
-		redisTemplate.delete(waitingKey);
-		redisTemplate.delete(enterableKey);
+		stringRedisTemplate.delete(waitingKey);
+		stringRedisTemplate.delete(enterableKey);
 
 		log.info("Cleared all queue data (TEST ONLY) - queueId: {}", queueId);
 	}
 
 	public boolean exists(Long queueId) {
 		String key = getWaitingKey(queueId);
-		return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+		return Boolean.TRUE.equals(stringRedisTemplate.hasKey(key));
 	}
 }

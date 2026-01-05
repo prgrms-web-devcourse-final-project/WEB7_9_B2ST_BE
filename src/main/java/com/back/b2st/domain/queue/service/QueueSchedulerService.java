@@ -9,7 +9,6 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.queue.entity.Queue;
 import com.back.b2st.domain.queue.error.QueueErrorCode;
@@ -29,8 +28,6 @@ public class QueueSchedulerService {
 	private final QueueRepository queueRepository;
 	private final QueueRedisRepository queueRedisRepository;
 	private final QueueService queueService;
-
-	// 테스트용 락 유지
 	private final RedissonClient redissonClient;
 
 	public void processNextEntries(Long queueId, int batchSize) {
@@ -41,19 +38,18 @@ public class QueueSchedulerService {
 		Queue queue = queueRepository.findById(queueId)
 			.orElseThrow(() -> new BusinessException(QueueErrorCode.QUEUE_NOT_FOUND));
 
-		Long totalWaiting = safeTotalWaiting(queueId);
+		Long totalWaiting = getTotalWaiting(queueId);
 		if (totalWaiting == null || totalWaiting == 0) return;
 
-		Long currentEnterable = safeEnterableCount(queueId);
+		Long currentEnterable = getEnterableCount(queueId);
 		if (currentEnterable == null) return;
 
 		int availableSlots = queue.getMaxActiveUsers() - currentEnterable.intValue();
 		if (availableSlots <= 0) return;
 
 		int entryCount = Math.min(batchSize, Math.min(availableSlots, totalWaiting.intValue()));
-		if (entryCount <= 0) return;
 
-		Set<Object> topWaitingUsers;
+		Set<String> topWaitingUsers;
 		try {
 			topWaitingUsers = queueRedisRepository.getTopWaitingUsers(queueId, entryCount);
 		} catch (Exception e) {
@@ -64,25 +60,31 @@ public class QueueSchedulerService {
 		if (topWaitingUsers == null || topWaitingUsers.isEmpty()) return;
 
 		List<Long> userIds = topWaitingUsers.stream()
-			.map(obj -> Long.parseLong(obj.toString()))
+			.map(Long::parseLong)
 			.collect(Collectors.toList());
 
 		processBatchEntries(queueId, userIds);
+		log.info("자동 입장 처리 완료 - queueId: {}, 처리 인원: {}명", queueId, userIds.size());
 	}
 
 	public void processBatchEntries(Long queueId, List<Long> userIds) {
+		int success = 0;
+		int fail = 0;
+
 		for (Long userId : userIds) {
 			try {
 				queueService.moveToEnterable(queueId, userId);
+				success++;
 			} catch (Exception e) {
-				log.error("입장 처리 실패 - queueId: {}, userId: {}", queueId, userId, e);
+				fail++;
+				log.error("입장 처리 실패 - queueId: {}, userId: {}, error: {}", queueId, userId, e.getMessage());
 			}
 		}
+		log.info("배치 입장 처리 - queueId: {}, 성공: {}명, 실패: {}명", queueId, success, fail);
 	}
 
-	/* ==================== TEST ONLY ==================== */
+	// ====== TEST UTIL (락 포함) ======
 
-	@Transactional
 	public int processTopNForTest(Long queueId, int count) {
 		String lockKey = "queue:lock:test:topN:" + queueId;
 		RLock lock = redissonClient.getLock(lockKey);
@@ -91,15 +93,15 @@ public class QueueSchedulerService {
 			boolean acquired = lock.tryLock(3, 10, TimeUnit.SECONDS);
 			if (!acquired) return 0;
 
-			Long totalWaiting = safeTotalWaiting(queueId);
+			Long totalWaiting = getTotalWaiting(queueId);
 			if (totalWaiting == null || totalWaiting == 0) return 0;
 
 			int actualCount = Math.min(count, totalWaiting.intValue());
-			Set<Object> topWaitingUsers = queueRedisRepository.getTopWaitingUsers(queueId, actualCount);
+			Set<String> topWaitingUsers = queueRedisRepository.getTopWaitingUsers(queueId, actualCount);
 			if (topWaitingUsers == null || topWaitingUsers.isEmpty()) return 0;
 
 			List<Long> userIds = topWaitingUsers.stream()
-				.map(obj -> Long.parseLong(obj.toString()))
+				.map(Long::parseLong)
 				.collect(Collectors.toList());
 
 			processBatchEntries(queueId, userIds);
@@ -113,7 +115,6 @@ public class QueueSchedulerService {
 		}
 	}
 
-	@Transactional
 	public int processUntilMeForTest(Long queueId, Long userId) {
 		String lockKey = "queue:lock:test:untilMe:" + queueId + ":" + userId;
 		RLock lock = redissonClient.getLock(lockKey);
@@ -122,21 +123,19 @@ public class QueueSchedulerService {
 			boolean acquired = lock.tryLock(3, 10, TimeUnit.SECONDS);
 			if (!acquired) return 0;
 
-			Long myRank1 = queueRedisRepository.getMyRankInWaiting(queueId, userId);
-			if (myRank1 == null || myRank1 <= 1) return 0;
+			Long myRank0 = queueRedisRepository.getMyRank0InWaiting(queueId, userId);
+			if (myRank0 == null || myRank0 <= 0) return 0; // 0이면 이미 1등(앞사람 0명)
 
-			int countToProcess = myRank1.intValue() - 1;
-
-			Set<Object> topWaitingUsers = queueRedisRepository.getTopWaitingUsers(queueId, countToProcess);
+			int countToProcess = myRank0.intValue(); // 내 앞 사람 수 = rank0
+			Set<String> topWaitingUsers = queueRedisRepository.getTopWaitingUsers(queueId, countToProcess);
 			if (topWaitingUsers == null || topWaitingUsers.isEmpty()) return 0;
 
 			List<Long> userIds = topWaitingUsers.stream()
-				.map(obj -> Long.parseLong(obj.toString()))
+				.map(Long::parseLong)
 				.filter(id -> !id.equals(userId))
 				.collect(Collectors.toList());
 
 			if (userIds.isEmpty()) return 0;
-
 			processBatchEntries(queueId, userIds);
 			return userIds.size();
 
@@ -148,7 +147,6 @@ public class QueueSchedulerService {
 		}
 	}
 
-	@Transactional
 	public int processIncludingMeForTest(Long queueId, Long userId) {
 		String lockKey = "queue:lock:test:includeMe:" + queueId + ":" + userId;
 		RLock lock = redissonClient.getLock(lockKey);
@@ -157,16 +155,15 @@ public class QueueSchedulerService {
 			boolean acquired = lock.tryLock(3, 10, TimeUnit.SECONDS);
 			if (!acquired) return 0;
 
-			Long myRank1 = queueRedisRepository.getMyRankInWaiting(queueId, userId);
-			if (myRank1 == null) return 0;
+			Long myRank0 = queueRedisRepository.getMyRank0InWaiting(queueId, userId);
+			if (myRank0 == null) return 0;
 
-			int countToProcess = myRank1.intValue();
-
-			Set<Object> topWaitingUsers = queueRedisRepository.getTopWaitingUsers(queueId, countToProcess);
+			int countToProcess = myRank0.intValue() + 1; // 나 포함
+			Set<String> topWaitingUsers = queueRedisRepository.getTopWaitingUsers(queueId, countToProcess);
 			if (topWaitingUsers == null || topWaitingUsers.isEmpty()) return 0;
 
 			List<Long> userIds = topWaitingUsers.stream()
-				.map(obj -> Long.parseLong(obj.toString()))
+				.map(Long::parseLong)
 				.collect(Collectors.toList());
 
 			processBatchEntries(queueId, userIds);
@@ -180,20 +177,22 @@ public class QueueSchedulerService {
 		}
 	}
 
-	private Long safeTotalWaiting(Long queueId) {
+	private Long getTotalWaiting(Long queueId) {
 		try {
-			return queueRedisRepository.getTotalWaitingCount(queueId);
+			Long count = queueRedisRepository.getTotalWaitingCount(queueId);
+			return count != null ? count : 0L;
 		} catch (Exception e) {
-			log.warn("Redis WAITING count 실패 - queueId={}", queueId, e);
+			log.error("Redis 대기 인원 조회 실패 - queueId: {}", queueId, e);
 			return null;
 		}
 	}
 
-	private Long safeEnterableCount(Long queueId) {
+	private Long getEnterableCount(Long queueId) {
 		try {
-			return queueRedisRepository.getTotalEnterableCount(queueId);
+			Long count = queueRedisRepository.getTotalEnterableCount(queueId);
+			return count != null ? count : 0L;
 		} catch (Exception e) {
-			log.warn("Redis ENTERABLE count 실패 - queueId={}", queueId, e);
+			log.error("Redis 입장 가능 인원 조회 실패 - queueId: {}", queueId, e);
 			return null;
 		}
 	}

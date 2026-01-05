@@ -117,17 +117,23 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,circuitbreakers,circuitbreakerevents
+        include: health,info,prometheus,circuitbreakers,circuitbreakerevents
+
   endpoint:
     health:
       show-details: when-authorized  # 운영 환경: 인증된 사용자만 상세 정보
+
   health:
     circuitbreakers:
       enabled: true
-  metrics:
-    export:
-      prometheus:
+
+  # (Deprecated) management.metrics.export.prometheus.enabled -> 아래로 이동
+  prometheus:
+    metrics:
+      export:
         enabled: true  # Prometheus 사용 시
+
+  metrics:
     distribution:
       percentiles-histogram:
         resilience4j.circuitbreaker.calls: true

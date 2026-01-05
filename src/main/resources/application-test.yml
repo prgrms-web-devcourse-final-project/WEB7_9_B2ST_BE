@@ -89,6 +89,11 @@ aws:
 queue:
   enabled: false
 
+alert:
+  enabled: false
+  slack:
+    webhook-url: ""
+
 logging:
   level:
     com.back.b2st: debug

@@ -10,6 +10,8 @@ import com.back.b2st.domain.prereservation.entry.dto.response.PrereservationRes;
 import com.back.b2st.domain.prereservation.entry.service.PrereservationApplyService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
+import com.back.b2st.global.error.code.CommonErrorCode;
+import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,6 +58,9 @@ public class PrereservationMyApplicationController {
 	public BaseResponse<List<PrereservationRes>> getMyApplications(
 		@Parameter(hidden = true) @CurrentUser UserPrincipal user
 	) {
+		if (user == null) {
+			throw new BusinessException(CommonErrorCode.UNAUTHORIZED);
+		}
 		return BaseResponse.success(prereservationApplyService.getMyApplicationList(user.getId()));
 	}
 }

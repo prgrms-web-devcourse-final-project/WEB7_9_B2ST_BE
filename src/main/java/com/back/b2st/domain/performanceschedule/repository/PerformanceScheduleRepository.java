@@ -17,6 +17,10 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 
 	List<PerformanceSchedule> findAllByPerformance_PerformanceIdOrderByStartAtAsc(Long performanceId);
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("delete from PerformanceSchedule ps where ps.performance.performanceId = :performanceId")
+	void deleteAllByPerformanceId(@Param("performanceId") Long performanceId);
+
 	Optional<PerformanceSchedule> findByPerformance_PerformanceIdAndPerformanceScheduleId(
 		Long performanceId,
 		Long performanceScheduleId

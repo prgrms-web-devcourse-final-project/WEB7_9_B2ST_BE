@@ -99,11 +99,56 @@ queue:
   test:
     enabled: false
 
+# ==================== Circuit Breaker 설정 (추가) ====================
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        minimumNumberOfCalls: 5
+        slowCallDurationThreshold: 2s
+        slowCallRateThreshold: 50
+        recordExceptions:
+          - org.springframework.data.redis.RedisConnectionFailureException
+          - org.springframework.data.redis.RedisSystemException
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+        ignoreExceptions:
+          - com.back.b2st.global.error.exception.BusinessException
+
+    instances:
+      queueRedis:
+        baseConfig: default
+        failureRateThreshold: 60
+        waitDurationInOpenState: 30s
+
+# ==================== Actuator/Management 설정 (Circuit Breaker 모니터링) ====================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakers,circuitbreakerevents
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        resilience4j.circuitbreaker.calls: true
+
 logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.orm.jdbc.bind: TRACE
     com.back.b2st.domain.queue: INFO
+    io.github.resilience4j: DEBUG  # Circuit Breaker 로깅
 
 aws:
   s3:

@@ -78,9 +78,11 @@ class ReservationControllerTest {
 	}
 
 	@Test
-	@DisplayName("내 예매 목록 조회 성공")
+	@DisplayName("내 예매 목록 조회 성공 - 완료/취소만 반환")
 	void getMyReservationsDetail_success() throws Exception {
 		// given
+		LocalDateTime now = LocalDateTime.now();
+
 		Venue venue = venueRepository.save(
 			Venue.builder()
 				.name("테스트 공연장")
@@ -92,8 +94,8 @@ class ReservationControllerTest {
 				.venue(venue)
 				.title("테스트 공연")
 				.category("콘서트")
-				.startDate(LocalDateTime.now())
-				.endDate(LocalDateTime.now().plusDays(1))
+				.startDate(now)
+				.endDate(now.plusDays(1))
 				.status(PerformanceStatus.ACTIVE)
 				.build()
 		);
@@ -102,9 +104,9 @@ class ReservationControllerTest {
 			PerformanceSchedule.builder()
 				.performance(performance)
 				.roundNo(1)
-				.startAt(LocalDateTime.now())
-				.bookingOpenAt(LocalDateTime.now().minusDays(1))
-				.bookingCloseAt(LocalDateTime.now().plusDays(1))
+				.startAt(now.plusDays(1))
+				.bookingOpenAt(now.minusDays(1))
+				.bookingCloseAt(now.plusDays(2))
 				.bookingType(BookingType.FIRST_COME)
 				.build()
 		);
@@ -129,19 +131,21 @@ class ReservationControllerTest {
 				.build()
 		);
 
-		reservationRepository.save(
+		// 완료 예매 1건
+		Reservation completed = reservationRepository.save(
 			Reservation.builder()
 				.memberId(memberId)
 				.scheduleId(schedule.getPerformanceScheduleId())
-				.expiresAt(LocalDateTime.now().plusMinutes(5))
+				.expiresAt(now.plusMinutes(5))
 				.build()
 		);
 
-		reservationRepository.save(
+		// 취소 예매 1건
+		Reservation canceled = reservationRepository.save(
 			Reservation.builder()
 				.memberId(memberId)
 				.scheduleId(schedule.getPerformanceScheduleId())
-				.expiresAt(LocalDateTime.now().plusMinutes(5))
+				.expiresAt(now.plusMinutes(5))
 				.build()
 		);
 
@@ -151,6 +155,7 @@ class ReservationControllerTest {
 				.contentType(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data").isArray())
-			.andExpect(jsonPath("$.data.length()").value(2));
+			.andExpect(jsonPath("$.data.length()").value(0));
 	}
+
 }

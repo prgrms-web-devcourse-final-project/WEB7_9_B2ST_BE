@@ -13,6 +13,7 @@ import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.ticket.service.TicketService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,8 @@ public class ReservationService {
 
 	private final ReservationRepository reservationRepository;
 	private final ReservationSeatManager reservationSeatManager;
+
+	private final TicketService ticketService;
 
 	/** === 예매 생성(결제 시작) === */
 	@Transactional
@@ -98,10 +101,16 @@ public class ReservationService {
 			throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
 		}
 
+		//TODO: 환불, 결제 취소 로직
+
+		// 1) 티켓 취소 (ISSUED -> CANCELED)
+		ticketService.cancelTicketsByReservation(reservationId, memberId);
+
+		// 2) 예매 취소 (COMPLETED -> CANCELLED)
 		reservation.cancel(LocalDateTime.now());
 
-		// 좌석 상태 복구 (HOLD → AVAILABLE) TODO: 일단 HOLD만 가능
-		reservationSeatManager.releaseAllSeats(reservationId);
+		// 3) 좌석 해제 (SOLD -> AVAILABLE)
+		reservationSeatManager.releaseForceAllSeats(reservationId);
 	}
 
 	/** === PENDING 만료 배치 처리 (스케줄러) === */

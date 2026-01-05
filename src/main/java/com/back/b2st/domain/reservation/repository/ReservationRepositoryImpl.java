@@ -79,7 +79,13 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 			.on(reservation.scheduleId.eq(performanceSchedule.performanceScheduleId))
 			.join(performance)
 			.on(performanceSchedule.performance.eq(performance))
-			.where(reservation.memberId.eq(memberId))
+			.where(
+				reservation.memberId.eq(memberId),
+				reservation.status.in(
+					ReservationStatus.COMPLETED,
+					ReservationStatus.CANCELED
+				)
+			)
 			.orderBy(reservation.createdAt.desc())
 			.fetch();
 	}

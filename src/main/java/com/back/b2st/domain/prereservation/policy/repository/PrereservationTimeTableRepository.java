@@ -14,6 +14,14 @@ public interface PrereservationTimeTableRepository extends JpaRepository<Prerese
 		Long sectionId
 	);
 
+	/**
+	 * (performanceScheduleId, sectionId) 조합이 중복으로 존재하더라도 단건 조회 시 예외가 나지 않도록 Top1로 조회합니다.
+	 */
+	Optional<PrereservationTimeTable> findTopByPerformanceScheduleIdAndSectionIdOrderByIdDesc(
+		Long performanceScheduleId,
+		Long sectionId
+	);
+
 	List<PrereservationTimeTable> findAllByPerformanceScheduleIdOrderByBookingStartAtAscSectionIdAsc(
 		Long performanceScheduleId
 	);

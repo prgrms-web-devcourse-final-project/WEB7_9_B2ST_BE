@@ -40,6 +40,7 @@ import com.back.b2st.security.CustomUserDetails;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
@@ -170,6 +171,7 @@ public class DataInitializer implements CommandLineRunner {
 		if (venueRepository.count() > 0) {
 			log.info("[DataInit] 이미 데이터 존재하여 초기화 스킵");
 			seedPrereservationTimeTablesIfMissing();
+			ensurePrereservationHoldTestAlwaysOpen();
 			return;
 		}
 
@@ -300,6 +302,7 @@ public class DataInitializer implements CommandLineRunner {
 			// - 예매 오픈된 회차(HOLD 테스트용)에 한해서만 미리 신청을 만들어 둔다.
 			// - 사전 신청 테스트용 회차는 프론트에서 직접 신청 → 신청 성공/실패 케이스를 확인할 수 있도록 비워둔다.
 			seedPrereservationApplications(prereserveSchedules, sections);
+			ensurePrereservationHoldTestAlwaysOpen();
 
 		// 모든 구역의 좌석 생성
 		List<Seat> seats = sections.stream()
@@ -679,6 +682,87 @@ public class DataInitializer implements CommandLineRunner {
 
 		if (createdCount > 0) {
 			log.info("[DataInit/Test] Prereservation time tables ensured. created={}", createdCount);
+		}
+	}
+
+	/**
+	 * 신청예매 HOLD/BOOKINGS 테스트를 "지금 당장" 할 수 있도록,
+	 * 오픈된(PRERESERVE & now >= bookingOpenAt) 회차의 모든 구역 슬롯을 넉넉하게 열어둔다.
+	 * - 정책(구역별 1시간 슬롯) 자체는 서비스에서 검증하지만, 테스트 데이터에서는 시간을 항상 포함하도록 세팅한다.
+	 */
+	private void ensurePrereservationHoldTestAlwaysOpen() {
+		List<PerformanceSchedule> openSchedules = performanceScheduleRepository.findAll().stream()
+			.filter(schedule -> schedule.getBookingType() == BookingType.PRERESERVE)
+			.filter(schedule -> schedule.getBookingOpenAt() != null)
+			.filter(schedule -> schedule.getPerformance() != null)
+			.filter(schedule -> TEST_PRERESERVE_PLAY_TITLE.equals(schedule.getPerformance().getTitle()))
+			.filter(schedule -> !LocalDateTime.now().isBefore(schedule.getBookingOpenAt()))
+			.toList();
+
+		if (openSchedules.isEmpty()) {
+			return;
+		}
+
+		LocalDateTime nowHour = LocalDateTime.now()
+			.withMinute(0)
+			.withSecond(0)
+			.withNano(0);
+		LocalDateTime wideStartAt = nowHour.minusHours(1);
+		LocalDateTime wideEndAt = nowHour.plusHours(23).minusSeconds(1);
+
+		int updated = 0;
+		for (PerformanceSchedule schedule : openSchedules) {
+			Long venueId = schedule.getPerformance().getVenue().getVenueId();
+			List<Section> sections = sectionRepository.findByVenueId(venueId).stream()
+				.sorted(java.util.Comparator.comparingLong(Section::getId))
+				.toList();
+			if (sections.isEmpty()) {
+				continue;
+			}
+
+			LocalDateTime endAtForSchedule = wideEndAt;
+			LocalDateTime bookingCloseAt = schedule.getBookingCloseAt();
+			if (bookingCloseAt != null && bookingCloseAt.isBefore(endAtForSchedule)) {
+				endAtForSchedule = bookingCloseAt;
+			}
+			if (!endAtForSchedule.isAfter(wideStartAt)) {
+				continue;
+			}
+
+			Long scheduleId = schedule.getPerformanceScheduleId();
+			List<PrereservationTimeTable> existing = prereservationTimeTableRepository
+				.findAllByPerformanceScheduleIdOrderByBookingStartAtAscSectionIdAsc(scheduleId);
+			Map<Long, PrereservationTimeTable> bySectionId = existing.stream()
+				.collect(java.util.stream.Collectors.toMap(
+					PrereservationTimeTable::getSectionId,
+					tt -> tt,
+					(left, right) -> right
+				));
+
+			for (Section section : sections) {
+				var timeTable = bySectionId.get(section.getId());
+				if (timeTable == null) {
+					prereservationTimeTableRepository.save(PrereservationTimeTable.builder()
+						.performanceScheduleId(scheduleId)
+						.sectionId(section.getId())
+						.bookingStartAt(wideStartAt)
+						.bookingEndAt(endAtForSchedule)
+						.build());
+					updated++;
+					continue;
+				}
+
+				// 현재 시간이 슬롯에 포함되지 않으면 "항상 오픈" 범위로 업데이트
+				LocalDateTime now = LocalDateTime.now();
+				if (now.isBefore(timeTable.getBookingStartAt()) || now.isAfter(timeTable.getBookingEndAt())) {
+					timeTable.updateBookingTime(wideStartAt, endAtForSchedule);
+					updated++;
+				}
+			}
+		}
+
+		if (updated > 0) {
+			log.info("[DataInit/Test] Prereservation HOLD test windows ensured. updated={}", updated);
 		}
 	}
 

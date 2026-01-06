@@ -21,6 +21,7 @@ import com.back.b2st.domain.email.dto.request.VerifyCodeReq;
 import com.back.b2st.domain.email.dto.response.CheckDuplicateRes;
 import com.back.b2st.domain.email.entity.EmailVerification;
 import com.back.b2st.domain.email.error.EmailErrorCode;
+import com.back.b2st.domain.email.metrics.EmailMetrics;
 import com.back.b2st.domain.email.repository.EmailVerificationRepository;
 import com.back.b2st.domain.lottery.result.dto.LotteryResultEmailInfo;
 import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
@@ -43,6 +44,8 @@ class EmailServiceTest {
 	private LotteryResultRepository lotteryResultRepository;
 	@Mock
 	private EmailSender emailSender;
+	@Mock
+	private EmailMetrics emailMetrics;
 
 	@Test
 	@DisplayName("중복 확인 - 사용 가능한 이메일")
@@ -70,10 +73,8 @@ class EmailServiceTest {
 		given(memberRepository.findByEmail(email)).willReturn(Optional.of(member));
 
 		// when & then
-		assertThatThrownBy(() -> emailService.sendVerificationCode(new SenderVerificationReq(email)))
-			.isInstanceOf(BusinessException.class)
-			.extracting("errorCode")
-			.isEqualTo(EmailErrorCode.ALREADY_VERIFIED);
+		assertThatThrownBy(() -> emailService.sendVerificationCode(new SenderVerificationReq(email))).isInstanceOf(
+			BusinessException.class).extracting("errorCode").isEqualTo(EmailErrorCode.ALREADY_VERIFIED);
 	}
 
 	@Test
@@ -94,11 +95,7 @@ class EmailServiceTest {
 		// given
 		String email = "test@test.com";
 		String code = "123456";
-		EmailVerification verification = EmailVerification.builder()
-			.email(email)
-			.code(code)
-			.attemptCount(0)
-			.build();
+		EmailVerification verification = EmailVerification.builder().email(email).code(code).attemptCount(0).build();
 		Member member = Member.builder()
 			.email(email)
 			.name("테스터")
@@ -128,10 +125,8 @@ class EmailServiceTest {
 			.build();
 		given(emailVerificationRepository.findById(email)).willReturn(Optional.of(verification));
 		// when & then
-		assertThatThrownBy(() -> emailService.verifyCode(new VerifyCodeReq(email, "000000")))
-			.isInstanceOf(BusinessException.class)
-			.extracting("errorCode")
-			.isEqualTo(EmailErrorCode.VERIFICATION_CODE_MISMATCH);
+		assertThatThrownBy(() -> emailService.verifyCode(new VerifyCodeReq(email, "000000"))).isInstanceOf(
+			BusinessException.class).extracting("errorCode").isEqualTo(EmailErrorCode.VERIFICATION_CODE_MISMATCH);
 		verify(emailVerificationRepository).save(any(EmailVerification.class));
 	}
 
@@ -147,10 +142,8 @@ class EmailServiceTest {
 			.build();
 		given(emailVerificationRepository.findById(email)).willReturn(Optional.of(verification));
 		// when & then
-		assertThatThrownBy(() -> emailService.verifyCode(new VerifyCodeReq(email, "123456")))
-			.isInstanceOf(BusinessException.class)
-			.extracting("errorCode")
-			.isEqualTo(EmailErrorCode.VERIFICATION_MAX_ATTEMPT);
+		assertThatThrownBy(() -> emailService.verifyCode(new VerifyCodeReq(email, "123456"))).isInstanceOf(
+			BusinessException.class).extracting("errorCode").isEqualTo(EmailErrorCode.VERIFICATION_MAX_ATTEMPT);
 		verify(emailVerificationRepository).deleteById(email);
 	}
 
@@ -161,10 +154,8 @@ class EmailServiceTest {
 		String email = "test@test.com";
 		given(emailVerificationRepository.findById(email)).willReturn(Optional.empty());
 		// when & then
-		assertThatThrownBy(() -> emailService.verifyCode(new VerifyCodeReq(email, "123456")))
-			.isInstanceOf(BusinessException.class)
-			.extracting("errorCode")
-			.isEqualTo(EmailErrorCode.VERIFICATION_NOT_FOUND);
+		assertThatThrownBy(() -> emailService.verifyCode(new VerifyCodeReq(email, "123456"))).isInstanceOf(
+			BusinessException.class).extracting("errorCode").isEqualTo(EmailErrorCode.VERIFICATION_NOT_FOUND);
 	}
 
 	@Nested
@@ -179,29 +170,20 @@ class EmailServiceTest {
 			List<LotteryResultEmailInfo> winners = List.of(
 				new LotteryResultEmailInfo(1L, 10L, "홍길동", SeatGradeType.VIP, 2, LocalDateTime.now()),
 				new LotteryResultEmailInfo(2L, 20L, "김철수", SeatGradeType.ROYAL, 1, LocalDateTime.now()),
-				new LotteryResultEmailInfo(3L, 30L, "이영희", SeatGradeType.STANDARD, 4, LocalDateTime.now())
-			);
+				new LotteryResultEmailInfo(3L, 30L, "이영희", SeatGradeType.STANDARD, 4, LocalDateTime.now()));
 
-			given(lotteryResultRepository.findSendEmailInfoByScheduleId(scheduleId))
-				.willReturn(winners);
+			given(lotteryResultRepository.findSendEmailInfoByScheduleId(scheduleId)).willReturn(winners);
 
-			given(memberRepository.findById(anyLong()))
-				.willAnswer(invocation -> {
-					Long id = invocation.getArgument(0);
-					return Optional.of(
-						Member.builder()
-							.email("user" + id + "@test.com")
-							.name("회원" + id)
-							.build()
-					);
-				});
+			given(memberRepository.findById(anyLong())).willAnswer(invocation -> {
+				Long id = invocation.getArgument(0);
+				return Optional.of(Member.builder().email("user" + id + "@test.com").name("회원" + id).build());
+			});
 
 			emailService.sendWinnerNotifications(scheduleId);
 
 			verify(lotteryResultRepository).findSendEmailInfoByScheduleId(scheduleId);
 			verify(memberRepository, times(3)).findById(anyLong());
-			verify(emailSender, times(3))
-				.sendLotteryWinnerEmail(anyString(), anyString(), any(), anyInt(), any());
+			verify(emailSender, times(3)).sendLotteryWinnerEmail(anyString(), anyString(), any(), anyInt(), any());
 		}
 
 		@Test
@@ -209,13 +191,11 @@ class EmailServiceTest {
 		void noWinners() {
 			Long scheduleId = 1L;
 
-			given(lotteryResultRepository.findSendEmailInfoByScheduleId(scheduleId))
-				.willReturn(List.of());
+			given(lotteryResultRepository.findSendEmailInfoByScheduleId(scheduleId)).willReturn(List.of());
 
 			emailService.sendWinnerNotifications(scheduleId);
 
-			verify(emailSender, never())
-				.sendLotteryWinnerEmail(any(), any(), any(), anyInt(), any());
+			verify(emailSender, never()).sendLotteryWinnerEmail(any(), any(), any(), anyInt(), any());
 		}
 
 		@Test
@@ -225,27 +205,18 @@ class EmailServiceTest {
 
 			List<LotteryResultEmailInfo> winners = List.of(
 				new LotteryResultEmailInfo(1L, 10L, "홍길동", SeatGradeType.VIP, 2, LocalDateTime.now()),
-				new LotteryResultEmailInfo(2L, 999L, "없는회원", SeatGradeType.ROYAL, 1, LocalDateTime.now())
-			);
+				new LotteryResultEmailInfo(2L, 999L, "없는회원", SeatGradeType.ROYAL, 1, LocalDateTime.now()));
 
-			given(lotteryResultRepository.findSendEmailInfoByScheduleId(scheduleId))
-				.willReturn(winners);
+			given(lotteryResultRepository.findSendEmailInfoByScheduleId(scheduleId)).willReturn(winners);
 
-			given(memberRepository.findById(10L))
-				.willReturn(Optional.of(
-					Member.builder()
-						.email("hong@test.com")
-						.name("홍길동")
-						.build()
-				));
+			given(memberRepository.findById(10L)).willReturn(
+				Optional.of(Member.builder().email("hong@test.com").name("홍길동").build()));
 
-			given(memberRepository.findById(999L))
-				.willReturn(Optional.empty());
+			given(memberRepository.findById(999L)).willReturn(Optional.empty());
 
 			emailService.sendWinnerNotifications(scheduleId);
 
-			verify(emailSender, times(1))
-				.sendLotteryWinnerEmail(anyString(), anyString(), any(), anyInt(), any());
+			verify(emailSender, times(1)).sendLotteryWinnerEmail(anyString(), anyString(), any(), anyInt(), any());
 		}
 	}
 }

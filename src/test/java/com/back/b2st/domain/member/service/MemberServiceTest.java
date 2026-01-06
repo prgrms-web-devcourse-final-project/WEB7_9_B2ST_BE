@@ -28,6 +28,7 @@ import com.back.b2st.domain.member.dto.request.WithdrawReq;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.entity.RefundAccount;
 import com.back.b2st.domain.member.error.MemberErrorCode;
+import com.back.b2st.domain.member.metrics.MemberMetrics;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.member.repository.RefundAccountRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -51,6 +52,8 @@ class MemberServiceTest {
 	private SignupRateLimitService signupRateLimitService;
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
+	@Mock
+	private MemberMetrics memberMetrics;
 
 	// 헬퍼 메서드
 	private SignupReq buildSignupReq() {

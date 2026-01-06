@@ -70,6 +70,10 @@ public class Performance extends BaseEntity {
 	@Column(nullable = false)
 	private PerformanceStatus status;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "booking_type")
+	private BookingType bookingType; // 예매 유형 (추첨/일반예매/구역별 사전등록)
+
 	@Column(name = "booking_open_at")
 	private LocalDateTime bookingOpenAt; // 예매 오픈 시각 (null이면 예매 불가)
 
@@ -86,6 +90,7 @@ public class Performance extends BaseEntity {
 		LocalDateTime startDate,
 		LocalDateTime endDate,
 		PerformanceStatus status,
+		BookingType bookingType,
 		LocalDateTime bookingOpenAt,
 		LocalDateTime bookingCloseAt
 	) {
@@ -97,6 +102,7 @@ public class Performance extends BaseEntity {
 		this.startDate = Objects.requireNonNull(startDate, "startDate must not be null");
 		this.endDate = Objects.requireNonNull(endDate, "endDate must not be null");
 		this.status = Objects.requireNonNull(status, "status must not be null");
+		this.bookingType = bookingType;
 		this.bookingOpenAt = bookingOpenAt;
 		this.bookingCloseAt = bookingCloseAt;
 

@@ -97,4 +97,6 @@ public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long
 		@Param("available") SeatStatus available,
 		@Param("sold") SeatStatus sold
 	);
+
+	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
 }

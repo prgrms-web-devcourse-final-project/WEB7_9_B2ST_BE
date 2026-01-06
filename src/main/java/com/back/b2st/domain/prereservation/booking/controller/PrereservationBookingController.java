@@ -11,6 +11,8 @@ import com.back.b2st.domain.prereservation.booking.service.PrereservationHoldSer
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
+import com.back.b2st.global.error.code.CommonErrorCode;
+import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,11 +49,12 @@ public class PrereservationBookingController {
 		@Parameter(description = "좌석 ID", example = "101")
 		@PathVariable Long seatId
 	) {
+		Long memberId = requireMemberId(user);
 		// 1. 신청예매 검증 (구역, 시간대 등)
-		prereservationHoldService.validateSeatHoldAllowed(user.getId(), scheduleId, seatId);
+		prereservationHoldService.validateSeatHoldAllowed(memberId, scheduleId, seatId);
 
 		// 2. 좌석 HOLD
-		scheduleSeatStateService.holdSeat(user.getId(), scheduleId, seatId);
+		scheduleSeatStateService.holdSeatWithoutQueue(memberId, scheduleId, seatId);
 
 		return BaseResponse.created(null);
 	}
@@ -73,8 +76,14 @@ public class PrereservationBookingController {
 		@Parameter(description = "좌석 ID", example = "101")
 		@PathVariable Long seatId
 	) {
-		var booking = prereservationBookingService.createBooking(user.getId(), scheduleId, seatId);
+		var booking = prereservationBookingService.createBooking(requireMemberId(user), scheduleId, seatId);
 		return BaseResponse.created(new PrereservationBookingCreateRes(booking.getId(), booking.getExpiresAt()));
 	}
-}
 
+	private Long requireMemberId(UserPrincipal user) {
+		if (user == null) {
+			throw new BusinessException(CommonErrorCode.UNAUTHORIZED);
+		}
+		return user.getId();
+	}
+}

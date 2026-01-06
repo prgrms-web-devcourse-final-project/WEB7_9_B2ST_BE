@@ -31,4 +31,6 @@ public interface PrereservationBookingRepository extends JpaRepository<Prereserv
 		@Param("scheduleSeatId") Long scheduleSeatId,
 		@Param("activeStatuses") List<PrereservationBookingStatus> activeStatuses
 	);
+
+	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
 }

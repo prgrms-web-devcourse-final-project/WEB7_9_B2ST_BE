@@ -90,6 +90,25 @@ alert:
   slack:
     webhook-url: ""
 
+# ==================== Circuit Breaker 설정 (테스트 환경 - 비활성화 또는 매우 관대) ====================
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 100
+        failureRateThreshold: 100  # 테스트: 절대 OPEN 안됨
+        waitDurationInOpenState: 1s
+        permittedNumberOfCallsInHalfOpenState: 10
+        minimumNumberOfCalls: 100  # 테스트: 절대 도달 안함
+        slowCallDurationThreshold: 60s
+        slowCallRateThreshold: 100
+
+    instances:
+      queueRedis:
+        baseConfig: default
+        registerHealthIndicator: false  # 테스트: Health Check 비활성화
+
 logging:
   level:
     com.back.b2st: debug
@@ -98,9 +117,11 @@ logging:
     org.springframework.mail: DEBUG
     com.sun.mail: DEBUG
     org.springframework.core.env: DEBUG
+    io.github.resilience4j: WARN  # 테스트: Circuit Breaker 로그 최소화
 
 management:
   health:
     mail:
       enabled: false
-
+    circuitbreakers:
+      enabled: false  # 테스트: Circuit Breaker Health Check 비활성화

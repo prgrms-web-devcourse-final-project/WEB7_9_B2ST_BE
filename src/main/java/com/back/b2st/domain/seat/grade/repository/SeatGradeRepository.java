@@ -15,6 +15,8 @@ public interface SeatGradeRepository extends JpaRepository<SeatGrade, Long> {
 	Optional<SeatGrade> findTopByPerformanceIdAndSeatIdOrderByIdDesc(Long performanceId, Long seatId);
 	Optional<SeatGrade> findTopByPerformanceIdAndGradeOrderByIdDesc(Long performanceId, SeatGradeType grade);
 
+	void deleteAllByPerformanceId(Long performanceId);
+
 	/**
 	 * 특정 공연의 등급별 좌석 수
 	 */

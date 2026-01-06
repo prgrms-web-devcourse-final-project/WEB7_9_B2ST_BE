@@ -26,6 +26,13 @@ repositories {
     mavenCentral()
 }
 
+// Spring Cloud 버전 관리 (Circuit Breaker용)
+// Spring Boot 4.0.0은 아직 정식 Spring Cloud 버전이 없으므로
+// Resilience4j를 직접 사용
+ext {
+    set('resilience4jVersion', '2.2.0')
+}
+
 dependencies {
     // 웹이랑 벨리데이션
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -42,6 +49,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.redisson:redisson-spring-boot-starter:4.0.0'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // Circuit Breaker (Resilience4j) - Spring Boot 4.0.0용 직접 의존성
+    implementation "io.github.resilience4j:resilience4j-spring-boot3:${resilience4jVersion}"
+    implementation "io.github.resilience4j:resilience4j-circuitbreaker:${resilience4jVersion}"
+    implementation "io.github.resilience4j:resilience4j-micrometer:${resilience4jVersion}"
 
     // QueryDSL
     implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
@@ -85,8 +97,6 @@ dependencies {
     // AWS S3
     implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:4.0.0-M1")
     implementation "io.awspring.cloud:spring-cloud-aws-starter-s3"
-
-
 }
 
 tasks.withType(JavaCompile) {

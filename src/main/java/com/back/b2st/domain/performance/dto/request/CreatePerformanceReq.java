@@ -2,6 +2,8 @@ package com.back.b2st.domain.performance.dto.request;
 
 import java.time.LocalDateTime;
 
+import com.back.b2st.domain.performance.entity.BookingType;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -36,7 +38,12 @@ public record CreatePerformanceReq(
 	LocalDateTime startDate,
 
 	@NotNull
-	LocalDateTime endDate
+	LocalDateTime endDate,
+
+	BookingType bookingType,  // 추가 (nullable, 기존 코드 호환성 고려)
+
+	LocalDateTime bookingOpenAt,  // 기존에 있었을 수도 있는 필드들
+
+	LocalDateTime bookingCloseAt
 ) {
 }
-

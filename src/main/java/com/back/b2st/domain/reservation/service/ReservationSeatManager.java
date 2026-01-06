@@ -73,7 +73,7 @@ public class ReservationSeatManager {
 		}
 	}
 
-	/** === 예매에 포함된 모든 좌석 HOLD 해제 === */
+	/** === 예매에 포함된 좌석 HOLD 해제 === */
 	@Transactional
 	public void releaseAllSeats(Long reservationId) {
 		reservationSeatRepository.findByReservationId(reservationId)
@@ -83,6 +83,22 @@ public class ReservationSeatManager {
 						.orElseThrow();
 
 				scheduleSeatStateService.releaseHold(
+					scheduleSeat.getScheduleId(),
+					scheduleSeat.getSeatId()
+				);
+			});
+	}
+
+	/** === 예매에 포함된 모든 좌석 HOLD 해제 === */
+	@Transactional
+	public void releaseForceAllSeats(Long reservationId) {
+		reservationSeatRepository.findByReservationId(reservationId)
+			.forEach(rs -> {
+				ScheduleSeat scheduleSeat =
+					scheduleSeatRepository.findById(rs.getScheduleSeatId())
+						.orElseThrow();
+
+				scheduleSeatStateService.releaseForceHold(
 					scheduleSeat.getScheduleId(),
 					scheduleSeat.getSeatId()
 				);

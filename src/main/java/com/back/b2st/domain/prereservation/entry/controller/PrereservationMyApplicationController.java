@@ -10,6 +10,8 @@ import com.back.b2st.domain.prereservation.entry.dto.response.PrereservationRes;
 import com.back.b2st.domain.prereservation.entry.service.PrereservationApplyService;
 import com.back.b2st.global.annotation.CurrentUser;
 import com.back.b2st.global.common.BaseResponse;
+import com.back.b2st.global.error.code.CommonErrorCode;
+import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,8 +44,8 @@ public class PrereservationMyApplicationController {
 			  "code": 200,
 			  "message": "성공적으로 처리되었습니다",
 			  "data": [
-			    { "scheduleId": 1, "sectionIds": [1, 3] },
-			    { "scheduleId": 2, "sectionIds": [5] }
+			    { "scheduleId": 1, "sectionIds": [1, 3], "bookingOpenAt": "2026-01-05T09:00:00", "bookingCloseAt": "2026-02-04T09:00:00" },
+			    { "scheduleId": 2, "sectionIds": [5], "bookingOpenAt": "2026-01-06T09:00:00", "bookingCloseAt": "2026-02-05T09:00:00" }
 			  ]
 			}
 			"""
@@ -56,6 +58,9 @@ public class PrereservationMyApplicationController {
 	public BaseResponse<List<PrereservationRes>> getMyApplications(
 		@Parameter(hidden = true) @CurrentUser UserPrincipal user
 	) {
+		if (user == null) {
+			throw new BusinessException(CommonErrorCode.UNAUTHORIZED);
+		}
 		return BaseResponse.success(prereservationApplyService.getMyApplicationList(user.getId()));
 	}
 }

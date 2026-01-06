@@ -17,6 +17,10 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 
 	List<PerformanceSchedule> findAllByPerformance_PerformanceIdOrderByStartAtAsc(Long performanceId);
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("delete from PerformanceSchedule ps where ps.performance.performanceId = :performanceId")
+	void deleteAllByPerformanceId(@Param("performanceId") Long performanceId);
+
 	Optional<PerformanceSchedule> findByPerformance_PerformanceIdAndPerformanceScheduleId(
 		Long performanceId,
 		Long performanceScheduleId
@@ -89,5 +93,15 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 	List<DrawTargetPerformance> findByOpenBetween(
 		@Param("today") LocalDateTime startDate,
 		@Param("threeDaysLater") LocalDateTime endDate);
+
+	/**
+	 * scheduleId로 performanceId 조회 (대기열/검증 등에서 사용)
+	 */
+	@Query("""
+			select ps.performance.performanceId
+			from PerformanceSchedule ps
+			where ps.performanceScheduleId = :scheduleId
+		""")
+	Optional<Long> findPerformanceIdByScheduleId(@Param("scheduleId") Long scheduleId);
 
 }

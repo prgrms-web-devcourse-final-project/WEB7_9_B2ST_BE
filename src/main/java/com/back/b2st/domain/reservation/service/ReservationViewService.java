@@ -23,6 +23,7 @@ import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -63,11 +64,28 @@ public class ReservationViewService {
 			);
 		}
 
+		List<Ticket> tickets = ticketRepository.findAllByReservationIdAndMemberId(reservationId, memberId);
+
 		// 신청 예매 티켓의 경우, Ticket.reservationId가 실제 Reservation PK가 아니라 prereservationBookingId로 저장되어 있음
 		// (ID 충돌 가능성 때문에, 신청예매 booking이 존재/소유자인지 먼저 확인하고, 그때만 신청예매 상세로 분기)
 		PrereservationBooking booking = prereservationBookingRepository.findById(reservationId)
 			.filter(b -> b.getMemberId().equals(memberId))
 			.orElse(null);
+
+		if (booking != null) {
+			ScheduleSeat scheduleSeat = scheduleSeatRepository.findById(booking.getScheduleSeatId())
+				.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+
+			// 예약(ticket.reservationId)이 Reservation PK인지 PrereservationBooking PK인지 구분하기 위해,
+			// "현재 사용자가 가진 ticket.seatId"와 "booking의 seatId"가 매칭되는 경우에만 신청예매 상세로 분기한다.
+			boolean hasMatchingTicketSeat = tickets.stream()
+				.anyMatch(ticket -> ticket.getSeatId().equals(scheduleSeat.getSeatId()));
+
+			if (!tickets.isEmpty() && !hasMatchingTicketSeat) {
+				// ticket이 있는데 좌석이 매칭되지 않으면, 이 id는 신청예매가 아니라 다른 도메인일 가능성이 높다.
+				booking = null;
+			}
+		}
 
 		if (booking != null) {
 			PerformanceSchedule schedule = performanceScheduleRepository.findById(booking.getScheduleId())
@@ -111,7 +129,7 @@ public class ReservationViewService {
 		// 교환/양도 등으로 티켓 소유자(memberId)와 예약자(reservation.memberId)가 다를 수 있으므로,
 		// "티켓을 보유한 사용자"는 예약 상세를 조회할 수 있도록 허용한다.
 		if (reservationRepository.existsById(reservationId)) {
-			if (!ticketRepository.existsByReservationIdAndMemberId(reservationId, memberId)) {
+			if (tickets.isEmpty()) {
 				throw new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND);
 			}
 
@@ -121,6 +139,13 @@ public class ReservationViewService {
 			}
 
 			List<ReservationSeatInfo> seats = reservationSeatRepository.findSeatInfos(reservationId);
+			boolean hasMatchingTicketSeat = seats.stream()
+				.anyMatch(seat -> tickets.stream().anyMatch(ticket -> ticket.getSeatId().equals(seat.seatId())));
+
+			if (!hasMatchingTicketSeat) {
+				throw new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND);
+			}
+
 			PaymentConfirmRes payment = paymentViewService.getByReservationId(reservationId, memberId);
 
 			return new ReservationDetailWithPaymentRes(reservationByTicket, seats, payment);

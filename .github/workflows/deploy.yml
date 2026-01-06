@@ -126,9 +126,6 @@ jobs:
                 
                 "cd docker/",
                 "export DOPPLER_TOKEN=\"${{ secrets.DOPPLER_TOKEN }}\"",
-                "export PRERESERVATION_APPLICATION_STRICT=false",
-                "export PRERESERVATION_BOOKING_STRICT=false",
-                "export PRERESERVATION_SLOT_STRICT=false",
                 "echo \"${{ secrets.PERSONAL_ACCESS_TOKEN }}\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
           
                 "doppler run -- docker compose pull",

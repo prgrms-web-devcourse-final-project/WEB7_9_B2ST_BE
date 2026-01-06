@@ -309,7 +309,7 @@ class SeatAllocationServiceTest {
 
 		// then - 전체 티켓 수 검증
 		List<Ticket> allTicketsFromDB = ticketRepository.findAll();
-		assertThat(allTicketsFromDB).hasSize(7); // 3명 × 2장
+		assertThat(allTicketsFromDB).hasSize(6); // 3명 × 2장
 
 		// 각 사용자별 티켓 검증
 		for (LotteryReservationInfo info : infos) {

@@ -16,6 +16,7 @@ public class DrawService {
 
 	private final PerformanceDrawService performanceDrawService;
 	private final SeatAllocationService seatAllocationService;
+	private final CancelUnpaidService cancelUnpaidService;
 
 	public void executeDraws() {
 		List<DrawTargetPerformance> targetPerformances = performanceDrawService.findBookingClosedPerformances();
@@ -52,6 +53,18 @@ public class DrawService {
 			} catch (Exception e) {
 				log.error("공연 추첨 실패 - scheduleId: {}", scheduleId, e);
 			}
+		}
+	}
+
+	/**
+	 * 미결제자 당첨 취소
+	 */
+	public void executecancelUnpaid() {
+		try {
+			cancelUnpaidService.cancelUnpaid();
+			// log.debug("공연 추첨 완료 - scheduleId: {}", scheduleId);
+		} catch (Exception e) {
+			// log.error("공연 추첨 실패 - scheduleId: {}", scheduleId, e);
 		}
 	}
 }

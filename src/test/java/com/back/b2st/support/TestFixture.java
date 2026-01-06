@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
+import com.back.b2st.domain.lottery.result.entity.LotteryResult;
+import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.performance.entity.Performance;
@@ -309,6 +311,23 @@ public class TestFixture {
 				)
 				.toList()
 		);
+	}
+
+	public static List<LotteryResult> createLotteryResult(
+		List<LotteryEntry> lotteryEntries,
+		List<Member> members,
+		LotteryResultRepository repo
+	) {
+		List<LotteryResult> lotteryResults = IntStream.range(0, members.size())
+			.mapToObj(i -> {
+				return LotteryResult.expired(
+					lotteryEntries.get(i).getId(),
+					members.get(i).getId()
+				);
+			})
+			.toList();
+
+		return repo.saveAll(lotteryResults);
 	}
 
 }

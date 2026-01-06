@@ -44,7 +44,7 @@ public class ReservationService {
 			);
 
 		// 3. 예매 중복 검증
-		validateReservationDuplicate(scheduleId, seatIds);
+		validateReservationDuplicate(scheduleId, seatResult.scheduleSeatIds());
 
 		// 4. Reservation(PENDING) 생성
 		Reservation reservation =

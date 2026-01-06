@@ -135,11 +135,14 @@ public class PrereservationApplyService {
 		var response = new ArrayList<PrereservationRes>(sectionIdsByScheduleId.size());
 		for (var entry : sectionIdsByScheduleId.entrySet()) {
 			PerformanceSchedule schedule = scheduleById.get(entry.getKey());
+			if (schedule == null || schedule.getBookingType() != BookingType.PRERESERVE) {
+				continue;
+			}
 			response.add(PrereservationRes.of(
 				entry.getKey(),
 				new ArrayList<>(entry.getValue()),
-				schedule != null ? schedule.getBookingOpenAt() : null,
-				schedule != null ? schedule.getBookingCloseAt() : null
+				schedule.getBookingOpenAt(),
+				schedule.getBookingCloseAt()
 			));
 		}
 		return response;

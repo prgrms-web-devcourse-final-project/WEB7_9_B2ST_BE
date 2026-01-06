@@ -342,7 +342,19 @@ class PrereservationApplyServiceTest {
 	@DisplayName("getMyApplicationList(): 전체 회차별 신청 구역 목록을 조회한다")
 	void getMyApplicationList_success() {
 		// given
-		given(performanceScheduleRepository.findAllById(any())).willReturn(java.util.List.of());
+		PerformanceSchedule schedule10 = mock(PerformanceSchedule.class);
+		given(schedule10.getPerformanceScheduleId()).willReturn(10L);
+		given(schedule10.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(schedule10.getBookingOpenAt()).willReturn(LocalDateTime.of(2026, 1, 6, 9, 0));
+		given(schedule10.getBookingCloseAt()).willReturn(LocalDateTime.of(2026, 2, 5, 9, 0));
+
+		PerformanceSchedule schedule20 = mock(PerformanceSchedule.class);
+		given(schedule20.getPerformanceScheduleId()).willReturn(20L);
+		given(schedule20.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(schedule20.getBookingOpenAt()).willReturn(LocalDateTime.of(2026, 1, 7, 9, 0));
+		given(schedule20.getBookingCloseAt()).willReturn(LocalDateTime.of(2026, 2, 6, 9, 0));
+
+		given(performanceScheduleRepository.findAllById(any())).willReturn(java.util.List.of(schedule10, schedule20));
 
 		Prereservation prereservation1 = mock(Prereservation.class);
 		Prereservation prereservation2 = mock(Prereservation.class);
@@ -391,7 +403,13 @@ class PrereservationApplyServiceTest {
 	@DisplayName("getMyApplicationList(): 같은 회차에 여러 구역 신청 시 중복 제거하여 반환한다")
 	void getMyApplicationList_duplicateSectionInSameSchedule() {
 		// given
-		given(performanceScheduleRepository.findAllById(any())).willReturn(java.util.List.of());
+		PerformanceSchedule schedule10 = mock(PerformanceSchedule.class);
+		given(schedule10.getPerformanceScheduleId()).willReturn(10L);
+		given(schedule10.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(schedule10.getBookingOpenAt()).willReturn(LocalDateTime.of(2026, 1, 6, 9, 0));
+		given(schedule10.getBookingCloseAt()).willReturn(LocalDateTime.of(2026, 2, 5, 9, 0));
+
+		given(performanceScheduleRepository.findAllById(any())).willReturn(java.util.List.of(schedule10));
 
 		Prereservation prereservation1 = mock(Prereservation.class);
 		Prereservation prereservation2 = mock(Prereservation.class);

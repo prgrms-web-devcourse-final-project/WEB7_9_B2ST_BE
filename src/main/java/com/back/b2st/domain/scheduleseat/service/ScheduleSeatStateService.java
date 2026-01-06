@@ -37,6 +37,19 @@ public class ScheduleSeatStateService {
 
 		queueAccessService.assertEnterable(performanceId, memberId);
 
+		holdSeatInternal(memberId, scheduleId, seatId);
+	}
+
+	/**
+	 * 신청예매(PRERESERVE) 좌석 HOLD는 대기열 없이 진행하므로, 대기열 검증을 생략한 HOLD를 제공합니다.
+	 * - 신청예매 전용 컨트롤러에서만 사용해야 합니다.
+	 */
+	@Transactional
+	public void holdSeatWithoutQueue(Long memberId, Long scheduleId, Long seatId) {
+		holdSeatInternal(memberId, scheduleId, seatId);
+	}
+
+	private void holdSeatInternal(Long memberId, Long scheduleId, Long seatId) {
 		// 1. 좌석 락 획득
 		String lockValue = scheduleSeatLockService.tryLock(scheduleId, seatId, memberId);
 		if (lockValue == null) {

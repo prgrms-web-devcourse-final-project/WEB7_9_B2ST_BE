@@ -39,9 +39,11 @@ public class PerformanceService {
 
 	private static final String POSTER_PREFIX = "performances/posters";
 
-	/* =========================
+	/*
+	 * =========================
 	 * 관리자 기능
-	 * ========================= */
+	 * =========================
+	 */
 
 	/**
 	 * 포스터 이미지 업로드용 Presigned PUT URL 발급 (관리자)
@@ -136,9 +138,20 @@ public class PerformanceService {
 			.orElseThrow(() -> new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND));
 	}
 
-	/* =========================
+	// 관리자: 삭제
+	@Transactional
+	public void deletePerformance(Long performanceId) {
+		if (!performanceRepository.existsById(performanceId)) {
+			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND);
+		}
+		performanceRepository.deleteById(performanceId);
+	}
+
+	/*
+	 * =========================
 	 * 사용자 기능
-	 * ========================= */
+	 * =========================
+	 */
 
 	// 사용자: Offset 목록
 	public Page<PerformanceListRes> getActivePerformances(Pageable pageable) {
@@ -165,9 +178,11 @@ public class PerformanceService {
 			.map(p -> performanceMapper.toListRes(p, now));
 	}
 
-	/* =========================
+	/*
+	 * =========================
 	 * Cursor 기반 페이징 (사용자 기능)
-	 * ========================= */
+	 * =========================
+	 */
 
 	public PerformanceCursorPageRes getActivePerformancesWithCursor(Long cursor, int size) {
 		Pageable pageable = PageRequest.of(0, size + 1);
@@ -190,9 +205,11 @@ public class PerformanceService {
 		return mapToCursorRes(performances, size);
 	}
 
-	/* =========================
+	/*
+	 * =========================
 	 * Cursor 기반 페이징 (관리자 기능)
-	 * ========================= */
+	 * =========================
+	 */
 
 	public PerformanceCursorPageRes getPerformancesForAdminWithCursor(Long cursor, int size) {
 		Pageable pageable = PageRequest.of(0, size + 1);
@@ -215,9 +232,11 @@ public class PerformanceService {
 		return mapToCursorRes(performances, size);
 	}
 
-	/* =========================
+	/*
+	 * =========================
 	 * 공통 유틸 (Private)
-	 * ========================= */
+	 * =========================
+	 */
 
 	private PerformanceCursorPageRes mapToCursorRes(List<Performance> performances, int size) {
 		LocalDateTime now = LocalDateTime.now();
@@ -229,7 +248,8 @@ public class PerformanceService {
 	}
 
 	private String blankToNull(String v) {
-		if (v == null) return null;
+		if (v == null)
+			return null;
 		String t = v.trim();
 		return t.isEmpty() ? null : t;
 	}
@@ -243,15 +263,19 @@ public class PerformanceService {
 	 */
 	private String normalizePosterKey(String posterKey) {
 		String s = blankToNull(posterKey);
-		if (s == null) return null;
+		if (s == null)
+			return null;
 
 		int start = 0;
 		int end = s.length();
 
-		while (start < end && s.charAt(start) == '/') start++;
-		while (start < end && s.charAt(end - 1) == '/') end--;
+		while (start < end && s.charAt(start) == '/')
+			start++;
+		while (start < end && s.charAt(end - 1) == '/')
+			end--;
 
-		if (start >= end) return null;
+		if (start >= end)
+			return null;
 
 		StringBuilder sb = new StringBuilder(end - start);
 		boolean prevSlash = false;
@@ -259,7 +283,8 @@ public class PerformanceService {
 		for (int i = start; i < end; i++) {
 			char ch = s.charAt(i);
 			if (ch == '/') {
-				if (prevSlash) continue;
+				if (prevSlash)
+					continue;
 				prevSlash = true;
 			} else {
 				prevSlash = false;

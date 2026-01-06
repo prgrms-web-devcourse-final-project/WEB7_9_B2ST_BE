@@ -1,16 +1,21 @@
 # 통합 Docker Compose 파일
-# PostgreSQL + Redis Cluster + Spring Boot App을 하나의 파일로 관리
+# PostgreSQL + Redis Cluster + Spring Boot App + Monitoring Stack
 #
 # 사용 방법:
 #   docker-compose up -d
 #   docker-compose logs -f app
+#
+# 모니터링 접근:
+#   - Prometheus: http://localhost:9090
+#   - Grafana: http://localhost:3001 (admin / admin123!)
+#   - Alertmanager: http://localhost:9093
 #
 # Redis Cluster 초기화:
 #   - redis-cluster-init 서비스가 자동으로 초기화합니다
 #   - 이미 초기화되어 있으면 자동으로 스킵됩니다 (cluster_state:ok 체크)
 #   - app 서비스는 redis-cluster-init 완료 후 자동 시작됩니다
 #
-#    운영 가이드:
+# ⚠️ 운영 가이드:
 #   - 배포 시: docker compose up -d 만 사용 (자동 초기화)
 #   - 장애/복구 시: bash docker/init-redis-cluster.sh 사용
 #   - 상세: OPERATIONS_RUNBOOK.md 참고
@@ -33,7 +38,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -81,7 +86,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "7000", "-a", "${REDIS_PASSWORD:-your-password}", "ping"]
+      test: [ "CMD", "redis-cli", "-p", "7000", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -126,7 +131,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "7001", "-a", "${REDIS_PASSWORD:-your-password}", "ping"]
+      test: [ "CMD", "redis-cli", "-p", "7001", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -171,7 +176,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "7002", "-a", "${REDIS_PASSWORD:-your-password}", "ping"]
+      test: [ "CMD", "redis-cli", "-p", "7002", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -216,7 +221,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "7003", "-a", "${REDIS_PASSWORD:-your-password}", "ping"]
+      test: [ "CMD", "redis-cli", "-p", "7003", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -261,7 +266,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "7004", "-a", "${REDIS_PASSWORD:-your-password}", "ping"]
+      test: [ "CMD", "redis-cli", "-p", "7004", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -306,7 +311,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "7005", "-a", "${REDIS_PASSWORD:-your-password}", "ping"]
+      test: [ "CMD", "redis-cli", "-p", "7005", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -382,15 +387,127 @@ services:
       - KAKAO_USER_INFO_URI=${KAKAO_USER_INFO_URI}
       - KAKAO_ISSUER=${KAKAO_ISSUER}
       - DDL_AUTO=${DDL_AUTO}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    command: java -jar app.jar
     networks:
       - common
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
+      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+  # ==================== Monitoring Stack ====================
 
+  # Prometheus - 메트릭 수집
+  prometheus:
+    image: prom/prometheus:v3.8.1
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  # Grafana - 대시보드 시각화
+  grafana:
+    image: grafana/grafana:12.3.0
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123!}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  # Alertmanager - 알림 관리
+  alertmanager:
+    image: prom/alertmanager:v0.30.0
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "9093:9093"
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  # Redis Exporter - Redis 메트릭 수집
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.80.1
+    restart: unless-stopped
+    depends_on:
+      redis-node-1:
+        condition: service_healthy
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis://redis-node-1:7000,redis://redis-node-2:7001,redis://redis-node-3:7002
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9121/metrics" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  # Postgres Exporter - PostgreSQL 메트릭 수집
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9187:9187"
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9187/metrics" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 networks:
   common:
     driver: bridge
@@ -403,3 +520,6 @@ volumes:
   redis-node-4-data:
   redis-node-5-data:
   redis-node-6-data:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:

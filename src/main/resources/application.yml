@@ -153,17 +153,29 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,circuitbreakers,circuitbreakerevents
+        include: health, info, circuitbreakers,circuitbreakerevents, prometheus, metrics
+      base-path: /actuator
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
   health:
     circuitbreakers:
       enabled: true
+    prometheus:
+      enabled: true
   metrics:
+    tags:
+      application: tt
+      team: b2st
     distribution:
       percentiles-histogram:
         resilience4j.circuitbreaker.calls: true
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 100ms, 500ms, 1s
+
 
 logging:
   level:

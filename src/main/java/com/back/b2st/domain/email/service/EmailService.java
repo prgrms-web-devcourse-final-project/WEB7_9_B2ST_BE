@@ -14,6 +14,7 @@ import com.back.b2st.domain.email.dto.request.VerifyCodeReq;
 import com.back.b2st.domain.email.dto.response.CheckDuplicateRes;
 import com.back.b2st.domain.email.entity.EmailVerification;
 import com.back.b2st.domain.email.error.EmailErrorCode;
+import com.back.b2st.domain.email.metrics.EmailMetrics;
 import com.back.b2st.domain.email.repository.EmailVerificationRepository;
 import com.back.b2st.domain.lottery.result.dto.LotteryResultEmailInfo;
 import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
@@ -37,6 +38,7 @@ public class EmailService {
 	private final EmailSender emailSender;
 	private final MemberRepository memberRepository;
 	private final EmailRateLimiter rateLimiter;
+	private final EmailMetrics emailMetrics;
 
 	/**
 	 * 이메일 중복 확인 - existsBy 조회 최적화 + boolean 반전
@@ -76,13 +78,14 @@ public class EmailService {
 			.build();
 
 		emailVerificationRepository.save(emailVerification);
-
 		log.info("인증 코드 저장 완료: email={}", maskEmail(email));
 
 		// 비동기 발송
 		try {
 			emailSender.sendEmailAsync(email, code);
+			emailMetrics.recordEmailSent(true);
 		} catch (Exception e) {
+			emailMetrics.recordEmailSent(false);
 			log.error("이메일 발송 요청 실패: {}", e.getMessage());
 			// 저장은 완료되었으니 예외 throw하지 않음
 		}
@@ -105,6 +108,7 @@ public class EmailService {
 		// 시도 횟수 확인
 		if (verification.isMaxAttemptExceeded()) {
 			emailVerificationRepository.deleteById(email);
+			emailMetrics.recordVerification(false);
 			throw new BusinessException(EmailErrorCode.VERIFICATION_MAX_ATTEMPT);
 		}
 
@@ -114,6 +118,7 @@ public class EmailService {
 			EmailVerification updated = verification.incrementAttempt();
 			emailVerificationRepository.save(updated);
 
+			emailMetrics.recordVerification(false);
 			log.warn("인증 코드 불일치: email={}, attempt={}", maskEmail(email), updated.getAttemptCount());
 			throw new BusinessException(EmailErrorCode.VERIFICATION_CODE_MISMATCH);
 		}
@@ -126,6 +131,7 @@ public class EmailService {
 		memberRepository.findByEmail(email)
 			.ifPresent(Member::verifyEmail);
 
+		emailMetrics.recordVerification(true);
 		log.info("이메일 인증 성공: email={}", maskEmail(email));
 	}
 

@@ -96,8 +96,6 @@ public class PerformanceDrawService {
 			.toList();
 
 		saveLotteryResult(winnerInfos);
-		// todo db 저장 실패시 모든 당첨자 정보가 날아감 -> 이거 대한 처리를 어떻게 할 것인가?
-		// todo 1. 발표하기 전에 모르니까 뭍을 건지, 아니면 파일로 따로 기록할 건지
 	}
 
 	/**

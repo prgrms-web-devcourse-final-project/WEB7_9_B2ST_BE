@@ -23,4 +23,7 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
 	List<Trade> findAllByBuyerIdAndTypeAndStatusOrderByPurchasedAtDesc(Long buyerId, TradeType type, TradeStatus status);
 
 	List<Trade> findAllByMemberIdAndTypeAndStatusOrderByPurchasedAtDesc(Long memberId, TradeType type, TradeStatus status);
+
+	// 구매자가 받은 완료된 거래 조회 (티켓 획득 경로 확인용)
+	List<Trade> findAllByBuyerIdAndStatus(Long buyerId, TradeStatus status);
 }

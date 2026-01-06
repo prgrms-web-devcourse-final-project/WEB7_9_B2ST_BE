@@ -51,21 +51,24 @@ public class PrereservationBookingService {
 
 		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
 
+		LocalDateTime now = LocalDateTime.now();
+
 		if (scheduleSeat.getHoldExpiredAt() == null) {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 		}
 
-		if (scheduleSeat.getHoldExpiredAt().isBefore(LocalDateTime.now())) {
+		if (scheduleSeat.getHoldExpiredAt().isBefore(now)) {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE, "좌석 HOLD가 만료되었습니다.");
 		}
 
-		prereservationBookingRepository.findActiveByScheduleSeatId(
+			prereservationBookingRepository.findActiveByScheduleSeatIdAndNotExpired(
 				scheduleSeat.getId(),
-				List.of(PrereservationBookingStatus.CREATED)
+				List.of(PrereservationBookingStatus.CREATED),
+				now
 			)
-			.ifPresent(existing -> {
-				throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE, "이미 생성된 신청예매가 존재합니다.");
-			});
+				.ifPresent(existing -> {
+					throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE, "이미 생성된 신청예매가 존재합니다.");
+				});
 
 		return prereservationBookingRepository.save(
 			PrereservationBooking.builder()
@@ -74,6 +77,15 @@ public class PrereservationBookingService {
 				.scheduleSeatId(scheduleSeat.getId())
 				.expiresAt(scheduleSeat.getHoldExpiredAt())
 				.build()
+		);
+	}
+
+	@Transactional
+	public int expireCreatedBookingsBatch() {
+		return prereservationBookingRepository.expireCreatedBookingsBatch(
+			PrereservationBookingStatus.CREATED,
+			PrereservationBookingStatus.FAILED,
+			LocalDateTime.now()
 		);
 	}
 

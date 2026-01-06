@@ -1,10 +1,12 @@
 package com.back.b2st.domain.lottery.result.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -62,6 +64,9 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		""")
 	List<LotteryReservationInfo> findReservationInfoByPaidIsTrue(Long scheduleId);
 
+	/*
+	 * 결제 여부 확인
+	 */
 	@Query("""
 		    SELECT le.uuid 
 		    FROM LotteryResult lr 
@@ -69,4 +74,32 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		    WHERE le.uuid IN :uuids AND lr.paid = true
 		""")
 	Set<UUID> findPaidByUuids(@Param("uuids") List<UUID> uuids);
+
+	/**
+	 * 기한 내 미결제자 당첨취소
+	 */
+	@Modifying
+	@Query("""
+		DELETE FROM LotteryResult lr
+		WHERE lr.paymentDeadline < :now 
+		  AND lr.paid = false
+		""")
+	int removeUnpaidAll(@Param("now") LocalDateTime now);
+
+	@Query("""
+		SELECT lr.memberId 
+		FROM LotteryResult lr
+		WHERE lr.paymentDeadline < :now 
+		  AND lr.paid = false
+		""")
+	List<Long> findCancelUnpaidAll(@Param("now") LocalDateTime now);
+
+	// Test
+	@Query("""
+		SELECT count(*) 
+		FROM LotteryResult lr
+		WHERE lr.paymentDeadline < :now 
+		  AND lr.paid = false
+		""")
+	long countUnpaidAll(@Param("now") LocalDateTime now);
 }

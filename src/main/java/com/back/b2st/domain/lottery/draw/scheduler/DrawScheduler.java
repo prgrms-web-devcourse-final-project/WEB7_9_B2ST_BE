@@ -15,7 +15,7 @@ public class DrawScheduler {
 
 	private final DrawService drawService;
 
-	@Scheduled(cron = "${lottery.draw.cron:0 0 3 * * *}")
+	@Scheduled(cron = "0 0 3 * * *")
 	public void executeDailyDraw() {
 		try {
 			drawService.executeDraws();
@@ -24,12 +24,21 @@ public class DrawScheduler {
 		}
 	}
 
-	@Scheduled(cron = "${lottery.allocation.cron:0 0 5 * * *}")
+	@Scheduled(cron = "0 0 5 * * *")
 	public void executeAllocation() {
 		try {
 			drawService.executeAllocation();
 		} catch (Exception e) {
 			log.error("Error, drawService.executeAllocation()", e);
+		}
+	}
+
+	@Scheduled(cron = "0 0 0 * * *")
+	public void executecancelUnpaid() {
+		try {
+			drawService.executecancelUnpaid();
+		} catch (Exception e) {
+			log.error("Error, drawService.executecancelUnpaid()", e);
 		}
 	}
 }

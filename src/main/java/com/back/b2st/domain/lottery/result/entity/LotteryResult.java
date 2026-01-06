@@ -99,4 +99,16 @@ public class LotteryResult extends BaseEntity {
 	public void confirmPayment() {
 		this.paid = true;
 	}
+
+	// test
+	public static LotteryResult expired(
+		Long lotteryEntryId,
+		Long memberId
+	) {
+		LotteryResult result = new LotteryResult(lotteryEntryId, memberId);
+		result.paymentDeadline = LocalDateTime.now()
+			.minusDays(1)
+			.with(LocalTime.MIN);
+		return result;
+	}
 }

@@ -2,6 +2,7 @@ package com.back.b2st.domain.lottery.draw.service;
 
 import static com.back.b2st.support.TestFixture.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -157,4 +158,47 @@ class LotteryNotificationServiceTest {
 		// verify(emailService).sendWinnerNotifications(scheduleId);
 	}
 
+	@Test
+	@DisplayName("실제 SMTP로 당첨 취소 이메일 1건 발송")
+	@Disabled
+	void notifyCancelUnpaid_success() {
+		// given
+		Member member = memberRepository.save(
+			Member.builder()
+				.email("codingworld@naver.com")
+				.password(passwordEncoder.encode("1234567a!"))
+				.name("실제발송테스트")
+				.role(Member.Role.MEMBER)
+				.provider(Member.Provider.EMAIL)
+				.isEmailVerified(true)
+				.isIdentityVerified(true)
+				.build()
+		);
+
+		// 응모 생성
+		createLotteryEntry(List.of(member), performance, schedule,
+			SeatGradeType.STANDARD, 1, lotteryEntryRepository);
+
+		entityManager.flush();
+		drawService.executeDraws();
+
+		List<LotteryResult> results = lotteryResultRepository.findAll();
+
+		results.forEach(result -> {
+			entityManager.createQuery("""
+						UPDATE LotteryResult lr
+						   SET lr.paymentDeadline = :expired
+						 WHERE lr.id = :id
+					""")
+				.setParameter("expired", LocalDateTime.now().minusDays(1))
+				.setParameter("id", result.getId())
+				.executeUpdate();
+		});
+
+		entityManager.flush();
+		entityManager.clear();
+
+		// when
+		drawService.executecancelUnpaid();
+	}
 }

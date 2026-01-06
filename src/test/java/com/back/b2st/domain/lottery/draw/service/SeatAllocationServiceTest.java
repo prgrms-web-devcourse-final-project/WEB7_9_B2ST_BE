@@ -138,8 +138,6 @@ class SeatAllocationServiceTest {
 		entityManager.flush();
 		drawService.executeDraws();
 
-		performanceDrawService.drawForPerformance(performance.getPerformanceId(), schedule.getPerformanceScheduleId());
-
 		entityManager.flush();
 		entityManager.clear();
 

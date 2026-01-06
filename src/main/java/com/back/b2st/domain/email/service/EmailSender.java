@@ -78,6 +78,17 @@ public class EmailSender {
 	}
 
 	@Async("emailExecutor")
+	public void sendCancelUnpaidEmail(
+		String to,
+		String name
+	) {
+		sendTemplateEmail(to, "[TT] 당첨 취소 안내", "email/lottery-cancel",
+			Map.of(
+				"name", name
+			));
+	}
+
+	@Async("emailExecutor")
 	public void sendTemplateEmail(String to, String subject, String templateName, Map<String, Object> variables) {
 		Context context = new Context();
 		if (variables != null) {

@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -93,10 +94,17 @@ public class PrereservationApplyService {
 
 	@Transactional(readOnly = true)
 	public PrereservationRes getMyApplications(Long scheduleId, Long memberId) {
+		PerformanceSchedule schedule = getScheduleOrThrow(scheduleId);
+
 		var applications = prereservationRepository
 			.findAllByPerformanceScheduleIdAndMemberIdOrderByCreatedAtDesc(scheduleId, memberId);
 		var sectionIds = applications.stream().map(Prereservation::getSectionId).distinct().toList();
-		return PrereservationRes.of(scheduleId, sectionIds);
+		return PrereservationRes.of(
+			scheduleId,
+			sectionIds,
+			schedule.getBookingOpenAt(),
+			schedule.getBookingCloseAt()
+		);
 	}
 
 	@Transactional(readOnly = true)
@@ -110,9 +118,23 @@ public class PrereservationApplyService {
 				.add(application.getSectionId());
 		}
 
+		Map<Long, PerformanceSchedule> scheduleById = performanceScheduleRepository
+			.findAllById(sectionIdsByScheduleId.keySet())
+			.stream()
+			.collect(java.util.stream.Collectors.toMap(
+				PerformanceSchedule::getPerformanceScheduleId,
+				schedule -> schedule
+			));
+
 		var response = new ArrayList<PrereservationRes>(sectionIdsByScheduleId.size());
 		for (var entry : sectionIdsByScheduleId.entrySet()) {
-			response.add(PrereservationRes.of(entry.getKey(), new ArrayList<>(entry.getValue())));
+			PerformanceSchedule schedule = scheduleById.get(entry.getKey());
+			response.add(PrereservationRes.of(
+				entry.getKey(),
+				new ArrayList<>(entry.getValue()),
+				schedule != null ? schedule.getBookingOpenAt() : null,
+				schedule != null ? schedule.getBookingCloseAt() : null
+			));
 		}
 		return response;
 	}

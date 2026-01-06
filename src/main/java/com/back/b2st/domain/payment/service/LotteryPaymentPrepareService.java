@@ -25,7 +25,7 @@ public class LotteryPaymentPrepareService {
 
 	@Transactional
 	public Payment prepareByEntryUuid(Long memberId, UUID entryUuid, PaymentMethod paymentMethod) {
-		LotteryPaymentInfo info = lotteryResultRepository.findPaymentInfoByid(entryUuid);
+		LotteryPaymentInfo info = lotteryResultRepository.findPaymentInfoById(entryUuid);
 		if (info == null) {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND);
 		}

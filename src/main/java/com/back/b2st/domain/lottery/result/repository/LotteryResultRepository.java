@@ -28,7 +28,7 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		JOIN LotteryEntry le ON lr.lotteryEntryId = le.id
 		WHERE le.uuid = :uuid
 		""")
-	LotteryPaymentInfo findPaymentInfoByid(    // todo ById
+	LotteryPaymentInfo findPaymentInfoById(
 		@Param("uuid") UUID uuid);
 
 	/**

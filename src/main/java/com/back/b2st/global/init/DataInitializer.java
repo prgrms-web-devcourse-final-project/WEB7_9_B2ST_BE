@@ -999,15 +999,16 @@ public class DataInitializer implements CommandLineRunner {
 		List<SeatGrade> grades = IntStream.range(0, seats.size())
 			.mapToObj(i -> {
 				int group = (i % 15) / 5;
+				SeatGradeType grade = SeatGradeType.values()[
+					ThreadLocalRandom.current().nextInt(SeatGradeType.values().length)];
+
 				return SeatGrade.builder()
 					.performanceId(performance.getPerformanceId())
 					.seatId(seats.get(i).getId())
-					.grade(SeatGradeType.values()[
-						ThreadLocalRandom.current().nextInt(SeatGradeType.values().length)
-						])
-					.price(switch (group) {
-						case 0 -> 30000;
-						case 1 -> 20000;
+					.grade(grade)
+					.price(switch (grade) {
+						case VIP -> 30000;
+						case ROYAL -> 20000;
 						default -> 10000;
 					})
 					.build();

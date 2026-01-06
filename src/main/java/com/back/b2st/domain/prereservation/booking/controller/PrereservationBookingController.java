@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.back.b2st.domain.prereservation.booking.dto.response.PrereservationBookingCreateRes;
+import com.back.b2st.domain.prereservation.booking.service.PrereservationSeatIdResolver;
 import com.back.b2st.domain.prereservation.booking.service.PrereservationBookingService;
 import com.back.b2st.domain.prereservation.booking.service.PrereservationHoldService;
 import com.back.b2st.domain.scheduleseat.service.ScheduleSeatStateService;
@@ -28,6 +29,7 @@ public class PrereservationBookingController {
 
 	private final PrereservationBookingService prereservationBookingService;
 	private final PrereservationHoldService prereservationHoldService;
+	private final PrereservationSeatIdResolver prereservationSeatIdResolver;
 	private final ScheduleSeatStateService scheduleSeatStateService;
 
 	@PostMapping("/hold")
@@ -50,11 +52,13 @@ public class PrereservationBookingController {
 		@PathVariable Long seatId
 	) {
 		Long memberId = requireMemberId(user);
+		Long resolvedSeatId = prereservationSeatIdResolver.resolveSeatId(scheduleId, seatId);
+
 		// 1. 신청예매 검증 (구역, 시간대 등)
-		prereservationHoldService.validateSeatHoldAllowed(memberId, scheduleId, seatId);
+		prereservationHoldService.validateSeatHoldAllowed(memberId, scheduleId, resolvedSeatId);
 
 		// 2. 좌석 HOLD
-		scheduleSeatStateService.holdSeatWithoutQueue(memberId, scheduleId, seatId);
+		scheduleSeatStateService.holdSeatWithoutQueue(memberId, scheduleId, resolvedSeatId);
 
 		return BaseResponse.created(null);
 	}
@@ -76,7 +80,8 @@ public class PrereservationBookingController {
 		@Parameter(description = "좌석 ID", example = "101")
 		@PathVariable Long seatId
 	) {
-		var booking = prereservationBookingService.createBooking(requireMemberId(user), scheduleId, seatId);
+		Long resolvedSeatId = prereservationSeatIdResolver.resolveSeatId(scheduleId, seatId);
+		var booking = prereservationBookingService.createBooking(requireMemberId(user), scheduleId, resolvedSeatId);
 		return BaseResponse.created(new PrereservationBookingCreateRes(booking.getId(), booking.getExpiresAt()));
 	}
 

@@ -583,11 +583,12 @@ public class DataInitializer implements CommandLineRunner {
 	private void seedPrereservationApplications(List<PerformanceSchedule> prereserveSchedules, List<Section> sections) {
 		var user1 = memberRepository.findByEmail("user1@tt.com").orElse(null);
 		var user2 = memberRepository.findByEmail("user2@tt.com").orElse(null);
-		if (user1 == null && user2 == null) {
+		var user3 = memberRepository.findByEmail("codeisneverodd@gmail.com").orElse(null);
+		if (user1 == null && user2 == null && user3 == null) {
 			return;
 		}
 
-		var members = java.util.List.of(user1, user2).stream().filter(java.util.Objects::nonNull).toList();
+		var members = java.util.List.of(user1, user2, user3).stream().filter(java.util.Objects::nonNull).toList();
 		int created = 0;
 
 		LocalDateTime now = LocalDateTime.now();

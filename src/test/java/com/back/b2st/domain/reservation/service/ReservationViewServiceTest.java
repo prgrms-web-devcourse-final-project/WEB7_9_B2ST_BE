@@ -161,6 +161,13 @@ class ReservationViewServiceTest {
 			.scheduleSeatId(scheduleSeatId)
 			.expiresAt(LocalDateTime.now().plusMinutes(10))
 			.build();
+		try {
+			var idField = PrereservationBooking.class.getDeclaredField("id");
+			idField.setAccessible(true);
+			idField.set(booking, bookingId);
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
 
 		Ticket ticket = Ticket.builder()
 			.reservationId(bookingId)

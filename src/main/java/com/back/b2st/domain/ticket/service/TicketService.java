@@ -9,8 +9,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
+import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.dto.response.ReservationSeatInfo;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.ticket.dto.response.TicketRes;
@@ -32,6 +38,9 @@ public class TicketService {
 	private final SeatRepository seatRepository;
 	private final ReservationRepository reservationRepository;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
+	private final ReservationSeatRepository reservationSeatRepository;
+	private final PrereservationBookingRepository prereservationBookingRepository;
+	private final ScheduleSeatRepository scheduleSeatRepository;
 
 	public Ticket createTicket(Long reservationId, Long memberId, Long seatId) {
 		return ticketRepository.findByReservationIdAndMemberIdAndSeatId(reservationId, memberId, seatId)
@@ -124,10 +133,7 @@ public class TicketService {
 			.map(ticket -> {
 				Seat seat = seatRepository.findById(ticket.getSeatId())
 					.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
-				Reservation reservation = reservationRepository.findById(ticket.getReservationId())
-					.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
-				PerformanceSchedule schedule = performanceScheduleRepository.findById(reservation.getScheduleId())
-					.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
+				PerformanceSchedule schedule = resolveScheduleForTicket(ticket);
 
 				return TicketRes.builder()
 					.ticketId(ticket.getId())
@@ -141,6 +147,40 @@ public class TicketService {
 					.build();
 			})
 			.collect(Collectors.toList());
+	}
+
+	private PerformanceSchedule resolveScheduleForTicket(Ticket ticket) {
+		Reservation reservation = reservationRepository.findById(ticket.getReservationId()).orElse(null);
+
+		if (reservation != null) {
+			List<ReservationSeatInfo> reservationSeats = reservationSeatRepository.findSeatInfos(reservation.getId());
+			boolean isSeatPartOfReservation = reservationSeats.stream()
+				.anyMatch(seatInfo -> seatInfo.seatId().equals(ticket.getSeatId()));
+
+			if (isSeatPartOfReservation) {
+				return performanceScheduleRepository.findById(reservation.getScheduleId())
+					.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
+			}
+		}
+
+		PrereservationBooking booking = prereservationBookingRepository.findById(ticket.getReservationId()).orElse(null);
+		if (booking != null) {
+			ScheduleSeat scheduleSeat = scheduleSeatRepository.findById(booking.getScheduleSeatId())
+				.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
+
+			if (scheduleSeat.getSeatId().equals(ticket.getSeatId())) {
+				return performanceScheduleRepository.findById(booking.getScheduleId())
+					.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
+			}
+		}
+
+		// 레거시/데이터 불일치 케이스: 기존 동작처럼 reservationId로 scheduleId를 역추적한다.
+		if (reservation != null) {
+			return performanceScheduleRepository.findById(reservation.getScheduleId())
+				.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
+		}
+
+		throw new BusinessException(TicketErrorCode.TICKET_NOT_FOUND);
 	}
 
 	@Transactional

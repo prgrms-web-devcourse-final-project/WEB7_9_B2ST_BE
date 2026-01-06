@@ -23,8 +23,12 @@ import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
+import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.ticket.dto.response.TicketRes;
@@ -63,6 +67,10 @@ class TicketServiceTest {
 	private PerformanceRepository performanceRepository;
 	@Autowired
 	private PerformanceScheduleRepository performanceScheduleRepository;
+	@Autowired
+	private ScheduleSeatRepository scheduleSeatRepository;
+	@Autowired
+	private PrereservationBookingRepository prereservationBookingRepository;
 	@Autowired
 	private EntityManager em;
 
@@ -257,6 +265,59 @@ class TicketServiceTest {
 
 		// then
 		assertThat(e.getErrorCode()).isEqualTo(TicketErrorCode.TICKET_NOT_CANCELABLE);
+	}
+
+	@Test
+	@DisplayName("내 티켓 조회: reservationId가 신청예매 bookingId여도 공연 정보를 정상 조회한다")
+	void getMyTickets_prereservationBookingId_mappedToSchedule() {
+		// given: 신청예매(bookingId를 ticket.reservationId로 쓰던 레거시 데이터) 생성
+		PerformanceSchedule prSchedule = PerformanceSchedule.builder()
+			.performance(performanceRepository.findAll().getFirst())
+			.roundNo(2)
+			.startAt(LocalDateTime.now().plusDays(2))
+			.bookingType(BookingType.PRERESERVE)
+			.bookingOpenAt(LocalDateTime.now().minusDays(1))
+			.bookingCloseAt(LocalDateTime.now().plusDays(30))
+			.build();
+		prSchedule = performanceScheduleRepository.save(prSchedule);
+
+		ScheduleSeat scheduleSeat = scheduleSeatRepository.save(
+			ScheduleSeat.builder()
+				.scheduleId(prSchedule.getPerformanceScheduleId())
+				.seatId(sId)
+				.build()
+		);
+
+		PrereservationBooking booking = prereservationBookingRepository.save(
+			PrereservationBooking.builder()
+				.scheduleId(prSchedule.getPerformanceScheduleId())
+				.memberId(mId)
+				.scheduleSeatId(scheduleSeat.getId())
+				.expiresAt(LocalDateTime.now().plusMinutes(10))
+				.build()
+		);
+
+		ticketRepository.save(
+			Ticket.builder()
+				.reservationId(booking.getId()) // 레거시: bookingId를 reservationId처럼 저장
+				.memberId(mId)
+				.seatId(sId)
+				.build()
+		);
+
+		em.flush();
+		em.clear();
+
+		// when
+		List<TicketRes> myTickets = ticketService.getMyTickets(mId);
+
+		// then
+		TicketRes prTicket = myTickets.stream()
+			.filter(t -> t.getReservationId().equals(booking.getId()))
+			.findFirst()
+			.orElseThrow();
+
+		assertThat(prTicket.getPerformanceId()).isEqualTo(prSchedule.getPerformance().getPerformanceId());
 	}
 
 	@Test

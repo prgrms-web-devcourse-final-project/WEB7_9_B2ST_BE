@@ -31,6 +31,9 @@ public class PrereservationHoldService {
 	private final PrereservationRepository prereservationRepository;
 	private final PrereservationSlotService prereservationSlotService;
 
+	@Value("${prereservation.booking.strict:true}")
+	private boolean bookingStrict = true;
+
 	@Value("${prereservation.slot.strict:true}")
 	private boolean slotStrict = true;
 
@@ -49,11 +52,13 @@ public class PrereservationHoldService {
 		}
 
 		LocalDateTime now = LocalDateTime.now();
-		if (now.isBefore(bookingOpenAt)) {
-			throw new BusinessException(PrereservationErrorCode.BOOKING_NOT_OPEN);
-		}
-		if (schedule.getBookingCloseAt() != null && now.isAfter(schedule.getBookingCloseAt())) {
-			throw new BusinessException(PrereservationErrorCode.BOOKING_CLOSED);
+		if (bookingStrict) {
+			if (now.isBefore(bookingOpenAt)) {
+				throw new BusinessException(PrereservationErrorCode.BOOKING_NOT_OPEN);
+			}
+			if (schedule.getBookingCloseAt() != null && now.isAfter(schedule.getBookingCloseAt())) {
+				throw new BusinessException(PrereservationErrorCode.BOOKING_CLOSED);
+			}
 		}
 
 		Seat seat = seatRepository.findById(seatId)

@@ -9,6 +9,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,9 @@ public class PrereservationApplyService {
 	private final PrereservationSlotService prereservationSlotService;
 	private final EmailSender emailSender;
 
+	@Value("${prereservation.application.strict:true}")
+	private boolean applicationStrict = true;
+
 	@Transactional
 	public void apply(Long scheduleId, Long memberId, String email, Long sectionId) {
 		PerformanceSchedule schedule = getScheduleOrThrow(scheduleId);
@@ -52,13 +56,15 @@ public class PrereservationApplyService {
 			throw new BusinessException(PrereservationErrorCode.BOOKING_TIME_NOT_CONFIGURED);
 		}
 
-		LocalDateTime now = LocalDateTime.now();
-		LocalDateTime applyOpenAt = bookingOpenAt.minusDays(1);
-		if (now.isBefore(applyOpenAt)) {
-			throw new BusinessException(PrereservationErrorCode.APPLICATION_NOT_OPEN);
-		}
-		if (!now.isBefore(bookingOpenAt)) {
-			throw new BusinessException(PrereservationErrorCode.APPLICATION_CLOSED);
+		if (applicationStrict) {
+			LocalDateTime now = LocalDateTime.now();
+			LocalDateTime applyOpenAt = bookingOpenAt.minusDays(1);
+			if (now.isBefore(applyOpenAt)) {
+				throw new BusinessException(PrereservationErrorCode.APPLICATION_NOT_OPEN);
+			}
+			if (!now.isBefore(bookingOpenAt)) {
+				throw new BusinessException(PrereservationErrorCode.APPLICATION_CLOSED);
+			}
 		}
 
 		Section section = sectionRepository.findById(sectionId)

@@ -100,8 +100,26 @@ queue:
     enabled: false
 
 prereservation:
+  application:
+    strict: ${PRERESERVATION_APPLICATION_STRICT:true}
+  booking:
+    strict: ${PRERESERVATION_BOOKING_STRICT:true}
   slot:
     strict: ${PRERESERVATION_SLOT_STRICT:true}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+prereservation:
+  application:
+    strict: ${PRERESERVATION_APPLICATION_STRICT:false}
+  booking:
+    strict: ${PRERESERVATION_BOOKING_STRICT:false}
+  slot:
+    strict: ${PRERESERVATION_SLOT_STRICT:false}
 
 # ==================== Circuit Breaker 설정 (추가) ====================
 resilience4j:

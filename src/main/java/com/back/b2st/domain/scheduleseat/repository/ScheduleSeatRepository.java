@@ -18,6 +18,9 @@ import jakarta.persistence.LockModeType;
 
 public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long>, ScheduleSeatRepositoryCustom {
 
+	/** 회차 좌석 생성 중복 방지 메서드 추가 */
+	boolean existsByScheduleId(Long scheduleId);
+
 	/** scheduleId + seatId 로 특정 좌석 조회 */
 	Optional<ScheduleSeat> findByScheduleIdAndSeatId(Long scheduleId, Long seatId);
 

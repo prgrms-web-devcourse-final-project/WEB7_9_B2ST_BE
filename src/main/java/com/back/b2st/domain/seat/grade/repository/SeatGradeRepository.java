@@ -13,7 +13,10 @@ import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 
 public interface SeatGradeRepository extends JpaRepository<SeatGrade, Long> {
 	Optional<SeatGrade> findTopByPerformanceIdAndSeatIdOrderByIdDesc(Long performanceId, Long seatId);
+
 	Optional<SeatGrade> findTopByPerformanceIdAndGradeOrderByIdDesc(Long performanceId, SeatGradeType grade);
+
+	boolean existsByPerformanceIdAndSeatId(Long performanceId, Long seatId);
 
 	void deleteAllByPerformanceId(Long performanceId);
 

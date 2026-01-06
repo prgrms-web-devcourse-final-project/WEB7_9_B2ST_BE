@@ -13,7 +13,7 @@ import com.back.b2st.domain.seat.seat.entity.Seat;
 public interface SeatRepository extends JpaRepository<Seat, Long> {
 	@Query(value = """
 			SELECT new com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes(
-				s.id, s.sectionName, s.rowLabel, s.seatNumber, g.grade
+				s.id, s.sectionName, s.rowLabel, s.seatNumber, g.grade, g.price
 			)
 			FROM Seat s
 			JOIN SeatGrade g ON g.seatId = s.id
@@ -26,7 +26,7 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
 
 	@Query("""
 			SELECT new com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes(
-					s.id, s.sectionName, s.rowLabel, s.seatNumber, g.grade
+					s.id, s.sectionName, s.rowLabel, s.seatNumber, g.grade, g.price
 			)
 			FROM Seat s
 			JOIN SeatGrade g ON g.seatId = s.id
@@ -36,7 +36,7 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
 
 	@Query("""
 			SELECT new com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes(
-					s.id, s.sectionName, s.rowLabel, s.seatNumber, g.grade
+					s.id, s.sectionName, s.rowLabel, s.seatNumber, g.grade, g.price
 			)
 			FROM Seat s
 			JOIN SeatGrade g ON g.seatId = s.id

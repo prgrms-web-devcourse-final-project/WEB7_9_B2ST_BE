@@ -1,10 +1,8 @@
 package com.back.b2st.domain.payment.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.util.UUID;
 
@@ -43,7 +41,7 @@ class LotteryPaymentPrepareServiceTest {
 		UUID entryUuid = UUID.randomUUID();
 		Long lotteryResultId = 10L;
 
-		when(lotteryResultRepository.findPaymentInfoByid(entryUuid))
+		when(lotteryResultRepository.findPaymentInfoById(entryUuid))
 			.thenReturn(new LotteryPaymentInfo(lotteryResultId, memberId, SeatGradeType.VIP, 2));
 
 		Payment expected = Payment.builder()
@@ -72,7 +70,7 @@ class LotteryPaymentPrepareServiceTest {
 	@Test
 	void prepareByEntryUuid_throwsWhenInfoNotFound() {
 		UUID entryUuid = UUID.randomUUID();
-		when(lotteryResultRepository.findPaymentInfoByid(entryUuid)).thenReturn(null);
+		when(lotteryResultRepository.findPaymentInfoById(entryUuid)).thenReturn(null);
 
 		assertThatThrownBy(() -> lotteryPaymentPrepareService.prepareByEntryUuid(1L, entryUuid, PaymentMethod.CARD))
 			.isInstanceOf(BusinessException.class)
@@ -83,7 +81,7 @@ class LotteryPaymentPrepareServiceTest {
 	@Test
 	void prepareByEntryUuid_throwsWhenNotOwner() {
 		UUID entryUuid = UUID.randomUUID();
-		when(lotteryResultRepository.findPaymentInfoByid(entryUuid))
+		when(lotteryResultRepository.findPaymentInfoById(entryUuid))
 			.thenReturn(new LotteryPaymentInfo(10L, 999L, SeatGradeType.VIP, 2));
 
 		assertThatThrownBy(() -> lotteryPaymentPrepareService.prepareByEntryUuid(1L, entryUuid, PaymentMethod.CARD))

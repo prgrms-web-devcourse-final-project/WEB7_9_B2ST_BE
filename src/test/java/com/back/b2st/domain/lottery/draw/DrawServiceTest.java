@@ -480,7 +480,7 @@ class DrawServiceTest {
 		// 추첨 응모
 		LotteryEntry entry = lotteryEntryRepository.findById(result.getLotteryEntryId()).get();
 		// 결과 테이블에서 정보 조회
-		LotteryPaymentInfo info = lotteryResultRepository.findPaymentInfoByid(entry.getUuid());
+		LotteryPaymentInfo info = lotteryResultRepository.findPaymentInfoById(entry.getUuid());
 
 		// then
 		assertThat(result.getId()).isEqualTo(info.id());

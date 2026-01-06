@@ -7,6 +7,7 @@ public record SeatInfoRes(
 	String sectionName,
 	String rowLabel,
 	Integer seatNumber,
-	SeatGradeType grade
+	SeatGradeType grade,
+	Integer price
 ) {
 }

@@ -311,6 +311,13 @@ class PrereservationApplyServiceTest {
 	@DisplayName("getMyApplications(): 신청한 구역 목록을 조회한다")
 	void getMyApplications_success() {
 		// given
+		LocalDateTime bookingOpenAt = LocalDateTime.of(2026, 1, 6, 9, 0);
+		LocalDateTime bookingCloseAt = LocalDateTime.of(2026, 2, 5, 9, 0);
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		given(schedule.getBookingOpenAt()).willReturn(bookingOpenAt);
+		given(schedule.getBookingCloseAt()).willReturn(bookingCloseAt);
+		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+
 		Prereservation prereservation1 = mock(Prereservation.class);
 		Prereservation prereservation2 = mock(Prereservation.class);
 
@@ -327,12 +334,16 @@ class PrereservationApplyServiceTest {
 		// then
 		assertThat(result.scheduleId()).isEqualTo(SCHEDULE_ID);
 		assertThat(result.sectionIds()).containsExactly(1L, 2L);
+		assertThat(result.bookingOpenAt()).isEqualTo(bookingOpenAt);
+		assertThat(result.bookingCloseAt()).isEqualTo(bookingCloseAt);
 	}
 
 	@Test
 	@DisplayName("getMyApplicationList(): 전체 회차별 신청 구역 목록을 조회한다")
 	void getMyApplicationList_success() {
 		// given
+		given(performanceScheduleRepository.findAllById(any())).willReturn(java.util.List.of());
+
 		Prereservation prereservation1 = mock(Prereservation.class);
 		Prereservation prereservation2 = mock(Prereservation.class);
 		Prereservation prereservation3 = mock(Prereservation.class);
@@ -364,6 +375,8 @@ class PrereservationApplyServiceTest {
 	@DisplayName("getMyApplicationList(): 신청 내역이 없으면 빈 리스트를 반환한다")
 	void getMyApplicationList_empty() {
 		// given
+		given(performanceScheduleRepository.findAllById(any())).willReturn(java.util.List.of());
+
 		given(prereservationRepository.findAllByMemberIdOrderByCreatedAtDesc(MEMBER_ID))
 			.willReturn(java.util.List.of());
 
@@ -378,6 +391,8 @@ class PrereservationApplyServiceTest {
 	@DisplayName("getMyApplicationList(): 같은 회차에 여러 구역 신청 시 중복 제거하여 반환한다")
 	void getMyApplicationList_duplicateSectionInSameSchedule() {
 		// given
+		given(performanceScheduleRepository.findAllById(any())).willReturn(java.util.List.of());
+
 		Prereservation prereservation1 = mock(Prereservation.class);
 		Prereservation prereservation2 = mock(Prereservation.class);
 

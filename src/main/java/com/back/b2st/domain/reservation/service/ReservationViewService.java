@@ -52,7 +52,6 @@ public class ReservationViewService {
 			PaymentConfirmRes payment = paymentViewService.getByReservationId(reservationId, memberId);
 			return new ReservationDetailWithPaymentRes(ownedReservation, seats, payment);
 		}
-
 		// 2) 티켓 소유자 기반 상세 (교환/양도 등으로 예약자 != 티켓소유자 가능)
 		List<Ticket> tickets = ticketRepository.findAllByReservationIdAndMemberId(reservationId, memberId);
 

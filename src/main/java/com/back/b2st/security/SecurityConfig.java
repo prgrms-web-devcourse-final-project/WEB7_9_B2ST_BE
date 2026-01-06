@@ -50,8 +50,14 @@ public class SecurityConfig {
 				// 대기열 API - 인증 필요 (로그인 사용자만 접근 가능)
 				.requestMatchers("/api/queues/**").authenticated()
 				// Actuator (health/info만 공개)
-				.requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus",
-					"/actuator/scheduledtasks").permitAll()
+				.requestMatchers(
+					"/actuator/health",
+					"/actuator/info",
+					"/actuator/prometheus",
+					"/actuator/scheduledtasks",
+					"/actuator/circuitbreakers",        // Circuit Breaker 상태
+					"/actuator/circuitbreakerevents"    // Circuit Breaker 이벤트
+				).permitAll()
 				// 인증 필요한 auth 하위 경로 (link, logout)
 				.requestMatchers("/api/auth/link/**", "/api/auth/logout").authenticated()
 				// 공개 경로

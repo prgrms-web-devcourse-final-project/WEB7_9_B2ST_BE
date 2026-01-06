@@ -219,4 +219,74 @@ class EmailServiceTest {
 			verify(emailSender, times(1)).sendLotteryWinnerEmail(anyString(), anyString(), any(), anyInt(), any());
 		}
 	}
+
+	@Nested
+	@DisplayName("당첨 취소 이메일 발송 (sendCancelUnpaidNotifications)")
+	class SendCancelUnpaidNotificationsTest {
+
+		@Test
+		@DisplayName("성공 - 대상자 3명에게 취소 이메일 발송")
+		void success() {
+			// given
+			List<Long> memberIds = List.of(10L, 20L, 30L);
+
+			given(memberRepository.findById(anyLong()))
+				.willAnswer(invocation -> {
+					Long id = invocation.getArgument(0);
+					return Optional.of(
+						Member.builder()
+							.email("user" + id + "@test.com")
+							.name("회원" + id)
+							.build()
+					);
+				});
+
+			// when
+			emailService.sendCancelUnpaidNotifications(memberIds);
+
+			// then
+			verify(memberRepository, times(3)).findById(anyLong());
+			verify(emailSender, times(3))
+				.sendCancelUnpaidEmail(anyString(), anyString());
+		}
+
+		@Test
+		@DisplayName("대상자 없음 - 이메일 발송 안함")
+		void noTargets() {
+			// when
+			emailService.sendCancelUnpaidNotifications(List.of());
+
+			// then
+			verify(memberRepository, never()).findById(anyLong());
+			verify(emailSender, never())
+				.sendCancelUnpaidEmail(anyString(), anyString());
+		}
+
+		@Test
+		@DisplayName("일부 실패 - 한 명 실패해도 나머지는 발송됨")
+		void partialFailure() {
+			// given
+			List<Long> memberIds = List.of(10L, 999L);
+
+			given(memberRepository.findById(10L))
+				.willReturn(Optional.of(
+					Member.builder()
+						.email("hong@tt.com")
+						.name("홍길동")
+						.build()
+				));
+
+			given(memberRepository.findById(999L))
+				.willReturn(Optional.empty());
+
+			// when
+			emailService.sendCancelUnpaidNotifications(memberIds);
+
+			// then
+			verify(memberRepository, times(2)).findById(anyLong());
+			verify(emailSender, times(1))
+				.sendCancelUnpaidEmail(anyString(), anyString());
+		}
+	}
+
 }

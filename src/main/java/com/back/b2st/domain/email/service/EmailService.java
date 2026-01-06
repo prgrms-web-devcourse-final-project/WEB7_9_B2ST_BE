@@ -219,8 +219,8 @@ public class EmailService {
 	/**
 	 * 취소 안내 메일 발송
 	 */
-	private void sendCancelUnpaidEmail(Long mdmberId) {
-		Member member = memberRepository.findById(mdmberId)
+	private void sendCancelUnpaidEmail(Long memberId) {
+		Member member = memberRepository.findById(memberId)
 			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
 
 		emailSender.sendCancelUnpaidEmail(

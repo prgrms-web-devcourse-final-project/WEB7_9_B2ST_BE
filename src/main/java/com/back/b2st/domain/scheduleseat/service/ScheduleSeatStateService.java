@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.performanceschedule.error.PerformanceScheduleErrorCode;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.queue.service.QueueAccessService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
@@ -19,15 +22,34 @@ public class ScheduleSeatStateService {
 
 	private final ScheduleSeatLockService scheduleSeatLockService;
 	private final SeatHoldTokenService seatHoldTokenService;
+	private final QueueAccessService queueAccessService;
 
 	private final ScheduleSeatRepository scheduleSeatRepository;
+	private final PerformanceScheduleRepository performanceScheduleRepository;
 
 	/** === 좌석 잡기 (HOLD) === */
 	@Transactional
 	public void holdSeat(Long memberId, Long scheduleId, Long seatId) {
 
-		// prereservationService.validateSeatHoldAllowed(memberId, scheduleId, seatId);
+		// 0. 대기열 통과 검증 (락 이전)
+		Long performanceId = performanceScheduleRepository.findPerformanceIdByScheduleId(scheduleId)
+			.orElseThrow(() -> new BusinessException(PerformanceScheduleErrorCode.SCHEDULE_NOT_FOUND));
 
+		queueAccessService.assertEnterable(performanceId, memberId);
+
+		holdSeatInternal(memberId, scheduleId, seatId);
+	}
+
+	/**
+	 * 신청예매(PRERESERVE) 좌석 HOLD는 대기열 없이 진행하므로, 대기열 검증을 생략한 HOLD를 제공합니다.
+	 * - 신청예매 전용 컨트롤러에서만 사용해야 합니다.
+	 */
+	@Transactional
+	public void holdSeatWithoutQueue(Long memberId, Long scheduleId, Long seatId) {
+		holdSeatInternal(memberId, scheduleId, seatId);
+	}
+
+	private void holdSeatInternal(Long memberId, Long scheduleId, Long seatId) {
 		// 1. 좌석 락 획득
 		String lockValue = scheduleSeatLockService.tryLock(scheduleId, seatId, memberId);
 		if (lockValue == null) {

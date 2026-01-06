@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,8 +22,16 @@ import org.springframework.transaction.annotation.Transactional;
 import com.back.b2st.domain.auth.dto.request.LoginReq;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.entity.PerformanceStatus;
+import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
+import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.prereservation.entry.entity.Prereservation;
 import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
+import com.back.b2st.domain.venue.venue.entity.Venue;
+import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.test.AbstractContainerBaseTest;
 
 import tools.jackson.databind.JsonNode;
@@ -48,6 +57,15 @@ class PrereservationMyApplicationControllerTest extends AbstractContainerBaseTes
 
 	@Autowired
 	private PrereservationRepository prereservationRepository;
+
+	@Autowired
+	private VenueRepository venueRepository;
+
+	@Autowired
+	private PerformanceRepository performanceRepository;
+
+	@Autowired
+	private PerformanceScheduleRepository performanceScheduleRepository;
 
 	private String accessToken;
 	private Long memberId;
@@ -76,9 +94,48 @@ class PrereservationMyApplicationControllerTest extends AbstractContainerBaseTes
 		accessToken = getAccessToken(email, password);
 		memberId = member.getId();
 
-		// FK가 없는 테이블이므로 더미 ID로 검증 가능 (순서 보장을 위해 오름차순 값 사용)
-		scheduleId1 = 100L;
-		scheduleId2 = 200L;
+		Venue venue = venueRepository.save(
+			Venue.builder()
+				.name("신청예매테스트공연장")
+				.build()
+		);
+
+		Performance performance = performanceRepository.save(
+			Performance.builder()
+				.venue(venue)
+				.title("신청예매테스트공연")
+				.category("테스트")
+				.description("신청예매 테스트용 공연입니다.")
+				.startDate(LocalDateTime.of(2026, 1, 1, 0, 0))
+				.endDate(LocalDateTime.of(2026, 12, 31, 23, 59))
+				.status(PerformanceStatus.ACTIVE)
+				.build()
+		);
+
+		PerformanceSchedule schedule1 = performanceScheduleRepository.save(
+			PerformanceSchedule.builder()
+				.performance(performance)
+				.startAt(LocalDateTime.of(2026, 1, 6, 19, 0))
+				.roundNo(1)
+				.bookingType(BookingType.PRERESERVE)
+				.bookingOpenAt(LocalDateTime.of(2026, 1, 5, 0, 0))
+				.bookingCloseAt(LocalDateTime.of(2026, 2, 5, 0, 0))
+				.build()
+		);
+
+		PerformanceSchedule schedule2 = performanceScheduleRepository.save(
+			PerformanceSchedule.builder()
+				.performance(performance)
+				.startAt(LocalDateTime.of(2026, 1, 7, 19, 0))
+				.roundNo(2)
+				.bookingType(BookingType.PRERESERVE)
+				.bookingOpenAt(LocalDateTime.of(2026, 1, 5, 0, 0))
+				.bookingCloseAt(LocalDateTime.of(2026, 2, 5, 0, 0))
+				.build()
+		);
+
+		scheduleId1 = schedule1.getPerformanceScheduleId();
+		scheduleId2 = schedule2.getPerformanceScheduleId();
 		sectionIdA = 10L;
 		sectionIdB = 20L;
 

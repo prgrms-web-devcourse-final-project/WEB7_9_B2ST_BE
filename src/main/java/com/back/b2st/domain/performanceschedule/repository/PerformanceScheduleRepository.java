@@ -94,4 +94,14 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 		@Param("today") LocalDateTime startDate,
 		@Param("threeDaysLater") LocalDateTime endDate);
 
+	/**
+	 * scheduleId로 performanceId 조회 (대기열/검증 등에서 사용)
+	 */
+	@Query("""
+			select ps.performance.performanceId
+			from PerformanceSchedule ps
+			where ps.performanceScheduleId = :scheduleId
+		""")
+	Optional<Long> findPerformanceIdByScheduleId(@Param("scheduleId") Long scheduleId);
+
 }

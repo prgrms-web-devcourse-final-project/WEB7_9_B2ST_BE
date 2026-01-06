@@ -23,6 +23,7 @@ import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.queue.service.QueueAccessService;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.seat.dto.response.SeatInfoRes;
 import com.back.b2st.domain.seat.seat.service.SeatService;
@@ -45,11 +46,16 @@ public class LotteryEntryService {
 	private final PerformanceRepository performanceRepository;
 	private final SeatService seatService;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
+	private final QueueAccessService queueAccessService;
 
 	/**
 	 * 선택한 회차의 좌석 배치도 전달
+	 *
+	 * 대기열 검증 추가: 입장 권한이 있는 사용자만 좌석 배치 조회 가능
 	 */
 	public List<SectionLayoutRes> getSeatLayout(Long memberId, Long performanceId) {
+		queueAccessService.assertEnterable(performanceId, memberId);
+
 		validateMember(memberId);
 		Long venudId = validatePerformance(performanceId);
 		List<SeatInfoRes> seatInfo = seatService.getSeatInfoByVenueId(venudId);

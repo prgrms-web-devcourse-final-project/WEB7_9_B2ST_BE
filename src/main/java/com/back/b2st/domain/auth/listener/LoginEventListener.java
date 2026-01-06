@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.response.LoginEvent;
 import com.back.b2st.domain.auth.entity.LoginLog;
+import com.back.b2st.domain.auth.metrics.SecurityMetrics;
 import com.back.b2st.domain.auth.repository.LoginLogRepository;
 import com.back.b2st.domain.auth.service.SecurityThreatDetectionService;
 import com.back.b2st.global.alert.AlertService;
@@ -32,6 +33,7 @@ public class LoginEventListener {
 	private final LoginLogRepository loginLogRepository;
 	private final SecurityThreatDetectionService threatDetectionService;
 	private final AlertService alertService;
+	private final SecurityMetrics securityMetrics;
 
 	/**
 	 * 로그인 이벤트 처리
@@ -57,7 +59,10 @@ public class LoginEventListener {
 			// 실패한 로그인에 대해 보안 위협 탐지
 			if (!event.isSuccess()) {
 				threatDetectionService.detectThreatForIp(event.clientIp())
-					.ifPresent(alertService::sendSecurityAlert);
+					.ifPresent(threat -> {
+						alertService.sendSecurityAlert(threat);
+						securityMetrics.recordSecurityThreat(threat);
+					});
 			}
 
 			log.info("로그인 로그 저장 완료: email={}, success={}, ip={}",

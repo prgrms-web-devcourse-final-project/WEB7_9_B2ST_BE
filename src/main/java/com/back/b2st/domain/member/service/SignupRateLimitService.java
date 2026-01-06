@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
+import com.back.b2st.domain.auth.metrics.SecurityMetrics;
 import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -22,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class SignupRateLimitService {
+
+	private final SecurityMetrics securityMetrics;
 
 	// 세팅 상수
 	private static final int MAX_SIGNUPS_PER_HOUR = 3; // 시간당 최대 가입 횟수
@@ -66,6 +69,7 @@ public class SignupRateLimitService {
 
 		// 최대 횟수 초과 시 예외
 		if (count > MAX_SIGNUPS_PER_HOUR) {
+			securityMetrics.recordRateLimitTriggered("/api/members/signup");
 			log.warn("가입 시도 초과: IP={}, count={}", clientIp, count);
 			throw new BusinessException(MemberErrorCode.SIGNUP_RATE_LIMIT_EXCEEDED);
 		}

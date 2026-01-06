@@ -2,6 +2,8 @@ package com.back.b2st.domain.performance.dto.request;
 
 import java.time.LocalDateTime;
 
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -36,7 +38,12 @@ public record CreatePerformanceReq(
 	LocalDateTime startDate,
 
 	@NotNull
-	LocalDateTime endDate
+	LocalDateTime endDate,
+
+	BookingType bookingType,  // nullable (LOTTERY, FIRST_COME, PRERESERVE)
+
+	LocalDateTime bookingOpenAt,
+
+	LocalDateTime bookingCloseAt
 ) {
 }
-

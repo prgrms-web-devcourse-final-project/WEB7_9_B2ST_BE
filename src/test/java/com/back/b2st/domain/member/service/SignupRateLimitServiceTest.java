@@ -16,6 +16,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.RedisScript;
 
+import com.back.b2st.domain.auth.metrics.SecurityMetrics;
 import com.back.b2st.domain.member.error.MemberErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 
@@ -27,6 +28,8 @@ class SignupRateLimitServiceTest {
 	private StringRedisTemplate redisTemplate;
 	@Mock
 	private ValueOperations<String, String> valueOperations;
+	@Mock
+	private SecurityMetrics securityMetrics;
 	@InjectMocks
 	private SignupRateLimitService signupRateLimitService;
 
@@ -38,10 +41,10 @@ class SignupRateLimitServiceTest {
 		void firstSignupAttempt_Success() {
 			// given
 			given(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
-				.willReturn(1L);
+					.willReturn(1L);
 			// when & then
 			assertThatCode(() -> signupRateLimitService.checkSignupLimit(TEST_IP))
-				.doesNotThrowAnyException();
+					.doesNotThrowAnyException();
 		}
 
 		@Test
@@ -49,10 +52,10 @@ class SignupRateLimitServiceTest {
 		void thirdSignupAttempt_Success() {
 			// given
 			given(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
-				.willReturn(3L);
+					.willReturn(3L);
 			// when & then
 			assertThatCode(() -> signupRateLimitService.checkSignupLimit(TEST_IP))
-				.doesNotThrowAnyException();
+					.doesNotThrowAnyException();
 		}
 
 		@Test
@@ -60,12 +63,12 @@ class SignupRateLimitServiceTest {
 		void fourthSignupAttempt_ThrowsException() {
 			// given
 			given(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
-				.willReturn(4L);
+					.willReturn(4L);
 			// when & then
 			assertThatThrownBy(() -> signupRateLimitService.checkSignupLimit(TEST_IP))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(MemberErrorCode.SIGNUP_RATE_LIMIT_EXCEEDED);
+					.isInstanceOf(BusinessException.class)
+					.extracting("errorCode")
+					.isEqualTo(MemberErrorCode.SIGNUP_RATE_LIMIT_EXCEEDED);
 		}
 
 		@Test
@@ -73,10 +76,10 @@ class SignupRateLimitServiceTest {
 		void redisReturnsNull_TreatedAsOne() {
 			// given
 			given(redisTemplate.execute(any(RedisScript.class), anyList(), any()))
-				.willReturn(null);
+					.willReturn(null);
 			// when & then
 			assertThatCode(() -> signupRateLimitService.checkSignupLimit(TEST_IP))
-				.doesNotThrowAnyException();
+					.doesNotThrowAnyException();
 		}
 	}
 

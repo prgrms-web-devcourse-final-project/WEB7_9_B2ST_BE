@@ -39,6 +39,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.aspectj:aspectjweaver:1.9.24'
 
+    // Prometheus
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
     // jpa, redis

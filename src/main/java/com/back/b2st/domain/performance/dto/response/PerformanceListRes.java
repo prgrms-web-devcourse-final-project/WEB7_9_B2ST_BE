@@ -1,5 +1,6 @@
 package com.back.b2st.domain.performance.dto.response;
 
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performance.entity.Performance;
 import java.time.LocalDateTime;
 
@@ -13,9 +14,10 @@ public record PerformanceListRes(
 	LocalDateTime endDate,
 	LocalDateTime bookingOpenAt,
 	LocalDateTime bookingCloseAt,
-	boolean isBookable
+	boolean isBookable,
+	BookingType bookingType
 ) {
-	public static PerformanceListRes from(Performance performance,LocalDateTime now, String resolvedPosterUrl) {
+	public static PerformanceListRes from(Performance performance, LocalDateTime now, String resolvedPosterUrl) {
 		return new PerformanceListRes(
 			performance.getPerformanceId(),
 			performance.getTitle(),
@@ -26,7 +28,8 @@ public record PerformanceListRes(
 			performance.getEndDate(),
 			performance.getBookingOpenAt(),
 			performance.getBookingCloseAt(),
-			performance.isBookable(now)
+			performance.isBookable(now),
+			performance.getBookingType()
 		);
 	}
 }

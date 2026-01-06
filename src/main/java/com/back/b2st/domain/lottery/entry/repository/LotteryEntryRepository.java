@@ -3,6 +3,7 @@ package com.back.b2st.domain.lottery.entry.repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -82,4 +83,7 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 		@Param("scheduleId") Long scheduleId,
 		@Param("winnerIds") List<Long> winnerIds
 	);
+
+	// test
+	LotteryEntry findByUuid(UUID uuid);
 }

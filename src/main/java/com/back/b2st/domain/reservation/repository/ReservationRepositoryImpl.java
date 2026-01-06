@@ -56,34 +56,6 @@ public class ReservationRepositoryImpl implements ReservationRepositoryCustom {
 	}
 
 	@Override
-	public ReservationDetailRes findReservationDetail(Long reservationId) {
-		return queryFactory
-			.select(
-				Projections.constructor(
-					ReservationDetailRes.class,
-					reservation.id,
-					reservation.status.stringValue(),
-					Projections.constructor(
-						ReservationDetailRes.PerformanceInfo.class,
-						performance.performanceId,
-						performanceSchedule.performanceScheduleId,
-						performance.title,
-						performance.category,
-						performance.startDate,
-						performanceSchedule.startAt
-					)
-				)
-			)
-			.from(reservation)
-			.join(performanceSchedule)
-			.on(reservation.scheduleId.eq(performanceSchedule.performanceScheduleId))
-			.join(performance)
-			.on(performanceSchedule.performance.eq(performance))
-			.where(reservation.id.eq(reservationId))
-			.fetchOne();
-	}
-
-	@Override
 	public List<ReservationRes> findMyReservations(Long memberId) {
 		return queryFactory
 			.select(

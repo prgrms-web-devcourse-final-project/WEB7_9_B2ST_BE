@@ -12,6 +12,7 @@ import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
 import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
+import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailWithPaymentRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationRes;
@@ -128,15 +129,27 @@ public class ReservationViewService {
 
 		// 교환/양도 등으로 티켓 소유자(memberId)와 예약자(reservation.memberId)가 다를 수 있으므로,
 		// "티켓을 보유한 사용자"는 예약 상세를 조회할 수 있도록 허용한다.
-		if (reservationRepository.existsById(reservationId)) {
+		Reservation reservationEntity = reservationRepository.findById(reservationId).orElse(null);
+		if (reservationEntity != null) {
 			if (tickets.isEmpty()) {
 				throw new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND);
 			}
 
-			ReservationDetailRes reservationByTicket = reservationRepository.findReservationDetail(reservationId);
-			if (reservationByTicket == null) {
-				throw new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND);
-			}
+			PerformanceSchedule schedule = performanceScheduleRepository.findById(reservationEntity.getScheduleId())
+				.orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+
+			ReservationDetailRes reservationByTicket = new ReservationDetailRes(
+				reservationEntity.getId(),
+				reservationEntity.getStatus().name(),
+				new ReservationDetailRes.PerformanceInfo(
+					schedule.getPerformance().getPerformanceId(),
+					schedule.getPerformanceScheduleId(),
+					schedule.getPerformance().getTitle(),
+					schedule.getPerformance().getCategory(),
+					schedule.getPerformance().getStartDate(),
+					schedule.getStartAt()
+				)
+			);
 
 			List<ReservationSeatInfo> seats = reservationSeatRepository.findSeatInfos(reservationId);
 			boolean hasMatchingTicketSeat = seats.stream()

@@ -22,6 +22,7 @@ import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
 import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
+import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailRes.PerformanceInfo;
 import com.back.b2st.domain.reservation.dto.response.ReservationDetailWithPaymentRes;
@@ -131,8 +132,8 @@ class ReservationViewServiceTest {
 			.thenReturn(List.of());
 		when(prereservationBookingRepository.findById(RESERVATION_ID))
 			.thenReturn(Optional.empty());
-		when(reservationRepository.existsById(RESERVATION_ID))
-			.thenReturn(false);
+		when(reservationRepository.findById(RESERVATION_ID))
+			.thenReturn(Optional.empty());
 
 		// when & then
 		assertThatThrownBy(() ->
@@ -238,27 +239,37 @@ class ReservationViewServiceTest {
 			.seatId(seatId)
 			.build();
 
-		ReservationDetailRes reservationDetail =
-			new ReservationDetailRes(
-				reservationId,
-				"COMPLETED",
-				new PerformanceInfo(
-					100L,
-					200L,
-					"테스트 공연",
-					"콘서트",
-					LocalDateTime.now().plusDays(1),
-					LocalDateTime.now().plusDays(1)
-				)
-			);
-
 		List<ReservationSeatInfo> seats = List.of(new ReservationSeatInfo(seatId, 10L, "A", "1", 1));
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		var performance = mock(com.back.b2st.domain.performance.entity.Performance.class);
+		when(performance.getPerformanceId()).thenReturn(100L);
+		when(performance.getTitle()).thenReturn("테스트 공연");
+		when(performance.getCategory()).thenReturn("콘서트");
+		when(performance.getStartDate()).thenReturn(LocalDateTime.now().plusDays(1));
+		when(schedule.getPerformance()).thenReturn(performance);
+		when(schedule.getPerformanceScheduleId()).thenReturn(200L);
+		when(schedule.getStartAt()).thenReturn(LocalDateTime.now().plusDays(1));
+
+		Reservation reservation = Reservation.builder()
+			.scheduleId(200L)
+			.memberId(999L)
+			.expiresAt(LocalDateTime.now().plusMinutes(10))
+			.build();
+		try {
+			var idField = Reservation.class.getDeclaredField("id");
+			idField.setAccessible(true);
+			idField.set(reservation, reservationId);
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
+		reservation.complete(LocalDateTime.now());
 
 		when(reservationRepository.findReservationDetail(reservationId, MEMBER_ID)).thenReturn(null);
 		when(ticketRepository.findAllByReservationIdAndMemberId(reservationId, MEMBER_ID)).thenReturn(List.of(ticket));
 		when(prereservationBookingRepository.findById(reservationId)).thenReturn(Optional.empty());
-		when(reservationRepository.existsById(reservationId)).thenReturn(true);
-		when(reservationRepository.findReservationDetail(reservationId)).thenReturn(reservationDetail);
+		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
+		when(performanceScheduleRepository.findById(200L)).thenReturn(Optional.of(schedule));
 		when(reservationSeatRepository.findSeatInfos(reservationId)).thenReturn(seats);
 		when(paymentViewService.getByReservationId(reservationId, MEMBER_ID)).thenReturn(null);
 
@@ -267,7 +278,7 @@ class ReservationViewServiceTest {
 
 		// then
 		assertThat(result).isNotNull();
-		assertThat(result.reservation()).isEqualTo(reservationDetail);
+		assertThat(result.reservation().reservationId()).isEqualTo(reservationId);
 		assertThat(result.seats()).hasSize(1);
 	}
 
@@ -294,36 +305,47 @@ class ReservationViewServiceTest {
 		ScheduleSeat bookingSeat = ScheduleSeat.builder().scheduleId(100L).seatId(9999L).build();
 
 		// reservation(동일 id)이 존재하고, reservation 좌석이 티켓 좌석과 매칭됨
-		ReservationDetailRes reservationDetail =
-			new ReservationDetailRes(
-				id,
-				"COMPLETED",
-				new PerformanceInfo(
-					100L,
-					200L,
-					"테스트 공연",
-					"콘서트",
-					LocalDateTime.now().plusDays(1),
-					LocalDateTime.now().plusDays(1)
-				)
-			);
 		List<ReservationSeatInfo> reservationSeats =
 			List.of(new ReservationSeatInfo(ticketSeatId, 10L, "A", "1", 1));
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		var performance = mock(com.back.b2st.domain.performance.entity.Performance.class);
+		when(performance.getPerformanceId()).thenReturn(100L);
+		when(performance.getTitle()).thenReturn("테스트 공연");
+		when(performance.getCategory()).thenReturn("콘서트");
+		when(performance.getStartDate()).thenReturn(LocalDateTime.now().plusDays(1));
+		when(schedule.getPerformance()).thenReturn(performance);
+		when(schedule.getPerformanceScheduleId()).thenReturn(200L);
+		when(schedule.getStartAt()).thenReturn(LocalDateTime.now().plusDays(1));
+
+		Reservation reservation = Reservation.builder()
+			.scheduleId(200L)
+			.memberId(999L)
+			.expiresAt(LocalDateTime.now().plusMinutes(10))
+			.build();
+		try {
+			var idField = Reservation.class.getDeclaredField("id");
+			idField.setAccessible(true);
+			idField.set(reservation, id);
+		} catch (NoSuchFieldException | IllegalAccessException e) {
+			throw new RuntimeException(e);
+		}
+		reservation.complete(LocalDateTime.now());
 
 		when(reservationRepository.findReservationDetail(id, MEMBER_ID)).thenReturn(null);
 		when(ticketRepository.findAllByReservationIdAndMemberId(id, MEMBER_ID)).thenReturn(List.of(ticket));
 		when(prereservationBookingRepository.findById(id)).thenReturn(Optional.of(booking));
 		when(scheduleSeatRepository.findById(999L)).thenReturn(Optional.of(bookingSeat));
 
-		when(reservationRepository.existsById(id)).thenReturn(true);
-		when(reservationRepository.findReservationDetail(id)).thenReturn(reservationDetail);
+		when(reservationRepository.findById(id)).thenReturn(Optional.of(reservation));
+		when(performanceScheduleRepository.findById(200L)).thenReturn(Optional.of(schedule));
 		when(reservationSeatRepository.findSeatInfos(id)).thenReturn(reservationSeats);
 
 		// when
 		ReservationDetailWithPaymentRes result = reservationViewService.getReservationDetail(id, MEMBER_ID);
 
 		// then: booking이 아니라 reservation으로 라우팅
-		assertThat(result.reservation()).isEqualTo(reservationDetail);
+		assertThat(result.reservation().reservationId()).isEqualTo(id);
 	}
 
 	@Test

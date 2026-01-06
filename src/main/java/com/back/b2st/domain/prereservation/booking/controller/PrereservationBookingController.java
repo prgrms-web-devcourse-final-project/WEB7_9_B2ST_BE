@@ -54,7 +54,7 @@ public class PrereservationBookingController {
 		prereservationHoldService.validateSeatHoldAllowed(memberId, scheduleId, seatId);
 
 		// 2. 좌석 HOLD
-		scheduleSeatStateService.holdSeat(memberId, scheduleId, seatId);
+		scheduleSeatStateService.holdSeatWithoutQueue(memberId, scheduleId, seatId);
 
 		return BaseResponse.created(null);
 	}

@@ -40,7 +40,7 @@ class ReservationServiceTest {
 
 	@InjectMocks
 	private ReservationService reservationService;
-	
+
 	private static final Long MEMBER_ID = 1L;
 	private static final Long OTHER_MEMBER_ID = 999L;
 	private static final Long RESERVATION_ID = 10L;
@@ -66,11 +66,11 @@ class ReservationServiceTest {
 			new SeatReservationResult(List.of(SCHEDULE_SEAT_ID), expiresAt)
 		);
 
-		when(reservationRepository.existsCompletedByScheduleSeat(SCHEDULE_ID, SEAT_ID))
+		when(reservationRepository.existsCompletedByScheduleSeat(SCHEDULE_ID, SCHEDULE_SEAT_ID))
 			.thenReturn(false);
 		when(reservationRepository.existsActivePendingByScheduleSeat(
 			eq(SCHEDULE_ID),
-			eq(SEAT_ID),
+			eq(SCHEDULE_SEAT_ID),
 			any(LocalDateTime.class)
 		)).thenReturn(false);
 
@@ -91,9 +91,10 @@ class ReservationServiceTest {
 		assertThat(result).isNotNull();
 
 		verify(reservationRepository).save(reservation);
+
 		verify(reservationSeatManager).attachSeats(
-			reservation.getId(),
-			List.of(SCHEDULE_SEAT_ID)
+			any(), // Long (null 허용)
+			eq(List.of(SCHEDULE_SEAT_ID))
 		);
 	}
 

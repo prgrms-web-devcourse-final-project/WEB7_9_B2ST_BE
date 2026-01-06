@@ -1,0 +1,43 @@
+# ----- HikariCP 커넥션 풀 -----
+
+# 활성 커넥션 수
+hikaricp_connections_active
+
+# 대기 중인 커넥션 요청 수
+hikaricp_connections_pending
+
+# 유휴 커넥션 수
+hikaricp_connections_idle
+
+# 전체 커넥션 수
+hikaricp_connections
+
+# 최대 커넥션 수
+hikaricp_connections_max
+
+# 최소 커넥션 수
+hikaricp_connections_min
+
+# 커넥션 풀 사용률 (%)
+hikaricp_connections_active / hikaricp_connections_max * 100
+
+
+# ----- 커넥션 획득 -----
+
+# 커넥션 획득 평균 시간 (초)
+rate(hikaricp_connections_acquire_seconds_sum[5m]) / rate(hikaricp_connections_acquire_seconds_count[5m])
+
+# 커넥션 생성 평균 시간 (초)
+rate(hikaricp_connections_creation_seconds_sum[5m]) / rate(hikaricp_connections_creation_seconds_count[5m])
+
+# 커넥션 사용 평균 시간 (초)
+rate(hikaricp_connections_usage_seconds_sum[5m]) / rate(hikaricp_connections_usage_seconds_count[5m])
+
+
+# ----- 커넥션 문제 -----
+
+# 커넥션 타임아웃 발생 횟수 (5분간)
+increase(hikaricp_connections_timeout_total[5m])
+
+# 커넥션 타임아웃 발생률
+rate(hikaricp_connections_timeout_total[5m])

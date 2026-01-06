@@ -21,7 +21,6 @@ import com.back.b2st.domain.lottery.draw.service.DrawService;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.entity.LotteryStatus;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
-import com.back.b2st.domain.lottery.result.entity.LotteryResult;
 import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
@@ -1343,10 +1342,7 @@ public class DataInitializer implements CommandLineRunner {
 			.filter(entry -> entry.getStatus() == LotteryStatus.WIN)
 			.toList();
 
-		List<LotteryResult> wonResults = lotteryResultRepository.findAll().stream()
-			.filter(result -> entries.stream()
-				.anyMatch(entry -> entry.getId().equals(result.getLotteryEntryId())))
-			.toList();
+		log.info("[DataInit] 결제 완료: wonEntries.size()={}", wonEntries.size());
 
 		// 당첨 결제 진행
 		for (LotteryEntry entry : wonEntries) {
@@ -1358,29 +1354,6 @@ public class DataInitializer implements CommandLineRunner {
 					entry.getUuid()
 				);
 				paymentOneClickService.pay(entry.getMemberId(), req);
-
-				Reservation reservation = Reservation.builder()
-					.scheduleId(schedule.getPerformanceScheduleId())
-					.memberId(entry.getMemberId())
-					.expiresAt(LocalDateTime.now().plusMinutes(5))
-					.build();
-
-				Reservation savedReservation = reservationRepository.save(reservation);
-
-				// 결제 생성 (DONE 상태)
-				Payment payment = Payment.builder()
-					.orderId("ORDER-INIT-" + System.currentTimeMillis() + "-" + entry.getMemberId())
-					.memberId(entry.getMemberId())
-					.domainType(DomainType.RESERVATION)
-					.domainId(savedReservation.getId())
-					.amount(10000L)
-					.method(PaymentMethod.CARD)
-					.expiresAt(null)
-					.build();
-
-				payment.complete(LocalDateTime.now());
-				paymentRepository.save(payment);
-
 				log.info("[DataInit] 결제 완료: entryId={}", entry.getUuid());
 			} catch (Exception e) {
 				log.warn("[DataInit] 결제 실패: entryId={}, error={}", entry.getUuid(), e.getMessage());

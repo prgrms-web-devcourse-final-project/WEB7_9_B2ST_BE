@@ -74,6 +74,7 @@ public class PerformanceService {
 			.startDate(request.startDate())
 			.endDate(request.endDate())
 			.status(PerformanceStatus.ACTIVE)
+			.bookingType(request.bookingType())
 			.bookingOpenAt(null)
 			.bookingCloseAt(null)
 			.build();

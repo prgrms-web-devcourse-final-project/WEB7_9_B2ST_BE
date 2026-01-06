@@ -3,6 +3,7 @@ package com.back.b2st.domain.performance.dto.response;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.back.b2st.domain.performance.entity.BookingType;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
@@ -23,6 +24,7 @@ public record PerformanceDetailRes(
 	LocalDateTime bookingOpenAt,
 	LocalDateTime bookingCloseAt,
 	boolean isBookable,
+	BookingType bookingType,
 	VenueSummary venue,
 	List<GradePrice> gradePrices
 ) {
@@ -52,6 +54,7 @@ public record PerformanceDetailRes(
 			performance.getBookingOpenAt(),
 			performance.getBookingCloseAt(),
 			performance.isBookable(now),
+			performance.getBookingType(),
 			VenueSummary.from(performance.getVenue()),
 			gradePrices == null ? List.of() : List.copyOf(gradePrices)
 		);

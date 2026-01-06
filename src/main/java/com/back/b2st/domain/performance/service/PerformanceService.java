@@ -19,6 +19,13 @@ import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.performance.error.PerformanceErrorCode;
 import com.back.b2st.domain.performance.mapper.PerformanceMapper;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
+import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
+import com.back.b2st.domain.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -34,6 +41,10 @@ public class PerformanceService {
 
 	private final PerformanceRepository performanceRepository;
 	private final VenueRepository venueRepository;
+	private final PerformanceScheduleRepository performanceScheduleRepository;
+	private final SeatRepository seatRepository;
+	private final SeatGradeRepository seatGradeRepository;
+
 	private final PerformanceMapper performanceMapper;
 	private final S3Service s3Service;
 
@@ -82,7 +93,54 @@ public class PerformanceService {
 			.build();
 
 		Performance saved = performanceRepository.save(performance);
+		createDefaultSeatGrades(saved);
+
 		return performanceMapper.toDetailRes(saved, LocalDateTime.now(), null);
+	}
+
+	private void createDefaultSeatGrades(Performance performance) {
+		Long performanceId = performance.getPerformanceId();
+		Long venueId = performance.getVenue().getVenueId();
+
+		List<Seat> seats = seatRepository.findByVenueId(venueId);
+		if (seats.isEmpty()) {
+			throw new BusinessException(SeatErrorCode.SEAT_NOT_FOUND);
+		}
+
+		List<SeatGrade> toCreate = seats.stream()
+			.filter(seat -> !seatGradeRepository.existsByPerformanceIdAndSeatId(performanceId, seat.getId()))
+			.map(seat -> {
+				SeatGradeType grade = defaultGrade(seat.getSectionName());
+				int price = defaultPrice(grade);
+
+				return SeatGrade.builder()
+					.performanceId(performanceId)
+					.seatId(seat.getId())
+					.grade(grade)
+					.price(price)
+					.build();
+			})
+			.toList();
+
+		if (!toCreate.isEmpty()) {
+			seatGradeRepository.saveAll(toCreate);
+		}
+	}
+
+	private SeatGradeType defaultGrade(String sectionName) {
+		if ("A".equalsIgnoreCase(sectionName))
+			return SeatGradeType.VIP;
+		if ("B".equalsIgnoreCase(sectionName))
+			return SeatGradeType.ROYAL;
+		return SeatGradeType.STANDARD;
+	}
+
+	private int defaultPrice(SeatGradeType grade) {
+		return switch (grade) {
+			case VIP -> 30000;
+			case ROYAL -> 20000;
+			default -> 10000;
+		};
 	}
 
 	@Transactional

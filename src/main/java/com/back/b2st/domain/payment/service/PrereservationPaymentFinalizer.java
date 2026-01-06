@@ -15,6 +15,8 @@ import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRe
 import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
 import com.back.b2st.domain.prereservation.booking.entity.PrereservationBookingStatus;
 import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
+import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.ticket.service.TicketService;
@@ -63,8 +65,9 @@ public class PrereservationPaymentFinalizer implements PaymentFinalizer {
 		ScheduleSeat scheduleSeat = findScheduleSeatWithLock(booking.getScheduleSeatId());
 
 		if (booking.getStatus() == PrereservationBookingStatus.COMPLETED) {
+			Reservation reservation = findOrCreateCompletedReservation(booking, scheduleSeat.getId(), booking.getCompletedAt());
 			ensureSeatSold(scheduleSeat);
-			ensureTicketExists(booking, scheduleSeat.getSeatId());
+			ensureTicketExists(reservation, scheduleSeat.getSeatId());
 			return;
 		}
 
@@ -73,7 +76,8 @@ public class PrereservationPaymentFinalizer implements PaymentFinalizer {
 		LocalDateTime now = LocalDateTime.now(clock);
 		booking.complete(now);
 		scheduleSeat.sold();
-		ensureTicketExists(booking, scheduleSeat.getSeatId());
+		Reservation reservation = findOrCreateCompletedReservation(booking, scheduleSeat.getId(), now);
+		ensureTicketExists(reservation, scheduleSeat.getSeatId());
 	}
 
 		private ScheduleSeat findScheduleSeatWithLock(Long scheduleSeatId) {
@@ -85,6 +89,64 @@ public class PrereservationPaymentFinalizer implements PaymentFinalizer {
 			}
 			return scheduleSeat;
 		}
+
+	private Reservation findOrCreateCompletedReservation(
+		PrereservationBooking booking,
+		Long scheduleSeatId,
+		LocalDateTime completedAt
+	) {
+		LocalDateTime effectiveCompletedAt = completedAt != null ? completedAt : LocalDateTime.now(clock);
+
+		Reservation existing = entityManager
+			.createQuery(
+				"""
+					select r
+					  from Reservation r
+					 where r.memberId = :memberId
+					   and r.scheduleId = :scheduleId
+					   and exists (
+						 select 1
+						   from ReservationSeat rs
+						  where rs.reservationId = r.id
+							and rs.scheduleSeatId = :scheduleSeatId
+					   )
+					""",
+				Reservation.class
+			)
+			.setParameter("memberId", booking.getMemberId())
+			.setParameter("scheduleId", booking.getScheduleId())
+			.setParameter("scheduleSeatId", scheduleSeatId)
+			.setMaxResults(1)
+			.getResultStream()
+			.findFirst()
+			.orElse(null);
+
+		if (existing != null) {
+			if (existing.getCompletedAt() == null) {
+				existing.complete(effectiveCompletedAt);
+			}
+			return existing;
+		}
+
+		Reservation reservation = Reservation.builder()
+			.scheduleId(booking.getScheduleId())
+			.memberId(booking.getMemberId())
+			.expiresAt(booking.getExpiresAt())
+			.build();
+		reservation.complete(effectiveCompletedAt);
+
+		entityManager.persist(reservation);
+		entityManager.flush();
+
+		entityManager.persist(
+			ReservationSeat.builder()
+				.reservationId(reservation.getId())
+				.scheduleSeatId(scheduleSeatId)
+				.build()
+		);
+
+		return reservation;
+	}
 
 	private void ensureSeatHoldOrSold(ScheduleSeat scheduleSeat) {
 		if (scheduleSeat.getStatus() == SeatStatus.SOLD) {
@@ -101,7 +163,7 @@ public class PrereservationPaymentFinalizer implements PaymentFinalizer {
 		}
 	}
 
-	private void ensureTicketExists(PrereservationBooking booking, Long seatId) {
-		ticketService.createTicket(booking.getId(), booking.getMemberId(), seatId);
+	private void ensureTicketExists(Reservation reservation, Long seatId) {
+		ticketService.createTicket(reservation.getId(), reservation.getMemberId(), seatId);
 	}
 }

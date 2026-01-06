@@ -19,13 +19,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.lottery.draw.service.DrawService;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
+import com.back.b2st.domain.lottery.entry.entity.LotteryStatus;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
+import com.back.b2st.domain.lottery.result.entity.LotteryResult;
+import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
+import com.back.b2st.domain.payment.dto.request.PaymentPayReq;
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.repository.PaymentRepository;
+import com.back.b2st.domain.payment.service.PaymentOneClickService;
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
@@ -87,6 +92,8 @@ public class DataInitializer implements CommandLineRunner {
 	private final PrereservationRepository prereservationRepository;
 	private final PrereservationBookingRepository prereservationBookingRepository;
 	private final DrawService drawService;
+	private final LotteryResultRepository lotteryResultRepository;
+	private final PaymentOneClickService paymentOneClickService;
 
 	@Override
 	public void run(String... args) throws Exception {
@@ -822,17 +829,16 @@ public class DataInitializer implements CommandLineRunner {
 
 	// 추첨 데이터
 	private void lottery() {
-
-		List<Member> members1 = createMembers(10, memberRepository, passwordEncoder);
-		List<Member> members2 = createMembers(10, memberRepository, passwordEncoder);
-		List<Member> members3 = createMembers(10, memberRepository, passwordEncoder);
+		List<Member> members1 = createMembers(3, memberRepository, passwordEncoder);
+		List<Member> members2 = createMembers(3, memberRepository, passwordEncoder);
+		List<Member> members3 = createMembers(3, memberRepository, passwordEncoder);
 
 		Venue venue = createVenue("추첨공연장", venueRepository);
 		List<Section> sections = createSections(venue.getVenueId(), sectionRepository, "A", "B", "C");
 		List<Seat> seats = createSeats(venue.getVenueId(), sections, 3, 5, seatRepository);
 
 		Performance performance = createPerformance(venue, performanceRepository);
-		List<PerformanceSchedule> schedules = createSchedules(performance, 3, BookingType.LOTTERY,
+		List<PerformanceSchedule> schedules = createSchedules(performance, 2, BookingType.LOTTERY,
 			performanceScheduleRepository);
 		createSeatGrades(performance, seats, seatGradeRepository);
 
@@ -843,10 +849,6 @@ public class DataInitializer implements CommandLineRunner {
 		createLotteryEntry(members1, performance, schedules.get(1), SeatGradeType.STANDARD, lotteryEntryRepository);
 		createLotteryEntry(members2, performance, schedules.get(1), SeatGradeType.VIP, lotteryEntryRepository);
 		createLotteryEntry(members3, performance, schedules.get(1), SeatGradeType.ROYAL, lotteryEntryRepository);
-
-		createLotteryEntry(members1, performance, schedules.get(2), SeatGradeType.STANDARD, lotteryEntryRepository);
-		createLotteryEntry(members2, performance, schedules.get(2), SeatGradeType.VIP, lotteryEntryRepository);
-		createLotteryEntry(members3, performance, schedules.get(2), SeatGradeType.ROYAL, lotteryEntryRepository);
 	}
 
 	/**
@@ -861,7 +863,7 @@ public class DataInitializer implements CommandLineRunner {
 		int row = (int)(memberRepository.count() + 1);
 		return IntStream.rangeClosed(row, row + count - 1)
 			.mapToObj(i -> Member.builder()
-				.email("user" + i + "@test.com")
+				.email("user" + i + "@tt.com")
 				.password(passwordEncoder.encode("1234567a!"))
 				.name("테스트유저" + i)
 				.role(Member.Role.MEMBER)
@@ -1011,9 +1013,7 @@ public class DataInitializer implements CommandLineRunner {
 					})
 					.build();
 			})
-				.
-
-			toList();
+			.toList();
 
 		repo.saveAll(grades);
 	}
@@ -1246,9 +1246,9 @@ public class DataInitializer implements CommandLineRunner {
 	 * 추첨 실행용 공연 데이터 생성
 	 */
 	private void lotteryForDrawExecution() {
-		List<Member> members1 = createMembers(10, memberRepository, passwordEncoder);
-		List<Member> members2 = createMembers(10, memberRepository, passwordEncoder);
-		List<Member> members3 = createMembers(10, memberRepository, passwordEncoder);
+		List<Member> members1 = createMembers(3, memberRepository, passwordEncoder);
+		List<Member> members2 = createMembers(3, memberRepository, passwordEncoder);
+		List<Member> members3 = createMembers(3, memberRepository, passwordEncoder);
 
 		Venue venue = createVenue("추첨실행-테스트공연장", venueRepository);
 		List<Section> sections = createSections(venue.getVenueId(), sectionRepository, "A", "B", "C");
@@ -1294,16 +1294,29 @@ public class DataInitializer implements CommandLineRunner {
 
 		Performance performance = createPerformance(venue, performanceRepository);
 
+		// PerformanceSchedule schedule = performanceScheduleRepository.save(
+		// 	PerformanceSchedule.builder()
+		// 		.performance(performance)
+		// 		.roundNo(1)
+		// 		.bookingType(BookingType.LOTTERY)
+		// 		.bookingOpenAt(LocalDateTime.now().minusDays(5))
+		// 		.bookingCloseAt(LocalDateTime.now().minusDays(3))
+		// 		.startAt(
+		// 			LocalDate.now().plusDays(2).atTime(19, 0) // ✅ 조회 범위 내
+		// 		)
+		// 		.build()
+		// );
+
 		PerformanceSchedule schedule = performanceScheduleRepository.save(
 			PerformanceSchedule.builder()
 				.performance(performance)
 				.roundNo(1)
 				.bookingType(BookingType.LOTTERY)
-				.bookingOpenAt(LocalDateTime.now().minusDays(5))
-				.bookingCloseAt(LocalDateTime.now().minusDays(3))
-				.startAt(
-					LocalDate.now().plusDays(2).atTime(19, 0) // ✅ 조회 범위 내
+				.bookingOpenAt(LocalDateTime.now().minusDays(3))
+				.bookingCloseAt(
+					LocalDate.now().minusDays(1).atTime(10, 0) // ✅ 어제
 				)
+				.startAt(LocalDateTime.now().plusDays(10)) // 의미 없음
 				.build()
 		);
 
@@ -1318,9 +1331,62 @@ public class DataInitializer implements CommandLineRunner {
 		);
 
 		// 추첨 응모 생성 (STANDARD 등급만)
-		createLotteryEntry(members, performance, schedule, SeatGradeType.STANDARD, lotteryEntryRepository);
+		List<LotteryEntry> entries = createLotteryEntry(members, performance, schedule, SeatGradeType.STANDARD,
+			lotteryEntryRepository);
 
+		// 추첨
 		drawService.executeDraws();
+
+		List<LotteryEntry> wonEntries = lotteryEntryRepository.findAllById(
+				entries.stream().map(LotteryEntry::getId).toList()
+			).stream()
+			.filter(entry -> entry.getStatus() == LotteryStatus.WIN)
+			.toList();
+
+		List<LotteryResult> wonResults = lotteryResultRepository.findAll().stream()
+			.filter(result -> entries.stream()
+				.anyMatch(entry -> entry.getId().equals(result.getLotteryEntryId())))
+			.toList();
+
+		// 당첨 결제 진행
+		for (LotteryEntry entry : wonEntries) {
+			try {
+				PaymentPayReq req = new PaymentPayReq(
+					DomainType.LOTTERY,
+					PaymentMethod.CARD,
+					0L,
+					entry.getUuid()
+				);
+				paymentOneClickService.pay(entry.getMemberId(), req);
+
+				Reservation reservation = Reservation.builder()
+					.scheduleId(schedule.getPerformanceScheduleId())
+					.memberId(entry.getMemberId())
+					.expiresAt(LocalDateTime.now().plusMinutes(5))
+					.build();
+
+				Reservation savedReservation = reservationRepository.save(reservation);
+
+				// 결제 생성 (DONE 상태)
+				Payment payment = Payment.builder()
+					.orderId("ORDER-INIT-" + System.currentTimeMillis() + "-" + entry.getMemberId())
+					.memberId(entry.getMemberId())
+					.domainType(DomainType.RESERVATION)
+					.domainId(savedReservation.getId())
+					.amount(10000L)
+					.method(PaymentMethod.CARD)
+					.expiresAt(null)
+					.build();
+
+				payment.complete(LocalDateTime.now());
+				paymentRepository.save(payment);
+
+				log.info("[DataInit] 결제 완료: entryId={}", entry.getUuid());
+			} catch (Exception e) {
+				log.warn("[DataInit] 결제 실패: entryId={}, error={}", entry.getUuid(), e.getMessage());
+			}
+		}
+
 		drawService.executeAllocation();
 
 		log.info("[DataInit/Lottery] 좌석 배치 대상 공연 데이터 생성 완료 (추첨 완료 상태)");

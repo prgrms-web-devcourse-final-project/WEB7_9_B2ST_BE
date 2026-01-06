@@ -297,4 +297,3 @@ class ReservationViewServiceTest {
 		assertThat(result).hasSize(2);
 	}
 }
-

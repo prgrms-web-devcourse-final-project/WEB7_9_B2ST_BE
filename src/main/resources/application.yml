@@ -99,6 +99,10 @@ queue:
   test:
     enabled: false
 
+prereservation:
+  slot:
+    strict: ${PRERESERVATION_SLOT_STRICT:true}
+
 # ==================== Circuit Breaker 설정 (추가) ====================
 resilience4j:
   circuitbreaker:

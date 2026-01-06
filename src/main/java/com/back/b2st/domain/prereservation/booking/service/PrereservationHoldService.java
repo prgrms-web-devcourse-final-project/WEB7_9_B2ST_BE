@@ -3,6 +3,7 @@ package com.back.b2st.domain.prereservation.booking.service;
 import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
@@ -29,6 +30,9 @@ public class PrereservationHoldService {
 	private final SectionRepository sectionRepository;
 	private final PrereservationRepository prereservationRepository;
 	private final PrereservationSlotService prereservationSlotService;
+
+	@Value("${prereservation.slot.strict:true}")
+	private boolean slotStrict = true;
 
 	@Transactional(readOnly = true)
 	public void validateSeatHoldAllowed(Long memberId, Long scheduleId, Long seatId) {
@@ -63,6 +67,10 @@ public class PrereservationHoldService {
 		);
 		if (!applied) {
 			throw new BusinessException(PrereservationErrorCode.SECTION_NOT_ACTIVATED);
+		}
+
+		if (!slotStrict) {
+			return;
 		}
 
 		Section section = sectionRepository.findById(seatSectionId)

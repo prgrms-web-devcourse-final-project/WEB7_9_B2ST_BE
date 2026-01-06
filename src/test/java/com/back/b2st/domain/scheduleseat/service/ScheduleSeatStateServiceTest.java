@@ -15,6 +15,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.queue.service.QueueAccessService;
@@ -25,6 +26,7 @@ import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
 class ScheduleSeatStateServiceTest {
 
 	@Mock

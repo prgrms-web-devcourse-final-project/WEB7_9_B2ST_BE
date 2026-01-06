@@ -4,10 +4,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,9 @@ public class PrereservationApplyService {
 	private final PrereservationSlotService prereservationSlotService;
 	private final EmailSender emailSender;
 
+	@Value("${prereservation.application.strict:true}")
+	private boolean applicationStrict = true;
+
 	@Transactional
 	public void apply(Long scheduleId, Long memberId, String email, Long sectionId) {
 		PerformanceSchedule schedule = getScheduleOrThrow(scheduleId);
@@ -51,13 +56,15 @@ public class PrereservationApplyService {
 			throw new BusinessException(PrereservationErrorCode.BOOKING_TIME_NOT_CONFIGURED);
 		}
 
-		LocalDateTime now = LocalDateTime.now();
-		LocalDateTime applyOpenAt = bookingOpenAt.minusDays(1);
-		if (now.isBefore(applyOpenAt)) {
-			throw new BusinessException(PrereservationErrorCode.APPLICATION_NOT_OPEN);
-		}
-		if (!now.isBefore(bookingOpenAt)) {
-			throw new BusinessException(PrereservationErrorCode.APPLICATION_CLOSED);
+		if (applicationStrict) {
+			LocalDateTime now = LocalDateTime.now();
+			LocalDateTime applyOpenAt = bookingOpenAt.minusDays(1);
+			if (now.isBefore(applyOpenAt)) {
+				throw new BusinessException(PrereservationErrorCode.APPLICATION_NOT_OPEN);
+			}
+			if (!now.isBefore(bookingOpenAt)) {
+				throw new BusinessException(PrereservationErrorCode.APPLICATION_CLOSED);
+			}
 		}
 
 		Section section = sectionRepository.findById(sectionId)
@@ -93,10 +100,17 @@ public class PrereservationApplyService {
 
 	@Transactional(readOnly = true)
 	public PrereservationRes getMyApplications(Long scheduleId, Long memberId) {
+		PerformanceSchedule schedule = getScheduleOrThrow(scheduleId);
+
 		var applications = prereservationRepository
 			.findAllByPerformanceScheduleIdAndMemberIdOrderByCreatedAtDesc(scheduleId, memberId);
 		var sectionIds = applications.stream().map(Prereservation::getSectionId).distinct().toList();
-		return PrereservationRes.of(scheduleId, sectionIds);
+		return PrereservationRes.of(
+			scheduleId,
+			sectionIds,
+			schedule.getBookingOpenAt(),
+			schedule.getBookingCloseAt()
+		);
 	}
 
 	@Transactional(readOnly = true)
@@ -110,9 +124,23 @@ public class PrereservationApplyService {
 				.add(application.getSectionId());
 		}
 
+		Map<Long, PerformanceSchedule> scheduleById = performanceScheduleRepository
+			.findAllById(sectionIdsByScheduleId.keySet())
+			.stream()
+			.collect(java.util.stream.Collectors.toMap(
+				PerformanceSchedule::getPerformanceScheduleId,
+				schedule -> schedule
+			));
+
 		var response = new ArrayList<PrereservationRes>(sectionIdsByScheduleId.size());
 		for (var entry : sectionIdsByScheduleId.entrySet()) {
-			response.add(PrereservationRes.of(entry.getKey(), new ArrayList<>(entry.getValue())));
+			PerformanceSchedule schedule = scheduleById.get(entry.getKey());
+			response.add(PrereservationRes.of(
+				entry.getKey(),
+				new ArrayList<>(entry.getValue()),
+				schedule != null ? schedule.getBookingOpenAt() : null,
+				schedule != null ? schedule.getBookingCloseAt() : null
+			));
 		}
 		return response;
 	}

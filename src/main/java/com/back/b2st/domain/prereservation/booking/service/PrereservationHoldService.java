@@ -3,6 +3,7 @@ package com.back.b2st.domain.prereservation.booking.service;
 import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
@@ -30,6 +31,12 @@ public class PrereservationHoldService {
 	private final PrereservationRepository prereservationRepository;
 	private final PrereservationSlotService prereservationSlotService;
 
+	@Value("${prereservation.booking.strict:true}")
+	private boolean bookingStrict = true;
+
+	@Value("${prereservation.slot.strict:true}")
+	private boolean slotStrict = true;
+
 	@Transactional(readOnly = true)
 	public void validateSeatHoldAllowed(Long memberId, Long scheduleId, Long seatId) {
 		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
@@ -45,11 +52,13 @@ public class PrereservationHoldService {
 		}
 
 		LocalDateTime now = LocalDateTime.now();
-		if (now.isBefore(bookingOpenAt)) {
-			throw new BusinessException(PrereservationErrorCode.BOOKING_NOT_OPEN);
-		}
-		if (schedule.getBookingCloseAt() != null && now.isAfter(schedule.getBookingCloseAt())) {
-			throw new BusinessException(PrereservationErrorCode.BOOKING_CLOSED);
+		if (bookingStrict) {
+			if (now.isBefore(bookingOpenAt)) {
+				throw new BusinessException(PrereservationErrorCode.BOOKING_NOT_OPEN);
+			}
+			if (schedule.getBookingCloseAt() != null && now.isAfter(schedule.getBookingCloseAt())) {
+				throw new BusinessException(PrereservationErrorCode.BOOKING_CLOSED);
+			}
 		}
 
 		Seat seat = seatRepository.findById(seatId)
@@ -63,6 +72,10 @@ public class PrereservationHoldService {
 		);
 		if (!applied) {
 			throw new BusinessException(PrereservationErrorCode.SECTION_NOT_ACTIVATED);
+		}
+
+		if (!slotStrict) {
+			return;
 		}
 
 		Section section = sectionRepository.findById(seatSectionId)

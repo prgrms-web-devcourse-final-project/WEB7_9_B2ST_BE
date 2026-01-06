@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,9 @@ public class PrereservationSectionService {
 	private final PrereservationRepository prereservationRepository;
 	private final PrereservationSlotService prereservationSlotService;
 
+	@Value("${prereservation.slot.strict:true}")
+	private boolean slotStrict = true;
+
 	@Transactional(readOnly = true)
 	public List<PrereservationSectionRes> getSections(Long scheduleId, Long memberId) {
 		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
@@ -54,7 +58,14 @@ public class PrereservationSectionService {
 
 		return sections.stream()
 			.map(section -> {
-				var slot = prereservationSlotService.calculateSlotOrThrow(schedule, section);
+				var slot = slotStrict
+					? prereservationSlotService.calculateSlotOrThrow(schedule, section)
+					: new PrereservationSlotService.Slot(
+						schedule.getBookingOpenAt(),
+						schedule.getBookingCloseAt() != null
+							? schedule.getBookingCloseAt()
+							: schedule.getBookingOpenAt().plusDays(30)
+					);
 				return new PrereservationSectionRes(
 					section.getId(),
 					section.getSectionName(),

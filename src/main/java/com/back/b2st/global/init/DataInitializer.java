@@ -287,13 +287,10 @@ public class DataInitializer implements CommandLineRunner {
 			.flatMap(schedule -> IntStream.range(0, sections.size())
 				.mapToObj(idx -> {
 					LocalDateTime bookingOpenAt = schedule.getBookingOpenAt();
-					LocalDateTime startAt = bookingOpenAt.plusHours(idx);
-					LocalDateTime endAt = startAt.plusHours(1).minusSeconds(1);
-
-					LocalDateTime bookingCloseAt = schedule.getBookingCloseAt();
-					if (bookingCloseAt != null && bookingCloseAt.isBefore(endAt)) {
-						endAt = bookingCloseAt;
-					}
+					LocalDateTime startAt = bookingOpenAt;
+					LocalDateTime endAt = schedule.getBookingCloseAt() != null
+						? schedule.getBookingCloseAt()
+						: bookingOpenAt.plusDays(30);
 
 					return PrereservationTimeTable.builder()
 						.performanceScheduleId(schedule.getPerformanceScheduleId())
@@ -666,12 +663,8 @@ public class DataInitializer implements CommandLineRunner {
 					continue;
 				}
 
-				LocalDateTime startAt = bookingOpenAt.plusHours(idx);
-				LocalDateTime endAt = startAt.plusHours(1).minusSeconds(1);
-
-				if (bookingCloseAt != null && bookingCloseAt.isBefore(endAt)) {
-					endAt = bookingCloseAt;
-				}
+				LocalDateTime startAt = bookingOpenAt;
+				LocalDateTime endAt = bookingCloseAt != null ? bookingCloseAt : bookingOpenAt.plusDays(30);
 				if (!endAt.isAfter(startAt)) {
 					continue;
 				}
@@ -696,32 +689,23 @@ public class DataInitializer implements CommandLineRunner {
 	}
 
 	/**
-	 * 신청예매 HOLD/BOOKINGS 테스트를 "지금 당장" 할 수 있도록,
-	 * 오픈된(PRERESERVE & now >= bookingOpenAt) 회차의 모든 구역 슬롯을 넉넉하게 열어둔다.
-	 * - 정책(구역별 1시간 슬롯) 자체는 서비스에서 검증하지만, 테스트 데이터에서는 시간을 항상 포함하도록 세팅한다.
+	 * 신청예매 테스트가 시간대(구역별 1시간 슬롯)에 묶이지 않도록,
+	 * 신청예매 테스트 공연의 구역별 시간표를 bookingOpenAt ~ bookingCloseAt(없으면 +30일)로 확장한다.
 	 */
 	private void ensurePrereservationHoldTestAlwaysOpen() {
-		List<PerformanceSchedule> openSchedules = performanceScheduleRepository.findAll().stream()
+		List<PerformanceSchedule> prereserveSchedules = performanceScheduleRepository.findAll().stream()
 			.filter(schedule -> schedule.getBookingType() == BookingType.PRERESERVE)
 			.filter(schedule -> schedule.getBookingOpenAt() != null)
 			.filter(schedule -> schedule.getPerformance() != null)
 			.filter(schedule -> TEST_PRERESERVE_PLAY_TITLE.equals(schedule.getPerformance().getTitle()))
-			.filter(schedule -> !LocalDateTime.now().isBefore(schedule.getBookingOpenAt()))
 			.toList();
 
-		if (openSchedules.isEmpty()) {
+		if (prereserveSchedules.isEmpty()) {
 			return;
 		}
 
-		LocalDateTime nowHour = LocalDateTime.now()
-			.withMinute(0)
-			.withSecond(0)
-			.withNano(0);
-		LocalDateTime wideStartAt = nowHour.minusHours(1);
-		LocalDateTime wideEndAt = nowHour.plusHours(23).minusSeconds(1);
-
 		int updated = 0;
-		for (PerformanceSchedule schedule : openSchedules) {
+		for (PerformanceSchedule schedule : prereserveSchedules) {
 			Long venueId = schedule.getPerformance().getVenue().getVenueId();
 			List<Section> sections = sectionRepository.findByVenueId(venueId).stream()
 				.sorted(java.util.Comparator.comparingLong(Section::getId))
@@ -730,14 +714,10 @@ public class DataInitializer implements CommandLineRunner {
 				continue;
 			}
 
-			LocalDateTime endAtForSchedule = wideEndAt;
-			LocalDateTime bookingCloseAt = schedule.getBookingCloseAt();
-			if (bookingCloseAt != null && bookingCloseAt.isBefore(endAtForSchedule)) {
-				endAtForSchedule = bookingCloseAt;
-			}
-			if (!endAtForSchedule.isAfter(wideStartAt)) {
-				continue;
-			}
+			LocalDateTime startAtForSchedule = schedule.getBookingOpenAt();
+			LocalDateTime endAtForSchedule = schedule.getBookingCloseAt() != null
+				? schedule.getBookingCloseAt()
+				: startAtForSchedule.plusDays(30);
 
 			Long scheduleId = schedule.getPerformanceScheduleId();
 			List<PrereservationTimeTable> existing = prereservationTimeTableRepository
@@ -755,24 +735,24 @@ public class DataInitializer implements CommandLineRunner {
 					prereservationTimeTableRepository.save(PrereservationTimeTable.builder()
 						.performanceScheduleId(scheduleId)
 						.sectionId(section.getId())
-						.bookingStartAt(wideStartAt)
+						.bookingStartAt(startAtForSchedule)
 						.bookingEndAt(endAtForSchedule)
 						.build());
 					updated++;
 					continue;
 				}
 
-				// 현재 시간이 슬롯에 포함되지 않으면 "항상 오픈" 범위로 업데이트
-				LocalDateTime now = LocalDateTime.now();
-				if (now.isBefore(timeTable.getBookingStartAt()) || now.isAfter(timeTable.getBookingEndAt())) {
-					timeTable.updateBookingTime(wideStartAt, endAtForSchedule);
+				// 1시간 슬롯 등 과거 데이터가 남아있어도 "전체 기간 오픈"으로 정규화
+				if (!startAtForSchedule.equals(timeTable.getBookingStartAt())
+					|| !endAtForSchedule.equals(timeTable.getBookingEndAt())) {
+					timeTable.updateBookingTime(startAtForSchedule, endAtForSchedule);
 					updated++;
 				}
 			}
 		}
 
 		if (updated > 0) {
-			log.info("[DataInit/Test] Prereservation HOLD test windows ensured. updated={}", updated);
+			log.info("[DataInit/Test] Prereservation time tables widened. updated={}", updated);
 		}
 	}
 
@@ -1095,13 +1075,10 @@ public class DataInitializer implements CommandLineRunner {
 			.flatMap(schedule -> IntStream.range(0, sections.size())
 				.mapToObj(idx -> {
 					LocalDateTime bookingOpenAt = schedule.getBookingOpenAt();
-					LocalDateTime startAt = bookingOpenAt.plusHours(idx);
-					LocalDateTime endAt = startAt.plusHours(1).minusSeconds(1);
-
-					LocalDateTime bookingCloseAt = schedule.getBookingCloseAt();
-					if (bookingCloseAt != null && bookingCloseAt.isBefore(endAt)) {
-						endAt = bookingCloseAt;
-					}
+					LocalDateTime startAt = bookingOpenAt;
+					LocalDateTime endAt = schedule.getBookingCloseAt() != null
+						? schedule.getBookingCloseAt()
+						: bookingOpenAt.plusDays(30);
 
 					return PrereservationTimeTable.builder()
 						.performanceScheduleId(schedule.getPerformanceScheduleId())

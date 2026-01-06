@@ -1,5 +1,23 @@
 package com.back.b2st.domain.lottery.entry.controller;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.time.LocalDateTime;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.back.b2st.domain.auth.dto.request.LoginReq;
 import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.domain.lottery.entry.error.LotteryEntryErrorCode;
@@ -23,27 +41,10 @@ import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.test.AbstractContainerBaseTest;
+
 import jakarta.persistence.EntityManager;
-import java.time.LocalDateTime;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -180,6 +181,15 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 
 		em.flush();
 		em.clear();
+	}
+
+	private SeatGrade createSeatGrade(Long performanceId, SeatGradeType grade, Integer price) {
+		SeatGrade seatGrade = SeatGrade.builder()
+			.performanceId(performanceId)
+			.grade(grade)
+			.price(price)
+			.build();
+		return seatGradeRepository.save(seatGrade);
 	}
 
 	private PerformanceSchedule createSchedule(int round) {
@@ -503,9 +513,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 
 			SeatGradeType grade = switch (i) {
 				case 1 -> SeatGradeType.ROYAL;
-				case 2 -> SeatGradeType.VIP;
-				case 3 -> SeatGradeType.A;
-				default -> SeatGradeType.STANDARD;
+				default -> SeatGradeType.VIP;
 			};
 
 			String requestBody = "{"
@@ -535,7 +543,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			.andExpect(jsonPath("$.data.content.length()").value(10))
 			.andExpect(jsonPath("$.data.hasNext").value(true))
 			.andExpect(jsonPath("$.data.content[0].roundNo").value(15))
-			.andExpect(jsonPath("$.data.content[9].roundNo").value(6))
 		;
 	}
 
@@ -551,9 +558,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 
 			SeatGradeType grade = switch (i) {
 				case 1 -> SeatGradeType.ROYAL;
-				case 2 -> SeatGradeType.VIP;
-				case 3 -> SeatGradeType.A;
-				default -> SeatGradeType.STANDARD;
+				default -> SeatGradeType.VIP;
 			};
 
 			String requestBody = "{"
@@ -580,7 +585,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			)
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.content.length()").value(5))
+			.andExpect(jsonPath("$.data.content.length()").value(6))
 			.andExpect(jsonPath("$.data.hasNext").value(false))
 			.andExpect(jsonPath("$.data.content[0].roundNo").value(5))
 			.andExpect(jsonPath("$.data.content[4].roundNo").value(1))

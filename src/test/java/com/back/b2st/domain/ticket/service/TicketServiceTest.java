@@ -26,16 +26,22 @@ import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRe
 import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
 import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.ticket.dto.response.TicketRes;
+import com.back.b2st.domain.ticket.entity.AcquisitionType;
 import com.back.b2st.domain.ticket.entity.Ticket;
 import com.back.b2st.domain.ticket.entity.TicketStatus;
 import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
+import com.back.b2st.domain.trade.entity.Trade;
+import com.back.b2st.domain.trade.entity.TradeType;
+import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
@@ -62,6 +68,8 @@ class TicketServiceTest {
 	@Autowired
 	private ReservationRepository reservationRepository;
 	@Autowired
+	private ReservationSeatRepository reservationSeatRepository;
+	@Autowired
 	private VenueRepository venueRepository;
 	@Autowired
 	private PerformanceRepository performanceRepository;
@@ -72,10 +80,14 @@ class TicketServiceTest {
 	@Autowired
 	private PrereservationBookingRepository prereservationBookingRepository;
 	@Autowired
+	private TradeRepository tradeRepository;
+	@Autowired
 	private EntityManager em;
 
 	private Ticket ticket;
-	private Long rId, mId, sId;
+	private Long rId, mId, sId, scheduleId;
+	private Venue venue;
+	private Section section;
 
 	@BeforeEach
 	void setUp() {
@@ -93,14 +105,14 @@ class TicketServiceTest {
 		Member savedMember = memberRepository.save(testMember);
 
 		// Create test venue
-		Venue venue = Venue.builder()
+		venue = Venue.builder()
 			.name("Test Venue")
 			.build();
-		Venue savedVenue = venueRepository.save(venue);
+		venue = venueRepository.save(venue);
 
 		// Create test performance
 		Performance performance = Performance.builder()
-			.venue(savedVenue)
+			.venue(venue)
 			.title("Test Performance")
 			.category("Test")
 			.startDate(java.time.LocalDateTime.now())
@@ -121,21 +133,28 @@ class TicketServiceTest {
 		PerformanceSchedule savedSchedule = performanceScheduleRepository.save(schedule);
 
 		// Create test section
-		Section section = Section.builder()
-			.venueId(savedVenue.getVenueId())
+		section = Section.builder()
+			.venueId(venue.getVenueId())
 			.sectionName("A")
 			.build();
-		Section savedSection = sectionRepository.save(section);
+		section = sectionRepository.save(section);
 
 		// Create test seat
 		Seat seat = Seat.builder()
-			.venueId(savedVenue.getVenueId())
-			.sectionId(savedSection.getId())
-			.sectionName(savedSection.getSectionName())
+			.venueId(venue.getVenueId())
+			.sectionId(section.getId())
+			.sectionName(section.getSectionName())
 			.rowLabel("1")
 			.seatNumber(1)
 			.build();
 		Seat savedSeat = seatRepository.save(seat);
+
+		// Create ScheduleSeat for the test seat
+		ScheduleSeat scheduleSeat = ScheduleSeat.builder()
+			.scheduleId(savedSchedule.getPerformanceScheduleId())
+			.seatId(savedSeat.getId())
+			.build();
+		ScheduleSeat savedScheduleSeat = scheduleSeatRepository.save(scheduleSeat);
 
 		// Create test reservation
 		Reservation reservation = Reservation.builder()
@@ -145,14 +164,55 @@ class TicketServiceTest {
 			.build();
 		Reservation savedReservation = reservationRepository.save(reservation);
 
+		// Create ReservationSeat to link reservation with scheduleSeat
+		ReservationSeat reservationSeat = ReservationSeat.builder()
+			.reservationId(savedReservation.getId())
+			.scheduleSeatId(savedScheduleSeat.getId())
+			.build();
+		reservationSeatRepository.save(reservationSeat);
+
 		em.flush();
 		em.clear();
 
 		rId = savedReservation.getId();
 		mId = savedMember.getId();
 		sId = savedSeat.getId();
+		scheduleId = savedSchedule.getPerformanceScheduleId();
 
 		ticket = ticketService.createTicket(rId, mId, sId);
+	}
+
+	/**
+	 * Helper method: 테스트용 좌석 생성 및 예약에 연결
+	 * @param seatNumber 좌석 번호
+	 * @return 생성된 Seat의 ID
+	 */
+	private Long createAndLinkSeat(int seatNumber) {
+		// Create seat
+		Seat seat = Seat.builder()
+			.venueId(venue.getVenueId())
+			.sectionId(section.getId())
+			.sectionName(section.getSectionName())
+			.rowLabel("1")
+			.seatNumber(seatNumber)
+			.build();
+		Seat savedSeat = seatRepository.save(seat);
+
+		// Create ScheduleSeat
+		ScheduleSeat scheduleSeat = ScheduleSeat.builder()
+			.scheduleId(scheduleId)
+			.seatId(savedSeat.getId())
+			.build();
+		ScheduleSeat savedScheduleSeat = scheduleSeatRepository.save(scheduleSeat);
+
+		// Link to reservation
+		ReservationSeat reservationSeat = ReservationSeat.builder()
+			.reservationId(rId)
+			.scheduleSeatId(savedScheduleSeat.getId())
+			.build();
+		reservationSeatRepository.save(reservationSeat);
+
+		return savedSeat.getId();
 	}
 
 	@Test
@@ -504,5 +564,227 @@ class TicketServiceTest {
 				&& t.getSeatId().equals(existingSeatId))
 			.count();
 		assertThat(count).isEqualTo(1L);
+	}
+
+	@Test
+	@DisplayName("내티켓조회_예매로받은티켓_RESERVATION")
+	void getMyTickets_reservationTicket_shouldReturnReservationType() {
+		// given: 예매로 받은 티켓 (기존 setUp에서 생성됨)
+		Long memberId = mId;
+
+		// when: 내 티켓 조회
+		List<TicketRes> tickets = ticketService.getMyTickets(memberId);
+
+		// then: acquisitionType이 RESERVATION
+		assertThat(tickets).isNotEmpty();
+		TicketRes ticketRes = tickets.stream()
+			.filter(t -> t.getTicketId().equals(ticket.getId()))
+			.findFirst()
+			.orElseThrow();
+		assertThat(ticketRes.getAcquisitionType()).isEqualTo(AcquisitionType.RESERVATION);
+	}
+
+	@Test
+	@DisplayName("내티켓조회_양도로받은티켓_TRANSFER")
+	void getMyTickets_transferTicket_shouldReturnTransferType() {
+		// given: 양도 시나리오 설정
+		// 1. 판매자(다른 사용자) 생성
+		Member seller = Member.builder()
+			.email("seller@test.com")
+			.password("password")
+			.name("Seller")
+			.birth(LocalDate.of(1990, 1, 1))
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
+			.build();
+		Member savedSeller = memberRepository.save(seller);
+
+		// 2. 추가 좌석 생성 및 예약에 연결
+		Long transferSeatId = createAndLinkSeat(10);
+
+		// 3. 판매자의 티켓 생성
+		Ticket sellerTicket = ticketService.createTicket(rId, savedSeller.getId(), transferSeatId);
+
+		// 4. 양도 거래 생성 및 완료
+		Trade trade = Trade.builder()
+			.memberId(savedSeller.getId())
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(sellerTicket.getId())
+			.type(TradeType.TRANSFER)
+			.price(30000)
+			.totalCount(1)
+			.section("A")
+			.row("1")
+			.seatNumber("10")
+			.build();
+		Trade savedTrade = tradeRepository.save(trade);
+		savedTrade.completeTransfer(mId, LocalDateTime.now());
+		em.flush();
+
+		// 5. 구매자(나)에게 새 티켓 생성
+		Ticket myTicket = ticketService.createTicket(rId, mId, transferSeatId);
+		em.flush();
+		em.clear();
+
+		// when: 내 티켓 조회
+		List<TicketRes> tickets = ticketService.getMyTickets(mId);
+
+		// then: 양도로 받은 티켓의 acquisitionType이 TRANSFER
+		TicketRes transferredTicket = tickets.stream()
+			.filter(t -> t.getTicketId().equals(myTicket.getId()))
+			.findFirst()
+			.orElseThrow();
+		assertThat(transferredTicket.getAcquisitionType()).isEqualTo(AcquisitionType.TRANSFER);
+	}
+
+	@Test
+	@DisplayName("내티켓조회_교환으로받은티켓_EXCHANGE")
+	void getMyTickets_exchangeTicket_shouldReturnExchangeType() {
+		// given: 교환 시나리오 설정
+		// 1. 교환 상대방 생성
+		Member partner = Member.builder()
+			.email("partner@test.com")
+			.password("password")
+			.name("Partner")
+			.birth(LocalDate.of(1990, 1, 1))
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
+			.build();
+		Member savedPartner = memberRepository.save(partner);
+
+		// 2. 추가 좌석 생성 및 예약에 연결
+		Long exchangeSeatId = createAndLinkSeat(11);
+
+		// 3. 상대방의 티켓 생성
+		Ticket partnerTicket = ticketService.createTicket(rId, savedPartner.getId(), exchangeSeatId);
+
+		// 4. 교환 거래 생성 및 완료
+		Trade trade = Trade.builder()
+			.memberId(savedPartner.getId())
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(partnerTicket.getId())
+			.type(TradeType.EXCHANGE)
+			.price(null)
+			.totalCount(1)
+			.section("A")
+			.row("1")
+			.seatNumber("11")
+			.build();
+		Trade savedTrade = tradeRepository.save(trade);
+		savedTrade.completeTransfer(mId, LocalDateTime.now());
+		em.flush();
+
+		// 5. 나에게 새 티켓 생성 (교환으로 받은 티켓)
+		Ticket myExchangedTicket = ticketService.createTicket(rId, mId, exchangeSeatId);
+		em.flush();
+		em.clear();
+
+		// when: 내 티켓 조회
+		List<TicketRes> tickets = ticketService.getMyTickets(mId);
+
+		// then: 교환으로 받은 티켓의 acquisitionType이 EXCHANGE
+		TicketRes exchangedTicket = tickets.stream()
+			.filter(t -> t.getTicketId().equals(myExchangedTicket.getId()))
+			.findFirst()
+			.orElseThrow();
+		assertThat(exchangedTicket.getAcquisitionType()).isEqualTo(AcquisitionType.EXCHANGE);
+	}
+
+	@Test
+	@DisplayName("내티켓조회_혼합티켓_각각올바른타입반환")
+	void getMyTickets_mixedTickets_shouldReturnCorrectTypes() {
+		// given: 예매 + 양도 + 교환 티켓이 모두 있는 상황
+		// 1. 예매 티켓 (기존)
+		Ticket reservationTicket = ticket;
+
+		// 2. 양도 티켓 설정
+		Member seller = memberRepository.save(Member.builder()
+			.email("seller2@test.com")
+			.password("password")
+			.name("Seller2")
+			.birth(LocalDate.of(1990, 1, 1))
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
+			.build());
+
+		Long transferSeatId = createAndLinkSeat(5);
+		Ticket sellerTicket = ticketService.createTicket(rId, seller.getId(), transferSeatId);
+		Trade transferTrade = tradeRepository.save(Trade.builder()
+			.memberId(seller.getId())
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(sellerTicket.getId())
+			.type(TradeType.TRANSFER)
+			.price(30000)
+			.totalCount(1)
+			.section("A")
+			.row("2")
+			.seatNumber("5")
+			.build());
+		transferTrade.completeTransfer(mId, LocalDateTime.now());
+
+		Ticket transferredTicket = ticketService.createTicket(rId, mId, transferSeatId);
+
+		// 3. 교환 티켓 설정
+		Member partner = memberRepository.save(Member.builder()
+			.email("partner2@test.com")
+			.password("password")
+			.name("Partner2")
+			.birth(LocalDate.of(1990, 1, 1))
+			.role(Member.Role.MEMBER)
+			.provider(Member.Provider.EMAIL)
+			.isEmailVerified(true)
+			.isIdentityVerified(true)
+			.build());
+
+		Long exchangeSeatId = createAndLinkSeat(8);
+		Ticket partnerTicket = ticketService.createTicket(rId, partner.getId(), exchangeSeatId);
+		Trade exchangeTrade = tradeRepository.save(Trade.builder()
+			.memberId(partner.getId())
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(partnerTicket.getId())
+			.type(TradeType.EXCHANGE)
+			.price(null)
+			.totalCount(1)
+			.section("A")
+			.row("3")
+			.seatNumber("8")
+			.build());
+		exchangeTrade.completeTransfer(mId, LocalDateTime.now());
+
+		Ticket exchangedTicket = ticketService.createTicket(rId, mId, exchangeSeatId);
+
+		em.flush();
+		em.clear();
+
+		// when: 내 티켓 조회
+		List<TicketRes> tickets = ticketService.getMyTickets(mId);
+
+		// then: 각 티켓의 타입이 올바름
+		assertThat(tickets).hasSize(3);
+
+		TicketRes reservation = tickets.stream()
+			.filter(t -> t.getTicketId().equals(reservationTicket.getId()))
+			.findFirst().orElseThrow();
+		assertThat(reservation.getAcquisitionType()).isEqualTo(AcquisitionType.RESERVATION);
+
+		TicketRes transfer = tickets.stream()
+			.filter(t -> t.getTicketId().equals(transferredTicket.getId()))
+			.findFirst().orElseThrow();
+		assertThat(transfer.getAcquisitionType()).isEqualTo(AcquisitionType.TRANSFER);
+
+		TicketRes exchange = tickets.stream()
+			.filter(t -> t.getTicketId().equals(exchangedTicket.getId()))
+			.findFirst().orElseThrow();
+		assertThat(exchange.getAcquisitionType()).isEqualTo(AcquisitionType.EXCHANGE);
 	}
 }

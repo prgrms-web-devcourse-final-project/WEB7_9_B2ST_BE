@@ -48,15 +48,15 @@ src/main/generated/
 .env
 .env.*
 
-# 예외 처리
-!docker-compose.yml
-!docker/docker-compose.yml
-!.github/workflows/*.yml
-!src/main/resources/application.yml
-!src/main/resources/application-prod.yml
-!src/main/resources/application-test.yml
-!docker/init-redis-cluster.sh
-!docker/docker-compose.redis-cluster.yml
+## 예외 처리
+#!docker-compose.yml
+#!docker/docker-compose.yml
+#!.github/workflows/*.yml
+#!src/main/resources/application.yml
+#!src/main/resources/application-prod.yml
+#!src/main/resources/application-test.yml
+#!docker/init-redis-cluster.sh
+#!docker/docker-compose.redis-cluster.yml
 
 ### custom ###
 src/main/resources/application-secret.yml

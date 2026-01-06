@@ -1,22 +1,67 @@
-# 1. 총 요청/분 (Stat 패널)
-sum(rate(http_server_requests_seconds_count[1m])) * 60
-# 2. 에러율 (Gauge 패널)
-sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m])) * 100
-# 3. 로그인 성공률 (Gauge 패널)
+# ----- 로그인 메트릭 -----
+
+# 로그인 성공 추이
+sum(rate(auth_login_total{result="success"}[1m]))
+
+# 로그인 실패 추이
+sum(rate(auth_login_total{result="failure"}[1m]))
+
+# 로그인 성공률 (%)
 sum(rate(auth_login_total{result="success"}[5m])) / sum(rate(auth_login_total[5m])) * 100
-# 4. 현재 잠긴 계정 수 (Stat 패널)
-auth_locked_accounts
-# 5. 로그인 시도 추이 (Graph 패널)
-sum by(result) (rate(auth_login_total[5m]))
-# 6. 보안 위협 (Table 패널)
-sum by(type, severity) (increase(security_threat_detected_total[1h]))
-# 7. P99 응답 시간 (Graph 패널)
-histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, uri))
-# 8. JVM 힙 메모리 (Graph 패널)
-jvm_memory_used_bytes{area="heap"} / 1024 / 1024
-# 9. DB 커넥션 풀 (Graph 패널)
-hikaricp_connections_active
-hikaricp_connections_idle
-hikaricp_connections_pending
-# 10. Redis 메모리 사용량 (Graph 패널)
-redis_memory_used_bytes / 1024 / 1024
+
+# Provider별 로그인 (EMAIL)
+sum(rate(auth_login_total{provider="EMAIL"}[1m])) by (result)
+
+# Provider별 로그인 (KAKAO)
+sum(rate(auth_login_total{provider="KAKAO"}[1m])) by (result)
+
+# 로그인 실패 사유별 분포
+sum(rate(auth_login_failure_reason_total[5m])) by (reason)
+
+
+# ----- 계정 보안 -----
+
+# 현재 잠긴 계정 수
+auth_locked_account_count
+
+# 계정 잠금 발생 추이
+sum(rate(auth_account_locked_total[5m]))
+
+# 계정 잠금 24시간 누적
+sum(increase(auth_account_locked_total[24h]))
+
+
+# ----- 보안 위협 -----
+
+# 보안 위협 탐지 (유형별)
+sum(rate(security_threat_detected_total[5m])) by (type)
+
+# 보안 위협 탐지 (심각도별)
+sum(rate(security_threat_detected_total[5m])) by (severity)
+
+# Rate Limit 트리거 (엔드포인트별)
+sum(rate(security_rate_limit_triggered_total[5m])) by (endpoint)
+
+# 24시간 보안 위협 누적
+sum(increase(security_threat_detected_total[24h])) by (type)
+
+
+# ----- 토큰 관리 -----
+
+# 토큰 재발급 추이
+sum(rate(auth_token_reissue_total[5m]))
+
+# 로그아웃 추이
+sum(rate(auth_logout_total[5m]))
+
+
+# ----- Auth API 성능 -----
+
+# Auth API P95 응답시간
+histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=~"/api/auth.*"}[5m])) by (le))
+
+# Auth API 에러율
+sum(rate(http_server_requests_seconds_count{uri=~"/api/auth.*", status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count{uri=~"/api/auth.*"}[5m])) * 100
+
+# Auth API RPS
+sum(rate(http_server_requests_seconds_count{uri=~"/api/auth.*"}[1m]))

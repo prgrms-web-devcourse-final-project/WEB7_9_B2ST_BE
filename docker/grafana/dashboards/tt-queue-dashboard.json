@@ -1,0 +1,78 @@
+# ----- 대기열 현황 (QueueMetrics 기반) -----
+
+# 현재 대기 중인 사용자 수 (queue별)
+queue_waiting_count
+
+# 현재 진입 가능한 사용자 수 (queue별)
+queue_enterable_count
+
+# 대기열 진입 추이
+sum(rate(queue_enter_total[
+    1m
+])) by (queue_id)
+
+# 대기열 이탈 추이 (사유별)
+sum(rate(queue_exit_total[
+    1m
+])) by (queue_id, reason)
+
+# 대기열 승격(WAITING → ENTERABLE) 추이
+sum(rate(queue_enterable_total[
+    1m
+])) by (queue_id)
+
+# 대기열 입장 완료 추이
+sum(rate(queue_complete_total[
+    1m
+])) by (queue_id)
+
+# 대기열 이탈률 (만료 비율)
+sum(rate(queue_exit_total{reason="EXPIRED"
+}[
+    5m
+])) / sum(rate(queue_exit_total[
+    5m
+])) * 100
+
+# 대기열 완료율 (완료 비율)
+sum(rate(queue_exit_total{reason="COMPLETED"
+}[
+    5m
+])) / sum(rate(queue_exit_total[
+    5m
+])) * 100
+
+# 전체 대기열 진입 RPS
+sum(rate(queue_enter_total[
+    1m
+]))
+
+
+# ----- Queue API 성능 -----
+
+# Queue API P95 응답시간
+histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=~"/api/queues.*"
+}[
+    5m
+])) by (le))
+
+# Queue API P99 응답시간
+histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{uri=~"/api/queues.*"
+}[
+    5m
+])) by (le))
+
+# Queue API 에러율
+sum(rate(http_server_requests_seconds_count{uri=~"/api/queues.*", status=~"5.."
+}[
+    5m
+])) / sum(rate(http_server_requests_seconds_count{uri=~"/api/queues.*"
+}[
+    5m
+])) * 100
+
+# Queue API RPS
+sum(rate(http_server_requests_seconds_count{uri=~"/api/queues.*"
+}[
+    1m
+]))

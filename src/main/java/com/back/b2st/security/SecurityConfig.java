@@ -57,7 +57,7 @@ public class SecurityConfig {
 				// 공개 경로
 				.requestMatchers(
 					"/api/members/signup", "/api/auth/**", "/h2-console/**", "/error", "/api/banks",
-					"/api/email/**",
+					"/api/email/**", "/api/performances/**",
 					"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html" // Swagger
 				).permitAll()
 				// 나머지 모든 요청은 인증 필요

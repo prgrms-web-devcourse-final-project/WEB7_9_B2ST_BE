@@ -1,6 +1,7 @@
 package com.back.b2st.domain.lottery.result.repository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -60,4 +61,12 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		  AND le.scheduleId = :scheduleId
 		""")
 	List<LotteryReservationInfo> findReservationInfoByPaidIsTrue(Long scheduleId);
+
+	@Query("""
+		    SELECT le.uuid 
+		    FROM LotteryResult lr 
+		    JOIN LotteryEntry le ON lr.lotteryEntryId = le.id 
+		    WHERE le.uuid IN :uuids AND lr.paid = true
+		""")
+	Set<UUID> findPaidByUuids(@Param("uuids") List<UUID> uuids);
 }

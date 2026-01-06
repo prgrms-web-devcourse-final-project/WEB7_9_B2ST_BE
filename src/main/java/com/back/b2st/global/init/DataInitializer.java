@@ -179,6 +179,7 @@ public class DataInitializer implements CommandLineRunner {
 		if (venueRepository.count() > 0) {
 			log.info("[DataInit] 이미 데이터 존재하여 초기화 스킵");
 			seedPrereservationTimeTablesIfMissing();
+			seedPrereservationApplicationsIfMissing();
 			ensurePrereservationHoldTestAlwaysOpen();
 			return;
 		}
@@ -307,6 +308,7 @@ public class DataInitializer implements CommandLineRunner {
 		// - 예매 오픈된 회차(HOLD 테스트용)에 한해서만 미리 신청을 만들어 둔다.
 		// - 사전 신청 테스트용 회차는 프론트에서 직접 신청 → 신청 성공/실패 케이스를 확인할 수 있도록 비워둔다.
 		seedPrereservationApplications(prereserveSchedules, sections);
+		seedPrereservationApplicationsIfMissing();
 		ensurePrereservationHoldTestAlwaysOpen();
 
 		// 모든 구역의 좌석 생성
@@ -620,6 +622,67 @@ public class DataInitializer implements CommandLineRunner {
 
 		if (created > 0) {
 			log.info("[DataInit/Test] Prereservation applications seeded. created={}", created);
+		}
+	}
+
+	/**
+	 * 기존 DB에 user1/user2 신청 내역만 남아있는 경우가 있어, user3 포함해서 누락분을 보충한다.
+	 * - 신청예매 테스트 공연에 한함(TEST_PRERESERVE_PLAY_TITLE)
+	 * - 오픈된 회차(now >= bookingOpenAt)만 대상
+	 */
+	private void seedPrereservationApplicationsIfMissing() {
+		var user1 = memberRepository.findByEmail("user1@tt.com").orElse(null);
+		var user2 = memberRepository.findByEmail("user2@tt.com").orElse(null);
+		var user3 = memberRepository.findByEmail("codeisneverodd@gmail.com").orElse(null);
+		if (user1 == null && user2 == null && user3 == null) {
+			return;
+		}
+
+		var members = java.util.List.of(user1, user2, user3).stream().filter(java.util.Objects::nonNull).toList();
+		LocalDateTime now = LocalDateTime.now();
+
+		List<PerformanceSchedule> openSchedules = performanceScheduleRepository.findAll().stream()
+			.filter(schedule -> schedule.getBookingType() == BookingType.PRERESERVE)
+			.filter(schedule -> schedule.getBookingOpenAt() != null)
+			.filter(schedule -> schedule.getPerformance() != null)
+			.filter(schedule -> TEST_PRERESERVE_PLAY_TITLE.equals(schedule.getPerformance().getTitle()))
+			.filter(schedule -> !now.isBefore(schedule.getBookingOpenAt()))
+			.toList();
+
+		if (openSchedules.isEmpty()) {
+			return;
+		}
+
+		int created = 0;
+		for (PerformanceSchedule schedule : openSchedules) {
+			Long scheduleId = schedule.getPerformanceScheduleId();
+			Long venueId = schedule.getPerformance().getVenue().getVenueId();
+			List<Section> sections = sectionRepository.findByVenueId(venueId);
+			if (sections.isEmpty()) {
+				continue;
+			}
+
+			for (var member : members) {
+				for (Section section : sections) {
+					if (prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
+						scheduleId, member.getId(), section.getId()
+					)) {
+						continue;
+					}
+					prereservationRepository.save(
+						Prereservation.builder()
+							.performanceScheduleId(scheduleId)
+							.memberId(member.getId())
+							.sectionId(section.getId())
+							.build()
+					);
+					created++;
+				}
+			}
+		}
+
+		if (created > 0) {
+			log.info("[DataInit/Test] Prereservation applications ensured. created={}", created);
 		}
 	}
 

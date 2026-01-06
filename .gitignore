@@ -63,3 +63,4 @@ src/main/resources/application-secret.yml
 
 # local / sensitive files
 *.pem
+error.log

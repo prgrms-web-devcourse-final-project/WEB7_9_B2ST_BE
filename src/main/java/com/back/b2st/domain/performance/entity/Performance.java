@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 import com.back.b2st.domain.performance.error.PerformanceErrorCode;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;  // 변경: 공연 회차의 BookingType 사용
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.jpa.entity.BaseEntity;
@@ -72,7 +73,7 @@ public class Performance extends BaseEntity {
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "booking_type")
-	private BookingType bookingType; // 예매 유형 (추첨/일반예매/구역별 사전등록)
+	private BookingType bookingType; // 예매 유형 (LOTTERY/FIRST_COME/PRERESERVE)
 
 	@Column(name = "booking_open_at")
 	private LocalDateTime bookingOpenAt; // 예매 오픈 시각 (null이면 예매 불가)

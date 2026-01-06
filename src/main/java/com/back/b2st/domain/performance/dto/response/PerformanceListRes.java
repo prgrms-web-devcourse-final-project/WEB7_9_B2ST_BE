@@ -1,6 +1,6 @@
 package com.back.b2st.domain.performance.dto.response;
 
-import com.back.b2st.domain.performance.entity.BookingType;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performance.entity.Performance;
 import java.time.LocalDateTime;
 

@@ -3,7 +3,7 @@ package com.back.b2st.domain.performance.dto.response;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.back.b2st.domain.performance.entity.BookingType;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;  // 변경
 import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;

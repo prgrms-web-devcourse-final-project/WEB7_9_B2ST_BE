@@ -2,7 +2,7 @@ package com.back.b2st.domain.performance.dto.request;
 
 import java.time.LocalDateTime;
 
-import com.back.b2st.domain.performance.entity.BookingType;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -40,9 +40,9 @@ public record CreatePerformanceReq(
 	@NotNull
 	LocalDateTime endDate,
 
-	BookingType bookingType,  // 추가 (nullable, 기존 코드 호환성 고려)
+	BookingType bookingType,  // nullable (LOTTERY, FIRST_COME, PRERESERVE)
 
-	LocalDateTime bookingOpenAt,  // 기존에 있었을 수도 있는 필드들
+	LocalDateTime bookingOpenAt,
 
 	LocalDateTime bookingCloseAt
 ) {

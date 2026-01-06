@@ -14,6 +14,9 @@ public interface ReservationRepositoryCustom {
 	/** 특정 예매 상세 조회 (본인 소유 검증 포함) */
 	ReservationDetailRes findReservationDetail(Long reservationId, Long memberId);
 
+	/** 특정 예매 상세 조회 (소유 검증 없음) */
+	ReservationDetailRes findReservationDetail(Long reservationId);
+
 	/** 해당 좌석에 대해 이미 완료된 예매(COMPLETED)가 존재하는지 확인 */
 	boolean existsCompletedByScheduleSeat(
 		Long scheduleId,

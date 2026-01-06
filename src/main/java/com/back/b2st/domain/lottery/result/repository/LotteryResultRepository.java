@@ -86,6 +86,14 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		""")
 	int removeUnpaidAll(@Param("now") LocalDateTime now);
 
+	@Query("""
+		SELECT lr.memberId 
+		FROM LotteryResult lr
+		WHERE lr.paymentDeadline < :now 
+		  AND lr.paid = false
+		""")
+	List<Long> findCancelUnpaidAll(@Param("now") LocalDateTime now);
+
 	// Test
 	@Query("""
 		SELECT count(*) 

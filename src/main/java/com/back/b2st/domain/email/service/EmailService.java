@@ -188,6 +188,50 @@ public class EmailService {
 			maskEmail(member.getEmail()), winner.id());
 	}
 
+	/**
+	 * 결제 기한 초과로 당첨 취소된 사용자에게 이메일 발송
+	 */
+	@Transactional(readOnly = true)
+	public void sendCancelUnpaidNotifications(List<Long> memberIds) {
+		log.info("당첨 취소 이메일 발송 시작");
+
+		if (memberIds.isEmpty()) {
+			log.info("당첨 취소 대상 없음");
+			return;
+		}
+
+		int successCount = 0;
+		int failCount = 0;
+
+		for (Long memberId : memberIds) {
+			try {
+				sendCancelUnpaidEmail(memberId);
+				successCount++;
+			} catch (Exception e) {
+				failCount++;
+				log.error("당첨 취소 이메일 발송 실패 - memberId: {}", memberId, e);
+			}
+		}
+
+		log.info("당첨 취소 이메일 발송 완료 - 성공: {}, 실패: {}", successCount, failCount);
+	}
+
+	/**
+	 * 취소 안내 메일 발송
+	 */
+	private void sendCancelUnpaidEmail(Long mdmberId) {
+		Member member = memberRepository.findById(mdmberId)
+			.orElseThrow(() -> new BusinessException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+		emailSender.sendCancelUnpaidEmail(
+			member.getEmail(),
+			member.getName()
+		);
+
+		log.info("당첨 안내 이메일 발송 완료 - email: {}, resultId: {}",
+			maskEmail(member.getEmail()), member.getId());
+	}
+
 	// 밑으로 헬퍼 메서드
 	// 보안 코드 생성
 	private String generateSecureCode() {

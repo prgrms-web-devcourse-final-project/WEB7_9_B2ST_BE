@@ -1,8 +1,10 @@
 package com.back.b2st.domain.lottery.draw.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 
@@ -16,10 +18,14 @@ class CancelUnpaidService {
 
 	private final LotteryResultRepository lotteryResultRepository;
 
-	public void cancelUnpaid() {
+	@Transactional
+	public List<Long> cancelUnpaid() {
 		LocalDateTime now = LocalDateTime.now();
-		int count = lotteryResultRepository.removeUnpaidAll(now);
+		List<Long> memberIds = lotteryResultRepository.findCancelUnpaidAll(now);
 
+		int count = lotteryResultRepository.removeUnpaidAll(now);
 		log.info("{} 미결제자 취소: {} 건", now, count);
+
+		return memberIds;
 	}
 }

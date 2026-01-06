@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: dev
+    default: dev
 
   application:
     name: b2st

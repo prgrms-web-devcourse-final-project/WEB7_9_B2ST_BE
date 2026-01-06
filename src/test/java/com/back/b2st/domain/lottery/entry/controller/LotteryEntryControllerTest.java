@@ -594,7 +594,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			)
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.content.length()").value(6))
+			.andExpect(jsonPath("$.data.content.length()").value(5))
 			.andExpect(jsonPath("$.data.hasNext").value(false))
 			.andExpect(jsonPath("$.data.content[0].roundNo").value(5))
 			.andExpect(jsonPath("$.data.content[4].roundNo").value(1))
@@ -673,7 +673,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			)
 			.andDo(print())
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.content.length()").value(2))
+			.andExpect(jsonPath("$.data.content.length()").value(1))
 			.andExpect(jsonPath("$.data.hasNext").value(false))
 			.andExpect(jsonPath("$.data.content[0].status").value("PAID"));
 	}

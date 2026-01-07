@@ -587,10 +587,10 @@ class SeatAllocationServiceTest {
 	@DisplayName("좌석 배정 성공 - 배치")
 	void allocateSeats_Success_execute() {
 		// given
-		schedules = createSchedulesSeatAllocation(performance, 1, performanceScheduleRepository);
+		// schedules = createSchedulesSeatAllocation(performance, 1, performanceScheduleRepository);
 		schedule = schedules.getFirst();
 
-		createScheduleSeats(schedule.getPerformanceScheduleId(), seats, scheduleSeatRepository);
+		// createScheduleSeats(schedule.getPerformanceScheduleId(), seats, scheduleSeatRepository);
 
 		createLotteryEntry(members.subList(0, 1), performance, schedule,
 			SeatGradeType.STANDARD, 3, lotteryEntryRepository);
@@ -682,10 +682,10 @@ class SeatAllocationServiceTest {
 	@DisplayName("좌석 배정 - 배치 실행 후 티켓 생성 검증")
 	void allocateSeats_BatchExecution_TicketCreation() {
 		// given
-		schedules = createSchedulesSeatAllocation(performance, 1, performanceScheduleRepository);
+		// schedules = createSchedulesSeatAllocation(performance, 1, performanceScheduleRepository);
 		schedule = schedules.getFirst();
 
-		createScheduleSeats(schedule.getPerformanceScheduleId(), seats, scheduleSeatRepository);
+		// createScheduleSeats(schedule.getPerformanceScheduleId(), seats, scheduleSeatRepository);
 
 		createLotteryEntry(members.subList(0, 1), performance, schedule,
 			SeatGradeType.STANDARD, 3, lotteryEntryRepository);

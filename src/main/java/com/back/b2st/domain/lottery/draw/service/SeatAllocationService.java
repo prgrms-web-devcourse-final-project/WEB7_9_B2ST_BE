@@ -44,6 +44,11 @@ public class SeatAllocationService {
 		return performanceScheduleRepository.findByOpenBetween(today, threeDaysLater);
 	}
 
+	// test
+	public List<DrawTargetPerformance> findBookingOpenPerformances_test() {
+		return performanceScheduleRepository.findByOpenBetween();
+	}
+
 	/**
 	 * 응모 정보 조회
 	 */

@@ -62,6 +62,16 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 		@Param("start") LocalDateTime startDate,
 		@Param("end") LocalDateTime endDate);
 
+	@Query("""
+			SELECT new com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance(
+					ps.performance.performanceId,
+					ps.performanceScheduleId
+			)
+			FROM PerformanceSchedule ps
+			WHERE ps.drawCompleted = false
+		""")
+	List<DrawTargetPerformance> findByNotDrawn();
+
 	/**
 	 * 회차 추첨 완료 업데이트
 	 * @param scheduleId
@@ -93,6 +103,20 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 	List<DrawTargetPerformance> findByOpenBetween(
 		@Param("today") LocalDateTime startDate,
 		@Param("threeDaysLater") LocalDateTime endDate);
+
+	// test
+	@Query("""
+			SELECT new com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance(
+					ps.performance.performanceId,
+					ps.performanceScheduleId
+			)
+			FROM PerformanceSchedule ps
+			JOIN ps.performance
+			WHERE ps.bookingType = com.back.b2st.domain.performanceschedule.entity.BookingType.LOTTERY
+			  AND ps.drawCompleted = true
+			  AND ps.seatAllocated = false
+		""")
+	List<DrawTargetPerformance> findByOpenBetween();
 
 	/**
 	 * scheduleId로 performanceId 조회 (대기열/검증 등에서 사용)

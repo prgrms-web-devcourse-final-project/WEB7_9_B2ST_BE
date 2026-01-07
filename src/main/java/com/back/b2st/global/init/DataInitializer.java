@@ -19,12 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.lottery.draw.service.DrawService;
 import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
-import com.back.b2st.domain.lottery.entry.entity.LotteryStatus;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
-import com.back.b2st.domain.payment.dto.request.PaymentPayReq;
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.entity.PaymentMethod;
@@ -1283,7 +1281,7 @@ public class DataInitializer implements CommandLineRunner {
 		createLotteryEntry(members2, performance, schedule, SeatGradeType.VIP, lotteryEntryRepository);
 		createLotteryEntry(members3, performance, schedule, SeatGradeType.ROYAL, lotteryEntryRepository);
 
-		drawService.executeDraws();
+		// drawService.executeDraws();
 
 		log.info("[DataInit/Lottery] 추첨 실행 대상 공연 데이터 생성 완료");
 	}
@@ -1341,33 +1339,33 @@ public class DataInitializer implements CommandLineRunner {
 			lotteryEntryRepository);
 
 		// 추첨
-		drawService.executeDraws();
-
-		List<LotteryEntry> wonEntries = lotteryEntryRepository.findAllById(
-				entries.stream().map(LotteryEntry::getId).toList()
-			).stream()
-			.filter(entry -> entry.getStatus() == LotteryStatus.WIN)
-			.toList();
-
-		log.info("[DataInit] 결제 완료: wonEntries.size()={}", wonEntries.size());
-
-		// 당첨 결제 진행
-		for (LotteryEntry entry : wonEntries) {
-			try {
-				PaymentPayReq req = new PaymentPayReq(
-					DomainType.LOTTERY,
-					PaymentMethod.CARD,
-					0L,
-					entry.getUuid()
-				);
-				paymentOneClickService.pay(entry.getMemberId(), req);
-				log.info("[DataInit] 결제 완료: entryId={}", entry.getUuid());
-			} catch (Exception e) {
-				log.warn("[DataInit] 결제 실패: entryId={}, error={}", entry.getUuid(), e.getMessage());
-			}
-		}
-
-		drawService.executeAllocation();
+		// drawService.executeDraws();
+		//
+		// List<LotteryEntry> wonEntries = lotteryEntryRepository.findAllById(
+		// 		entries.stream().map(LotteryEntry::getId).toList()
+		// 	).stream()
+		// 	.filter(entry -> entry.getStatus() == LotteryStatus.WIN)
+		// 	.toList();
+		//
+		// log.info("[DataInit] 결제 완료: wonEntries.size()={}", wonEntries.size());
+		//
+		// // 당첨 결제 진행
+		// for (LotteryEntry entry : wonEntries) {
+		// 	try {
+		// 		PaymentPayReq req = new PaymentPayReq(
+		// 			DomainType.LOTTERY,
+		// 			PaymentMethod.CARD,
+		// 			0L,
+		// 			entry.getUuid()
+		// 		);
+		// 		paymentOneClickService.pay(entry.getMemberId(), req);
+		// 		log.info("[DataInit] 결제 완료: entryId={}", entry.getUuid());
+		// 	} catch (Exception e) {
+		// 		log.warn("[DataInit] 결제 실패: entryId={}, error={}", entry.getUuid(), e.getMessage());
+		// 	}
+		// }
+		//
+		// drawService.executeAllocation();
 
 		log.info("[DataInit/Lottery] 좌석 배치 대상 공연 데이터 생성 완료 (추첨 완료 상태)");
 	}
@@ -1542,11 +1540,12 @@ public class DataInitializer implements CommandLineRunner {
 
 		// 실제 좌석 등급에서 가격 조회
 		SeatGrade user1SeatGrade = seatGradeRepository
-			.findTopByPerformanceIdAndSeatIdOrderByIdDesc(user1Schedule.getPerformance().getPerformanceId(), user1Seat.getId())
+			.findTopByPerformanceIdAndSeatIdOrderByIdDesc(user1Schedule.getPerformance().getPerformanceId(),
+				user1Seat.getId())
 			.orElseThrow(() -> new IllegalStateException("user1 SeatGrade not found"));
 
 		// 원가에서 약간 할인된 가격으로 설정 (원가의 80%)
-		int user1DiscountedPrice = (int) (user1SeatGrade.getPrice() * 0.8);
+		int user1DiscountedPrice = (int)(user1SeatGrade.getPrice() * 0.8);
 
 		com.back.b2st.domain.trade.entity.Trade user1Trade = com.back.b2st.domain.trade.entity.Trade.builder()
 			.memberId(user1.getId())
@@ -1578,11 +1577,12 @@ public class DataInitializer implements CommandLineRunner {
 
 		// 실제 좌석 등급에서 가격 조회
 		SeatGrade user2SeatGrade = seatGradeRepository
-			.findTopByPerformanceIdAndSeatIdOrderByIdDesc(user2Schedule.getPerformance().getPerformanceId(), user2Seat.getId())
+			.findTopByPerformanceIdAndSeatIdOrderByIdDesc(user2Schedule.getPerformance().getPerformanceId(),
+				user2Seat.getId())
 			.orElseThrow(() -> new IllegalStateException("user2 SeatGrade not found"));
 
 		// 원가에서 약간 할인된 가격으로 설정 (원가의 85%)
-		int user2DiscountedPrice = (int) (user2SeatGrade.getPrice() * 0.85);
+		int user2DiscountedPrice = (int)(user2SeatGrade.getPrice() * 0.85);
 
 		com.back.b2st.domain.trade.entity.Trade user2Trade = com.back.b2st.domain.trade.entity.Trade.builder()
 			.memberId(user2.getId())

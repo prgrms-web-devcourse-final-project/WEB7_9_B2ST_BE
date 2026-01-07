@@ -8,6 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 	import com.back.b2st.domain.reservation.entity.Reservation;
@@ -46,12 +48,14 @@ import lombok.RequiredArgsConstructor;
 		private final SeatGradeRepository seatGradeRepository;
 		private final ReservationRepository reservationRepository;
 		private final PerformanceScheduleRepository performanceScheduleRepository;
+		private final PerformanceRepository performanceRepository;
 
 	public TradeRes getTrade(Long tradeId) {
 		Trade trade = tradeRepository.findById(tradeId)
 			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
 
-		return TradeRes.from(trade);
+		String performanceTitle = getPerformanceTitle(trade.getPerformanceId());
+		return TradeRes.from(trade, performanceTitle);
 	}
 
 	public Page<TradeRes> getTrades(TradeType type, TradeStatus status, Pageable pageable) {
@@ -67,7 +71,10 @@ import lombok.RequiredArgsConstructor;
 			trades = tradeRepository.findAll(pageable);
 		}
 
-		return trades.map(TradeRes::from);
+		return trades.map(trade -> {
+			String performanceTitle = getPerformanceTitle(trade.getPerformanceId());
+			return TradeRes.from(trade, performanceTitle);
+		});
 	}
 
 	@Transactional
@@ -231,5 +238,11 @@ import lombok.RequiredArgsConstructor;
 		if (!pendingRequests.isEmpty()) {
 			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "대기 중인 교환 신청이 있어 삭제할 수 없습니다.");
 		}
+	}
+
+	private String getPerformanceTitle(Long performanceId) {
+		return performanceRepository.findById(performanceId)
+			.map(Performance::getTitle)
+			.orElse("알 수 없음");
 	}
 }

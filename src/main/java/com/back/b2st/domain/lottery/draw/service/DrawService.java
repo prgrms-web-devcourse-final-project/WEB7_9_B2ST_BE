@@ -20,7 +20,10 @@ public class DrawService {
 	private final LotteryNotificationService notificationService;
 
 	public void executeDraws() {
-		List<DrawTargetPerformance> targetPerformances = performanceDrawService.findBookingClosedPerformances();
+		// test
+		List<DrawTargetPerformance> targetPerformances = performanceDrawService.findBookingClosedPerformances_test();
+
+		// List<DrawTargetPerformance> targetPerformances = performanceDrawService.findBookingClosedPerformances();
 		log.debug("추첨 대상 공연 수 : {}", targetPerformances.size());
 
 		// 각 공연별 추첨
@@ -42,8 +45,11 @@ public class DrawService {
 	 * 좌석 할당 실행
 	 */
 	public void executeAllocation() {
+		// tset
+		List<DrawTargetPerformance> targetPerformances = seatAllocationService.findBookingOpenPerformances_test();
+		
 		// 좌석 할당이 필요한 공연 조회
-		List<DrawTargetPerformance> targetPerformances = seatAllocationService.findBookingOpenPerformances();
+		// List<DrawTargetPerformance> targetPerformances = seatAllocationService.findBookingOpenPerformances();
 		log.debug("좌석 할당 공연 수 : {}", targetPerformances.size());
 
 		for (DrawTargetPerformance performance : targetPerformances) {

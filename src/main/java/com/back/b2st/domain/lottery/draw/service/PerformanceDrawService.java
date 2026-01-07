@@ -50,6 +50,10 @@ public class PerformanceDrawService {
 		return performanceScheduleRepository.findByClosedBetweenAndNotDrawn(startDate, endDate);
 	}
 
+	public List<DrawTargetPerformance> findBookingClosedPerformances_test() {
+		return performanceScheduleRepository.findByNotDrawn();
+	}
+
 	/**
 	 * 공연 추첨 진행
 	 * @param performanceId    공연 id

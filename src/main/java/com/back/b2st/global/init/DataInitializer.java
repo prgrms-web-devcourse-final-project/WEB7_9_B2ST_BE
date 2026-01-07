@@ -94,11 +94,15 @@ public class DataInitializer implements CommandLineRunner {
 	private final LotteryResultRepository lotteryResultRepository;
 	private final PaymentOneClickService paymentOneClickService;
 
+	// Trade 관련 Repository 추가
+	private final com.back.b2st.domain.trade.repository.TradeRepository tradeRepository;
+
 	@Override
 	public void run(String... args) throws Exception {
 		// 서버 재시작시 중복 생성 방지 차
 		initMemberData();
 		initConnectedSet();
+		initTradeData();
 		lottery();
 		lotteryForDrawExecution();
 		lotteryForSeatAllocation();
@@ -586,6 +590,8 @@ public class DataInitializer implements CommandLineRunner {
 				Thread.currentThread().interrupt();
 			}
 		}
+
+		// user2 티켓은 initTradeData()에서 필요시 자동 생성됨
 	}
 
 	private void seedPrereservationApplications(List<PerformanceSchedule> prereserveSchedules, List<Section> sections) {
@@ -1382,6 +1388,221 @@ public class DataInitializer implements CommandLineRunner {
 					.build())
 				.toList()
 		);
+	}
+
+	/**
+	 * user2를 위한 티켓 생성 (양도 테스트용)
+	 */
+	private void createUser2Tickets(Member user2) {
+		try {
+			// 첫 번째 공연과 회차 조회
+			List<Performance> performances = performanceRepository.findAll();
+			if (performances.isEmpty()) {
+				log.warn("[DataInit/Trade] 공연이 없어 user2 티켓 생성 불가");
+				return;
+			}
+
+			Performance performance = performances.get(0);
+			List<PerformanceSchedule> schedules = performanceScheduleRepository
+				.findAllByPerformance_PerformanceIdOrderByStartAtAsc(performance.getPerformanceId());
+
+			if (schedules.isEmpty()) {
+				log.warn("[DataInit/Trade] 회차가 없어 user2 티켓 생성 불가");
+				return;
+			}
+
+			PerformanceSchedule schedule = schedules.get(0);
+
+			// 아직 SOLD되지 않은 좌석 찾기
+			List<ScheduleSeat> availableScheduleSeats = scheduleSeatRepository
+				.findAll()
+				.stream()
+				.filter(ss -> ss.getScheduleId().equals(schedule.getPerformanceScheduleId()))
+				.filter(ss -> ss.getStatus() == com.back.b2st.domain.scheduleseat.entity.SeatStatus.AVAILABLE)
+				.limit(3)
+				.toList();
+
+			if (availableScheduleSeats.size() < 3) {
+				log.warn("[DataInit/Trade] 사용 가능한 좌석이 부족해 user2 티켓 생성 불가");
+				return;
+			}
+
+			// user2에게 3개의 티켓 생성
+			for (int i = 0; i < 3; i++) {
+				ScheduleSeat scheduleSeat = availableScheduleSeats.get(i);
+				Seat seat = seatRepository.findById(scheduleSeat.getSeatId())
+					.orElseThrow(() -> new IllegalStateException("Seat not found"));
+
+				// 좌석 상태 SOLD 처리
+				scheduleSeat.sold();
+
+				// 예매 생성 (PENDING → COMPLETED)
+				Reservation reservation = Reservation.builder()
+					.scheduleId(schedule.getPerformanceScheduleId())
+					.memberId(user2.getId())
+					.expiresAt(LocalDateTime.now().plusMinutes(5))
+					.build();
+
+				Reservation savedReservation = reservationRepository.save(reservation);
+
+				reservationSeatRepository.save(
+					ReservationSeat.builder()
+						.reservationId(savedReservation.getId())
+						.scheduleSeatId(scheduleSeat.getId())
+						.build()
+				);
+
+				reservation.complete(LocalDateTime.now());
+
+				// 결제 생성 (DONE 상태)
+				Payment payment = Payment.builder()
+					.orderId("ORDER-TRADE-INIT-" + System.currentTimeMillis() + "-" + i)
+					.memberId(user2.getId())
+					.domainType(DomainType.RESERVATION)
+					.domainId(savedReservation.getId())
+					.amount(20000L)
+					.method(PaymentMethod.CARD)
+					.expiresAt(null)
+					.build();
+
+				payment.complete(LocalDateTime.now());
+				paymentRepository.save(payment);
+
+				// 티켓 생성
+				Ticket ticket = Ticket.builder()
+					.reservationId(savedReservation.getId())
+					.memberId(user2.getId())
+					.seatId(seat.getId())
+					.build();
+
+				ticketRepository.save(ticket);
+
+				log.info("[DataInit/Trade] user2 티켓 생성 완료 - 좌석: {}구역 {}행 {}번",
+					seat.getSectionName(), seat.getRowLabel(), seat.getSeatNumber());
+
+				// orderId 중복 방지를 위한 짧은 대기
+				try {
+					Thread.sleep(10);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+			}
+		} catch (Exception e) {
+			log.error("[DataInit/Trade] user2 티켓 생성 중 오류 발생", e);
+		}
+	}
+
+	/**
+	 * 양도 테스트 데이터 생성 (user1 ↔ user2 티켓 소유권 이전)
+	 */
+	private void initTradeData() {
+		// 중복 생성 방지
+		if (tradeRepository.count() > 0) {
+			log.info("[DataInit/Trade] 이미 양도글 존재하여 초기화 스킵");
+			return;
+		}
+
+		Member user1 = memberRepository.findByEmail("user1@tt.com").orElse(null);
+		Member user2 = memberRepository.findByEmail("user2@tt.com").orElse(null);
+
+		if (user1 == null || user2 == null) {
+			log.warn("[DataInit/Trade] user1 또는 user2가 존재하지 않아 양도글 생성 스킵");
+			return;
+		}
+
+		// user1의 티켓 조회 (첫 번째 티켓)
+		List<Ticket> user1Tickets = ticketRepository.findByMemberId(user1.getId());
+		if (user1Tickets.isEmpty()) {
+			log.warn("[DataInit/Trade] user1의 티켓이 없어 양도글 생성 스킵");
+			return;
+		}
+
+		// user2의 티켓 조회 - 없으면 생성
+		List<Ticket> user2Tickets = ticketRepository.findByMemberId(user2.getId());
+		if (user2Tickets.isEmpty()) {
+			log.info("[DataInit/Trade] user2 티켓이 없어 생성 시작");
+			createUser2Tickets(user2);
+			user2Tickets = ticketRepository.findByMemberId(user2.getId());
+
+			if (user2Tickets.isEmpty()) {
+				log.warn("[DataInit/Trade] user2 티켓 생성 실패");
+				return;
+			}
+		}
+
+		// user1의 첫 번째 티켓으로 양도글 생성
+		Ticket user1Ticket = user1Tickets.get(0);
+		Seat user1Seat = seatRepository.findById(user1Ticket.getSeatId())
+			.orElseThrow(() -> new IllegalStateException("user1 Seat not found"));
+		Reservation user1Reservation = reservationRepository.findById(user1Ticket.getReservationId())
+			.orElseThrow(() -> new IllegalStateException("user1 Reservation not found"));
+		PerformanceSchedule user1Schedule = performanceScheduleRepository
+			.findById(user1Reservation.getScheduleId())
+			.orElseThrow(() -> new IllegalStateException("user1 Schedule not found"));
+
+		// 실제 좌석 등급에서 가격 조회
+		SeatGrade user1SeatGrade = seatGradeRepository
+			.findTopByPerformanceIdAndSeatIdOrderByIdDesc(user1Schedule.getPerformance().getPerformanceId(), user1Seat.getId())
+			.orElseThrow(() -> new IllegalStateException("user1 SeatGrade not found"));
+
+		// 원가에서 약간 할인된 가격으로 설정 (원가의 80%)
+		int user1DiscountedPrice = (int) (user1SeatGrade.getPrice() * 0.8);
+
+		com.back.b2st.domain.trade.entity.Trade user1Trade = com.back.b2st.domain.trade.entity.Trade.builder()
+			.memberId(user1.getId())
+			.performanceId(user1Schedule.getPerformance().getPerformanceId())
+			.scheduleId(user1Schedule.getPerformanceScheduleId())
+			.ticketId(user1Ticket.getId())
+			.type(com.back.b2st.domain.trade.entity.TradeType.TRANSFER)
+			.price(user1DiscountedPrice)
+			.totalCount(1)
+			.section(user1Seat.getSectionName())
+			.row(user1Seat.getRowLabel())
+			.seatNumber(String.valueOf(user1Seat.getSeatNumber()))
+			.build();
+
+		tradeRepository.save(user1Trade);
+		log.info("[DataInit/Trade] user1 양도글 생성 완료 - 티켓ID: {}, 좌석: {}구역 {}행 {}번, 원가: {}원, 양도가: {}원 ({}등급)",
+			user1Ticket.getId(), user1Seat.getSectionName(), user1Seat.getRowLabel(),
+			user1Seat.getSeatNumber(), user1SeatGrade.getPrice(), user1DiscountedPrice, user1SeatGrade.getGrade());
+
+		// user2의 첫 번째 티켓으로 양도글 생성
+		Ticket user2Ticket = user2Tickets.get(0);
+		Seat user2Seat = seatRepository.findById(user2Ticket.getSeatId())
+			.orElseThrow(() -> new IllegalStateException("user2 Seat not found"));
+		Reservation user2Reservation = reservationRepository.findById(user2Ticket.getReservationId())
+			.orElseThrow(() -> new IllegalStateException("user2 Reservation not found"));
+		PerformanceSchedule user2Schedule = performanceScheduleRepository
+			.findById(user2Reservation.getScheduleId())
+			.orElseThrow(() -> new IllegalStateException("user2 Schedule not found"));
+
+		// 실제 좌석 등급에서 가격 조회
+		SeatGrade user2SeatGrade = seatGradeRepository
+			.findTopByPerformanceIdAndSeatIdOrderByIdDesc(user2Schedule.getPerformance().getPerformanceId(), user2Seat.getId())
+			.orElseThrow(() -> new IllegalStateException("user2 SeatGrade not found"));
+
+		// 원가에서 약간 할인된 가격으로 설정 (원가의 85%)
+		int user2DiscountedPrice = (int) (user2SeatGrade.getPrice() * 0.85);
+
+		com.back.b2st.domain.trade.entity.Trade user2Trade = com.back.b2st.domain.trade.entity.Trade.builder()
+			.memberId(user2.getId())
+			.performanceId(user2Schedule.getPerformance().getPerformanceId())
+			.scheduleId(user2Schedule.getPerformanceScheduleId())
+			.ticketId(user2Ticket.getId())
+			.type(com.back.b2st.domain.trade.entity.TradeType.TRANSFER)
+			.price(user2DiscountedPrice)
+			.totalCount(1)
+			.section(user2Seat.getSectionName())
+			.row(user2Seat.getRowLabel())
+			.seatNumber(String.valueOf(user2Seat.getSeatNumber()))
+			.build();
+
+		tradeRepository.save(user2Trade);
+		log.info("[DataInit/Trade] user2 양도글 생성 완료 - 티켓ID: {}, 좌석: {}구역 {}행 {}번, 원가: {}원, 양도가: {}원 ({}등급)",
+			user2Ticket.getId(), user2Seat.getSectionName(), user2Seat.getRowLabel(),
+			user2Seat.getSeatNumber(), user2SeatGrade.getPrice(), user2DiscountedPrice, user2SeatGrade.getGrade());
+
+		log.info("[DataInit/Trade] 양도 테스트 데이터 생성 완료 (user1 ↔ user2)");
 	}
 
 }

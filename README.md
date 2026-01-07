@@ -22,9 +22,6 @@
 ![Doppler](https://img.shields.io/badge/Doppler-000000?logo=doppler&logoColor=white&style=for-the-badge)
 ![Micrometer](https://img.shields.io/badge/Micrometer-000000?style=for-the-badge)
 
-### \<Authentication & Security\>
-![JWT](https://img.shields.io/badge/JWT-000000?logo=jsonwebtokens&logoColor=white&style=for-the-badge)
-![KAKAO OAuth](https://img.shields.io/badge/KAKAO%20OAuth-FFCD00?style=for-the-badge&logo=kakaotalk&logoColor=000000)
 ### \<Infra\>
 ![Terraform](https://img.shields.io/badge/Terraform-7B42BC?logo=terraform&logoColor=white&style=for-the-badge)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white&style=for-the-badge)
@@ -33,10 +30,10 @@
 ![Amazon%20S3](https://img.shields.io/badge/Amazon%20S3-569A31?logo=amazons3&logoColor=white&style=for-the-badge)
 
 ### \<External Services\>
+![JWT](https://img.shields.io/badge/JWT-000000?logo=jsonwebtokens&logoColor=white&style=for-the-badge)
+![KAKAO OAuth](https://img.shields.io/badge/KAKAO%20OAuth-FFCD00?style=for-the-badge&logo=kakaotalk&logoColor=000000)
 ![SMTP](https://img.shields.io/badge/SMTP-000000?style=for-the-badge)
-![Slack%20Webhook](https://img.shields.io/badge/Slack%20Webhook-4A154B?logo=slack&logoColor=white&style=for-the-badge)
-
-### \<Documentation & Testing\>
+![Slack Webhook](https://img.shields.io/badge/Slack%20Webhook-4A154B?logo=slack&logoColor=white&style=for-the-badge)
 ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?logo=swagger&logoColor=black&style=for-the-badge)
 ![Postman](https://img.shields.io/badge/Postman-FF6C37?logo=postman&logoColor=white&style=for-the-badge)
 ![Testcontainers](https://img.shields.io/badge/Testcontainers-000000?logo=testcontainers&logoColor=white&style=for-the-badge)

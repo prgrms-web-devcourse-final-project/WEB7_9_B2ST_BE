@@ -67,6 +67,9 @@ class TradeServiceTest {
 	@Mock
 	private PerformanceScheduleRepository performanceScheduleRepository;
 
+	@Mock
+	private com.back.b2st.domain.performance.repository.PerformanceRepository performanceRepository;
+
 	@Test
 	@DisplayName("교환 게시글 생성 성공")
 	void createExchangeTrade_success() {
@@ -391,8 +394,25 @@ class TradeServiceTest {
 		org.springframework.data.domain.Page<Trade> tradePage =
 			new org.springframework.data.domain.PageImpl<>(List.of(trade));
 
+		com.back.b2st.domain.venue.venue.entity.Venue mockVenue =
+			com.back.b2st.domain.venue.venue.entity.Venue.builder()
+				.name("테스트 공연장")
+				.build();
+
+		com.back.b2st.domain.performance.entity.Performance performance =
+			com.back.b2st.domain.performance.entity.Performance.builder()
+				.venue(mockVenue)
+				.title("테스트 공연")
+				.category("콘서트")
+				.startDate(java.time.LocalDateTime.now())
+				.endDate(java.time.LocalDateTime.now().plusDays(7))
+				.status(com.back.b2st.domain.performance.entity.PerformanceStatus.ACTIVE)
+				.build();
+
 		given(tradeRepository.findAllByTypeAndStatus(type, status, pageable))
 			.willReturn(tradePage);
+		given(performanceRepository.findById(1L))
+			.willReturn(java.util.Optional.of(performance));
 
 		// when
 		org.springframework.data.domain.Page<com.back.b2st.domain.trade.dto.response.TradeRes> result =
@@ -401,6 +421,7 @@ class TradeServiceTest {
 		// then
 		assertThat(result.getContent()).hasSize(1);
 		assertThat(result.getContent().get(0).type()).isEqualTo(TradeType.EXCHANGE);
+		assertThat(result.getContent().get(0).performanceTitle()).isEqualTo("테스트 공연");
 		verify(tradeRepository).findAllByTypeAndStatus(type, status, pageable);
 	}
 

@@ -1,5 +1,6 @@
 package com.back.b2st.domain.lottery.draw.service;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -8,7 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -37,6 +37,7 @@ public class PerformanceDrawService {
 	private final LotteryEntryRepository lotteryEntryRepository;
 	private final SeatGradeRepository seatGradeRepository;
 	private final LotteryResultRepository lotteryResultRepository;
+	private final SecureRandom secureRandom = new SecureRandom();
 
 	/**
 	 * 마감 공연 조회
@@ -156,8 +157,6 @@ public class PerformanceDrawService {
 	 * @return 당첨자 id 리스트
 	 */
 	private List<Long> drawWithWeight(List<LotteryApplicantInfo> applicantInfos, Long seatCounts) {
-		// todo 가중치를 for문 말고 그냥 셔플링 해서 뽑는 방식으로 ㄱㄱ?
-		// todo 중간에 당첨을 진행하다가 날아가는 경우 어떻게 할것인가? -> 한 명 뽑을 때마다 별도로 저장을 해야하나?
 		// 가중치 계산
 		List<WeightedApplicant> weightedApplicants = applicantInfos.stream()
 			.map(applicant -> new WeightedApplicant(
@@ -180,7 +179,7 @@ public class PerformanceDrawService {
 
 		// 남은 좌석 0 이상,
 		while (remainingSeats > 0 && selectedIds.size() < applicantInfos.size()) {
-			int ramdomDraw = ThreadLocalRandom.current().nextInt(totalWeight) + 1;    // 0 ~ (totalWeight - 1)
+			int randomDraw = secureRandom.nextInt(totalWeight) + 1;    // 0 ~ (totalWeight - 1)
 			int currentWeight = 0;
 
 			WeightedApplicant selected = null;
@@ -193,7 +192,7 @@ public class PerformanceDrawService {
 
 				currentWeight += applicant.weight();
 				// 현재 가중치 위치 비교
-				if (ramdomDraw <= currentWeight) {
+				if (randomDraw <= currentWeight) {
 					selected = applicant;
 					break;
 				}

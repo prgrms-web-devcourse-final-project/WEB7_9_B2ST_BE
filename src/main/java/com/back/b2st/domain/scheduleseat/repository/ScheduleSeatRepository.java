@@ -1,0 +1,105 @@
+package com.back.b2st.domain.scheduleseat.repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
+import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
+
+import jakarta.persistence.LockModeType;
+
+public interface ScheduleSeatRepository extends JpaRepository<ScheduleSeat, Long>, ScheduleSeatRepositoryCustom {
+
+	/** 회차 좌석 생성 중복 방지 메서드 추가 */
+	boolean existsByScheduleId(Long scheduleId);
+
+	/** scheduleId + seatId 로 특정 좌석 조회 */
+	Optional<ScheduleSeat> findByScheduleIdAndSeatId(Long scheduleId, Long seatId);
+
+	/** 만료된 HOLD 좌석 목록 조회(키 추출) */
+	@Query("""
+		select s.scheduleId, s.seatId
+		  from ScheduleSeat s
+		 where s.status = :hold
+		   and s.holdExpiredAt is not null
+		   and s.holdExpiredAt <= :now
+		""")
+	List<Object[]> findExpiredHoldKeys(@Param("hold") SeatStatus hold, @Param("now") LocalDateTime now);
+
+	/** HOLD 만료 좌석 -> AVAILABLE로 일괄 처리 */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+		update ScheduleSeat s
+		   set s.status = :available,
+		       s.holdExpiredAt = null
+		 where s.status = :hold
+		   and s.holdExpiredAt is not null
+		   and s.holdExpiredAt <= :now
+		""")
+	int releaseExpiredHolds(
+		@Param("hold") SeatStatus hold,
+		@Param("available") SeatStatus available,
+		@Param("now") LocalDateTime now);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("SELECT s FROM ScheduleSeat s WHERE s.scheduleId = :scheduleId AND s.seatId = :seatId")
+	Optional<ScheduleSeat> findByScheduleIdAndSeatIdWithLock(
+		@Param("scheduleId") Long scheduleId,
+		@Param("seatId") Long seatId
+	);
+
+	/** 특정 회차의 특정 등급 AVAILABLE 좌석 조회 */
+	@Query("""
+		SELECT s
+		FROM ScheduleSeat s
+		JOIN SeatGrade sg ON s.seatId = sg.seatId
+		WHERE s.scheduleId = :scheduleId
+		  AND s.status = 'AVAILABLE'
+		  AND sg.grade = :grade
+		""")
+	List<ScheduleSeat> findAvailableSeatsByGrade(
+		@Param("scheduleId") Long scheduleId,
+		@Param("grade") SeatGradeType grade
+	);
+
+	/* === LOTTERY === */
+
+	/** scheduleId + scheduleSeatId(PK) 목록으로 좌석 조회 (검증용) */
+	@Query("""
+		select s
+		  from ScheduleSeat s
+		 where s.scheduleId = :scheduleId
+		   and s.id in :scheduleSeatIds
+		""")
+	List<ScheduleSeat> findByScheduleIdAndScheduleSeatIdIn(
+		@Param("scheduleId") Long scheduleId,
+		@Param("scheduleSeatIds") List<Long> scheduleSeatIds
+	);
+
+	/** scheduleId + scheduleSeatId(PK) 목록을 SOLD로 일괄 업데이트 (추첨 확정용) */
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+		update ScheduleSeat s
+		   set s.status = :sold,
+		       s.holdExpiredAt = null
+		 where s.scheduleId = :scheduleId
+		   and s.id in :scheduleSeatIds
+		   and s.status = :available
+		""")
+	int updateStatusToSoldByScheduleSeatIds(
+		@Param("scheduleId") Long scheduleId,
+		@Param("scheduleSeatIds") List<Long> scheduleSeatIds,
+		@Param("available") SeatStatus available,
+		@Param("sold") SeatStatus sold
+	);
+
+	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
+}

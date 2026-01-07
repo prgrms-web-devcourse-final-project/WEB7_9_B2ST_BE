@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>계정 복구</title>
+    <style>
+        body {
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .button-box {
+            margin: 30px 0;
+        }
+
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>B2ST TT</h1>
+    </div>
+    <div class="content">
+        <h2>계정 복구 안내</h2>
+        <p>안녕하세요, <strong th:text="${name}">사용자</strong>님.</p>
+        <p>계정 복구를 요청하셨습니다.<br/>
+            아래 버튼을 클릭하시면 계정이 즉시 복구됩니다.</p>
+        <div class="button-box">
+            <a th:href="${recoveryLink}" class="button">계정 복구하기</a>
+        </div>
+        <div class="warning">
+            ⚠️ 이 링크는 <strong th:text="${expiryHours}">24</strong>시간 후에 만료됩니다.<br/>
+            본인이 요청하지 않은 경우 이 이메일을 무시하세요.
+        </div>
+    </div>
+    <div class="footer">
+        <p>본 메일은 발신 전용이며, 회신되지 않습니다.</p>
+        <p>&copy; 2025 B2ST TT(Ticket&Trade). All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

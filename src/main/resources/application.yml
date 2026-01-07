@@ -1,0 +1,196 @@
+spring:
+  profiles:
+    active: dev
+
+  application:
+    name: b2st
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/tt_db
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  data:
+    redis:
+      mode: ${REDIS_MODE:cluster}
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      timeout: 3000ms
+      cluster:
+        nodes: ${REDIS_CLUSTER_NODES:localhost:7000,localhost:7001,localhost:7002,localhost:7003,localhost:7004,localhost:7005}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+
+  # ==================== MAIL 설정 (기본값 추가!) ====================
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:dummy@example.com}
+    password: ${MAIL_PASSWORD:dummy}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    default-encoding: UTF-8
+
+alert:
+  enabled: true
+  slack:
+    webhook-url: ${SLACK_WEBHOOK_URL:}
+
+app:
+  mail:
+    from-address: ${MAIL_FROM_ADDRESS:noreply@b2st.com}
+    from-name: ${MAIL_FROM_NAME:B2ST TT}
+    verification:
+      expire-minutes: 5
+      code-length: 6
+
+oauth:
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:dummy}
+    client-secret: ${KAKAO_CLIENT_SECRET:dummy}
+    redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/api/auth/kakao/callback}
+    token-uri: https://kauth.kakao.com/oauth/token
+    user-info-uri: https://kapi.kakao.com/v2/user/me
+    issuer: https://kauth.kakao.com
+    jwks-uri: https://kauth.kakao.com/.well-known/jwks.json
+    default-nickname: 카카오사용자
+
+jwt:
+  secret: ${JWT_SECRET:c2VjcmV0LWtleS1mb3ItYjJzdC1wcm9qZWN0LXR0LXNlcnZpY2UtbXVzdC1iZS1sb25nLWVub3VnaA==}
+  access-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:1209600000}
+
+queue:
+  enabled: true
+  scheduler:
+    batch-size: 100
+    fixed-delay: 3000
+    leader-lock:
+      wait-seconds: 3
+  cleanup:
+    expired:
+      fixedDelayMs: 60000
+    enterable:
+      fixedDelayMs: 5000
+    stale:
+      fixedDelayMs: 60000
+      enabled: false
+  test:
+    enabled: false
+
+prereservation:
+  application:
+    strict: ${PRERESERVATION_APPLICATION_STRICT:true}
+  booking:
+    strict: ${PRERESERVATION_BOOKING_STRICT:true}
+  slot:
+    strict: ${PRERESERVATION_SLOT_STRICT:true}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+prereservation:
+  application:
+    strict: ${PRERESERVATION_APPLICATION_STRICT:false}
+  booking:
+    strict: ${PRERESERVATION_BOOKING_STRICT:false}
+  slot:
+    strict: ${PRERESERVATION_SLOT_STRICT:false}
+
+# ==================== Circuit Breaker 설정 (추가) ====================
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        minimumNumberOfCalls: 5
+        slowCallDurationThreshold: 2s
+        slowCallRateThreshold: 50
+        recordExceptions:
+          - org.springframework.data.redis.RedisConnectionFailureException
+          - org.springframework.data.redis.RedisSystemException
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+        ignoreExceptions:
+          - com.back.b2st.global.error.exception.BusinessException
+
+    instances:
+      queueRedis:
+        baseConfig: default
+        failureRateThreshold: 60
+        waitDurationInOpenState: 30s
+
+# ==================== Actuator/Management 설정 (Circuit Breaker 모니터링) ====================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, circuitbreakers,circuitbreakerevents, prometheus, metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+  health:
+    circuitbreakers:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: tt
+      team: b2st
+    distribution:
+      percentiles-histogram:
+        resilience4j.circuitbreaker.calls: true
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99
+      slo:
+        http.server.requests: 100ms, 500ms, 1s
+
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: TRACE
+    com.back.b2st.domain.queue: INFO
+    io.github.resilience4j: DEBUG  # Circuit Breaker 로깅
+
+aws:
+  s3:
+    bucket: local-dummy-bucket
+    region: ap-northeast-2
+    presign-expiration-seconds: 300
+    max-file-size: 10485760
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp

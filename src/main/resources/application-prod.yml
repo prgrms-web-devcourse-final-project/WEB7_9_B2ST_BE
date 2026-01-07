@@ -1,0 +1,139 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO}
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  data:
+    redis:
+      host: tt_redis
+      port: 6379
+      password: ${REDIS_PASSWORD}
+      cluster:
+        nodes: ${REDIS_CLUSTER_NODES:redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005}
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: WARN
+    io.github.resilience4j: INFO  # 운영 환경 Circuit Breaker 로깅
+
+oauth:
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID}
+    client-secret: ${KAKAO_CLIENT_SECRET}
+    redirect-uri: ${KAKAO_REDIRECT_URI}
+    token-uri: ${KAKAO_TOKEN_URI}
+    user-info-uri: ${KAKAO_USER_INFO_URI}
+    issuer: ${KAKAO_ISSUER}
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-expiration: ${JWT_ACCESS_EXPIRATION}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION}
+
+# queue 시스템 활성화
+queue:
+  enabled: true
+  default:
+    max-active-users: 200
+    entry-ttl-minutes: 10
+  sync:
+    enabled: true  # 프로덕션에서는 동기화 활성화
+  lua:
+    enabled: true
+    fallback-enabled: true
+
+# ==================== Circuit Breaker 설정 (운영 환경) ====================
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 20  # 운영 환경: 더 큰 샘플
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s  # 운영 환경: 더 긴 대기
+        permittedNumberOfCallsInHalfOpenState: 5
+        minimumNumberOfCalls: 10  # 운영 환경: 충분한 샘플 확보
+        slowCallDurationThreshold: 2s
+        slowCallRateThreshold: 50
+        recordExceptions:
+          - org.springframework.data.redis.RedisConnectionFailureException
+          - org.springframework.data.redis.RedisSystemException
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+        ignoreExceptions:
+          - com.back.b2st.global.error.exception.BusinessException
+
+    instances:
+      queueRedis:
+        baseConfig: default
+        failureRateThreshold: 60
+        waitDurationInOpenState: 60s  # 운영 환경: Redis 복구 시간 충분히 확보
+
+server:
+  forward-headers-strategy: framework
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_REGION:ap-northeast-2}
+    presign-expiration-seconds: ${AWS_S3_PRESIGN_EXPIRATION:300}
+    max-file-size: ${AWS_S3_MAX_FILE_SIZE:10485760}
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+
+# ==================== Actuator 설정 (운영 환경) ====================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,circuitbreakers,circuitbreakerevents
+
+  endpoint:
+    health:
+      show-details: when-authorized  # 운영 환경: 인증된 사용자만 상세 정보
+
+  health:
+    circuitbreakers:
+      enabled: true
+
+  # (Deprecated) management.metrics.export.prometheus.enabled -> 아래로 이동
+  prometheus:
+    metrics:
+      export:
+        enabled: true  # Prometheus 사용 시
+
+  metrics:
+    distribution:
+      percentiles-histogram:
+        resilience4j.circuitbreaker.calls: true

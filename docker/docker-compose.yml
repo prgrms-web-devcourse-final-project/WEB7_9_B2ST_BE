@@ -356,7 +356,6 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - DOPPLER_TOKEN=${DOPPLER_TOKEN}
       - SPRING_PROFILES_ACTIVE=prod
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}

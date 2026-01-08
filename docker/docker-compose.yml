@@ -15,7 +15,7 @@
 #   - 이미 초기화되어 있으면 자동으로 스킵됩니다 (cluster_state:ok 체크)
 #   - app 서비스는 redis-cluster-init 완료 후 자동 시작됩니다
 #
-# ⚠️ 운영 가이드:
+#    운영 가이드:
 #   - 배포 시: docker compose up -d 만 사용 (자동 초기화)
 #   - 장애/복구 시: bash docker/init-redis-cluster.sh 사용
 #   - 상세: OPERATIONS_RUNBOOK.md 참고

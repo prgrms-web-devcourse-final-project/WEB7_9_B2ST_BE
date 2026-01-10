@@ -135,6 +135,10 @@ jobs:
               "umask 077",
               "doppler secrets download --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" --format env --no-file > doppler.env",
               "chmod 600 doppler.env",
+          
+              "set -a && source doppler.env && set +a",
+              "envsubst < monitoring/alertmanager/alertmanager.yml > /tmp/alertmanager-resolved.yml",
+              "cp /tmp/alertmanager-resolved.yml monitoring/alertmanager/alertmanager.yml",
 
               "docker compose --env-file doppler.env pull",
               "docker compose --env-file doppler.env up -d --force-recreate",

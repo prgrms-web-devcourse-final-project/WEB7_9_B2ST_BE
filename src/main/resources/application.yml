@@ -55,7 +55,7 @@ spring:
 alert:
   enabled: true
   slack:
-    webhook-url: ${SLACK_WEBHOOK_URL:}
+    webhook-auth: ${SLACK_WEBHOOK_AUTH:}
 
 app:
   mail:

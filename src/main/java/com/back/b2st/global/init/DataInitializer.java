@@ -64,7 +64,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Profile("!test & !prod")
+@Profile("!test")
 @Transactional
 public class DataInitializer implements CommandLineRunner {
 

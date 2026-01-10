@@ -104,12 +104,12 @@ jobs:
           INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TT-ec2-1" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
           echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
 
-      - name: AWS SSM Send-Command (Official CLI)
+      - name: AWS SSM Send-Command (doppler run 방식)
         run: |
           aws ssm send-command \
           --instance-ids "${{ env.INSTANCE_ID }}" \
           --document-name "AWS-RunShellScript" \
-          --comment "Deploy Spring Boot (Doppler env_file injection)" \
+          --comment "Deploy Spring Boot with doppler run" \
           --parameters '{
             "commands": [
               "#!/bin/bash",
@@ -132,17 +132,14 @@ jobs:
 
               "echo \"${{ secrets.PERSONAL_ACCESS_TOKEN }}\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
 
-              "umask 077",
-              "doppler secrets download --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" --format env --no-file > doppler.env",
-              "chmod 600 doppler.env",
-
-              "docker compose --env-file doppler.env pull",
-              "docker compose --env-file doppler.env up -d --force-recreate",
-
-              "rm -f doppler.env",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose pull",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose up -d --force-recreate",
 
               "docker image prune -f",
-              "docker logout ghcr.io 2>/dev/null"
+              "docker logout ghcr.io 2>/dev/null",
+
+              "echo \"Deployment completed at $(date)\"",
+              "docker compose ps"
             ]
           }' \
           --region ${{ secrets.AWS_REGION }}

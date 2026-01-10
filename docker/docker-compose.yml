@@ -318,7 +318,6 @@ services:
     networks:
       - common
 
-    # ⚠️ 중요: doppler run 방식 사용 시 env_file 불필요
     # 환경변수 주입 방식:
     #   - Doppler 환경변수: doppler run 명령어로 메모리에서 직접 주입
     #   - Docker Compose 환경변수: 아래 environment에 명시

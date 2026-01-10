@@ -7,13 +7,18 @@ on:
     paths:
       - ".github/workflows/**"
       - "src/**"
+      - "build.gradle"
+      - "settings.gradle"
       - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - "gradlew"
+      - "gradlew.bat"
       - "Dockerfile"
       - "docker/**"
     branches:
       - develop
 
-# 권한 최소화/명시화
 permissions:
   contents: write
   packages: write
@@ -65,8 +70,7 @@ jobs:
       - name: set lower case owner name
         id: export_owner
         run: |
-         # OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
-          OWNER_LC="chehyeon-kim23" # 본인 아이디를 소문자로 직접 입력
+          OWNER_LC="chehyeon-kim23"
           echo "owner_lc=$OWNER_LC" >> $GITHUB_OUTPUT
 
       - name: export image name
@@ -82,8 +86,7 @@ jobs:
           cache-to: type=registry,ref=ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:cache,mode=max
           tags: |
             ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:${{ needs.makeTagAndRelease.outputs.tag_name }},
-            ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:latest          
-  
+            ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -103,37 +106,43 @@ jobs:
 
       - name: AWS SSM Send-Command (Official CLI)
         run: |
-            aws ssm send-command \
-            --instance-ids "${{ env.INSTANCE_ID }}" \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy Spring Boot with Prod Profile" \
-            --parameters '{
-              "commands": [
-                "#!/bin/bash",
-                
-                "export HOME=/root",
-                "export PATH=$PATH:/usr/local/bin",
-          
-                
-                "git config --global --add safe.directory /dockerProjects/tt-src/WEB7_9_B2ST_BE",
-                
-                "cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/ || exit 1",
-                "git fetch --all",
-                "git reset --hard origin/develop",
-          
-                
-                "cd docker/",
-                "export DOPPLER_TOKEN=\"${{ secrets.DOPPLER_TOKEN }}\"",
-                "export DOPPLER_PROJECT=tt",
-                "export DOPPLER_CONFIG=prd",
-                "echo \"${{ secrets.PERSONAL_ACCESS_TOKEN }}\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
-          
-                "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose pull",
-                "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose up -d --force-recreate",
-          
-                "docker image prune -f",
-          
-                "docker logout ghcr.io 2>/dev/null"
-              ]
-            }' \
-            --region ${{ secrets.AWS_REGION }}
+          aws ssm send-command \
+          --instance-ids "${{ env.INSTANCE_ID }}" \
+          --document-name "AWS-RunShellScript" \
+          --comment "Deploy Spring Boot (Doppler env_file injection)" \
+          --parameters '{
+            "commands": [
+              "#!/bin/bash",
+              "set -euo pipefail",
+
+              "export HOME=/root",
+              "export PATH=$PATH:/usr/local/bin",
+
+              "git config --global --add safe.directory /dockerProjects/tt-src/WEB7_9_B2ST_BE",
+
+              "cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/ || exit 1",
+              "git fetch --all",
+              "git reset --hard origin/develop",
+
+              "cd docker/",
+
+              "export DOPPLER_TOKEN=\"${{ secrets.DOPPLER_TOKEN }}\"",
+              "export DOPPLER_PROJECT=tt",
+              "export DOPPLER_CONFIG=prd",
+
+              "echo \"${{ secrets.PERSONAL_ACCESS_TOKEN }}\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
+
+              "umask 077",
+              "doppler secrets download --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" --format env --no-file > doppler.env",
+              "chmod 600 doppler.env",
+
+              "docker compose --env-file doppler.env pull",
+              "docker compose --env-file doppler.env up -d --force-recreate",
+
+              "rm -f doppler.env",
+
+              "docker image prune -f",
+              "docker logout ghcr.io 2>/dev/null"
+            ]
+          }' \
+          --region ${{ secrets.AWS_REGION }}

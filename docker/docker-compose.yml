@@ -424,8 +424,9 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     networks:
       - common
+    # redis_exporter는 distroless 이미지라 shell 없음 - Prometheus scrape가 healthcheck 역할
     healthcheck:
-      test: [ "CMD-SHELL", "nc -z localhost 9121 || exit 1" ]
+      test: [ "NONE" ]
       interval: 30s
       timeout: 10s
       retries: 3

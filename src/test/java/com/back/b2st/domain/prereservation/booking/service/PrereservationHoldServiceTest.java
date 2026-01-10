@@ -53,7 +53,7 @@ class PrereservationHoldServiceTest {
 	private static final Long SECTION_ID = 7L;
 
 	@Test
-	@DisplayName("validateSeatHoldAllowed(): BookingType이 PRERESERVE가 아니면 검증을 스킵한다")
+	@DisplayName("validateSeatHoldAllowed(): BookingType이 PRERESERVE가 아니면 BOOKING_TYPE_NOT_SUPPORTED 예외")
 	void validateHold_skipNonPrereserve() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
@@ -61,8 +61,9 @@ class PrereservationHoldServiceTest {
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
 		// when & then
-		assertThatCode(() -> prereservationHoldService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
-			.doesNotThrowAnyException();
+		assertThatThrownBy(() -> prereservationHoldService.validateSeatHoldAllowed(MEMBER_ID, SCHEDULE_ID, SEAT_ID))
+			.isInstanceOf(BusinessException.class)
+			.hasMessageContaining(PrereservationErrorCode.BOOKING_TYPE_NOT_SUPPORTED.getMessage());
 		then(seatRepository).shouldHaveNoInteractions();
 		then(prereservationRepository).shouldHaveNoInteractions();
 	}

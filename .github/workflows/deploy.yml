@@ -104,12 +104,12 @@ jobs:
           INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TT-ec2-1" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
           echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
 
-      - name: AWS SSM Send-Command (EC2 로컬 토큰 사용 - 노출 방지)
+      - name: AWS SSM Send-Command (Doppler 완전 통합)
         run: |
           aws ssm send-command \
           --instance-ids "${{ env.INSTANCE_ID }}" \
           --document-name "AWS-RunShellScript" \
-          --comment "Deploy Spring Boot with doppler run (secure)" \
+          --comment "Deploy with Doppler (all secrets managed centrally)" \
           --parameters '{
             "commands": [
               "#!/bin/bash",
@@ -126,32 +126,30 @@ jobs:
 
               "cd docker/",
 
-              "# Doppler token: trailing newline/CRLF 제거해서 안정적으로 주입",
+              "# Doppler 설정 (파일에서 토큰만 읽기)",
               "export DOPPLER_TOKEN=\"$(sudo tr -d \"\\r\\n\" < /etc/tt-secrets/doppler-token)\"",
               "export DOPPLER_PROJECT=tt",
               "export DOPPLER_CONFIG=prd",
 
-              "# GitHub token: ghcr 로그인 후 즉시 폐기(변수는 쉘 종료 시 사라짐)",
-              "GITHUB_TOKEN=\"$(sudo tr -d \"\\r\\n\" < /etc/tt-secrets/github-token)\"",
-              "echo \"$GITHUB_TOKEN\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
-              "unset GITHUB_TOKEN",
+              "# GitHub 레지스트리 로그인 (Doppler에서 GITHUB_TOKEN 주입)",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- bash -c \"echo \\$GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null\"",
 
-              "# (권장) doppler secrets를 파일로 남기지 않고, envsubst에만 잠깐 쓰기",
-              "# alertmanager.yml는 런타임 치환이 필요하므로 doppler run 환경에서 envsubst 실행",
+              "# Alertmanager 설정 파일 환경변수 치환",
               "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- bash -lc \"envsubst < monitoring/alertmanager/alertmanager.yml > /tmp/alertmanager-resolved.yml\"",
               "cp /tmp/alertmanager-resolved.yml monitoring/alertmanager/alertmanager.yml",
               "rm -f /tmp/alertmanager-resolved.yml",
 
-              "# compose 전체를 doppler run으로 감싸서, compose 파싱/컨테이너 실행 모두 동일 env 보장",
+              "# Docker Compose 실행 (모든 환경변수 Doppler에서 주입)",
               "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose pull",
               "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose up -d --force-recreate",
 
+              "# 정리",
               "docker image prune -f",
               "docker logout ghcr.io 2>/dev/null",
 
-              "echo \"Deployment completed at $(date)\"",
+              "echo \"✅ Deployment completed at $(date)\"",
 
-              "# 마지막 상태 조회도 doppler run으로 감싸서 경고(예: SLACK_WEBHOOK_AUTH) 방지",
+              "# 최종 상태 확인",
               "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose ps"
             ]
           }' \

@@ -48,7 +48,6 @@ public class PrereservationTimeTableService {
 			}
 
 			validateTimeRangeOrThrow(item.bookingStartAt(), item.bookingEndAt());
-			validateWithinScheduleOrThrow(schedule, item.bookingStartAt(), item.bookingEndAt());
 
 			PrereservationTimeTable timeTable = prereservationTimeTableRepository
 				.findByPerformanceScheduleIdAndSectionId(scheduleId, item.sectionId())
@@ -81,16 +80,6 @@ public class PrereservationTimeTableService {
 
 	private void validateTimeRangeOrThrow(LocalDateTime startAt, LocalDateTime endAt) {
 		if (startAt.isAfter(endAt) || startAt.isEqual(endAt)) {
-			throw new BusinessException(PrereservationErrorCode.TIME_TABLE_NOT_CONFIGURED);
-		}
-	}
-
-	private void validateWithinScheduleOrThrow(PerformanceSchedule schedule, LocalDateTime startAt, LocalDateTime endAt) {
-		if (startAt.isBefore(schedule.getBookingOpenAt())) {
-			throw new BusinessException(PrereservationErrorCode.TIME_TABLE_NOT_CONFIGURED);
-		}
-
-		if (schedule.getBookingCloseAt() != null && endAt.isAfter(schedule.getBookingCloseAt())) {
 			throw new BusinessException(PrereservationErrorCode.TIME_TABLE_NOT_CONFIGURED);
 		}
 	}

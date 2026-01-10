@@ -244,9 +244,10 @@ public class PerformanceService {
 
 	public PerformanceCursorPageRes getActivePerformancesWithCursor(Long cursor, int size) {
 		Pageable pageable = PageRequest.of(0, size + 1);
+		LocalDateTime todayStart = LocalDateTime.now().toLocalDate().atStartOfDay();
 
 		List<Performance> performances = performanceRepository
-			.findByStatusWithCursor(PerformanceStatus.ACTIVE, cursor, pageable);
+			.findByStatusWithCursor(PerformanceStatus.ACTIVE, todayStart, cursor, pageable);
 
 		return mapToCursorRes(performances, size);
 	}
@@ -257,8 +258,10 @@ public class PerformanceService {
 		}
 
 		Pageable pageable = PageRequest.of(0, size + 1);
+		LocalDateTime todayStart = LocalDateTime.now().toLocalDate().atStartOfDay();
+
 		List<Performance> performances = performanceRepository
-			.searchActiveWithCursor(PerformanceStatus.ACTIVE, keyword.trim(), cursor, pageable);
+			.searchActiveWithCursor(PerformanceStatus.ACTIVE, todayStart, keyword.trim(), cursor, pageable);
 
 		return mapToCursorRes(performances, size);
 	}

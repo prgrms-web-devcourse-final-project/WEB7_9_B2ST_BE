@@ -2,7 +2,6 @@ services:
   # ==================== PostgreSQL ====================
   postgres:
     image: postgres:16-alpine
-    # container_name: tt_postgres  # 운영에서는 제거 권장 (blue/green, preview 배포 시 충돌 방지)
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -22,11 +21,7 @@ services:
       retries: 5
 
   # ==================== Redis Cluster ====================
-  # Redis Cluster Node 1 (Master)
-  # container_name 제거 권장: 운영 환경에서는 동일 서버의 여러 인스턴스나 blue/green 배포 시 충돌 방지
-  # 단, 로컬 개발에서는 편의를 위해 유지 가능
   redis-node-1:
-    # container_name: redis-node-1  # 운영에서는 제거 권장
     image: redis:7-alpine
     command:
       - redis-server
@@ -69,9 +64,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cluster Node 2 (Master)
   redis-node-2:
-    # container_name: redis-node-2  # 운영에서는 제거 권장
     image: redis:7-alpine
     command:
       - redis-server
@@ -114,9 +107,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cluster Node 3 (Master)
   redis-node-3:
-    # container_name: redis-node-3  # 운영에서는 제거 권장
     image: redis:7-alpine
     command:
       - redis-server
@@ -159,9 +150,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cluster Node 4 (Slave)
   redis-node-4:
-    # container_name: redis-node-4  # 운영에서는 제거 권장
     image: redis:7-alpine
     command:
       - redis-server
@@ -204,9 +193,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cluster Node 5 (Slave)
   redis-node-5:
-    # container_name: redis-node-5  # 운영에서는 제거 권장
     image: redis:7-alpine
     command:
       - redis-server
@@ -249,9 +236,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cluster Node 6 (Slave)
   redis-node-6:
-    # container_name: redis-node-6  # 운영에서는 제거 권장
     image: redis:7-alpine
     command:
       - redis-server
@@ -295,8 +280,6 @@ services:
       retries: 5
 
   # ==================== Redis Cluster 초기화 ====================
-  # Redis Cluster를 자동으로 초기화합니다 (이미 초기화되어 있으면 스킵)
-  # container_name 제거: 임시 컨테이너이므로 blue/green 배포 등에서 충돌 방지
   redis-cluster-init:
     image: redis:7-alpine
     depends_on:
@@ -319,64 +302,43 @@ services:
     command: sh /init-cluster.sh
     networks:
       - common
-    restart: "no"  # 한 번만 실행 (종료 후 재시작 안 함)
+    restart: "no"
 
   # ==================== Spring Boot Application ====================
   app:
     image: ghcr.io/chehyeon-kim23/tt_backend:latest
-    # container_name: tt_app  # 운영에서는 제거 권장 (blue/green, preview 배포 시 충돌 방지)
     restart: always
     depends_on:
       postgres:
         condition: service_healthy
       redis-cluster-init:
-        condition: service_completed_successfully  # 초기화 완료 대기
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - AWS_REGION=${AWS_REGION:-ap-northeast-2}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      # Redis Cluster 설정 (로컬호스트 대신 컨테이너 이름 사용 가능)
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_MODE=cluster
-      - REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
-      # 또는 호스트 머신에서 접근하는 경우:
-      # - REDIS_CLUSTER_NODES=${REDIS_CLUSTER_NODES:-localhost:7000,localhost:7001,localhost:7002,localhost:7003,localhost:7004,localhost:7005}
-      - MAIL_HOST=${MAIL_HOST}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
-      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_ACCESS_EXPIRATION=${JWT_ACCESS_EXPIRATION}
-      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION}
-      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
-      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
-      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
-      - KAKAO_TOKEN_URI=${KAKAO_TOKEN_URI}
-      - KAKAO_USER_INFO_URI=${KAKAO_USER_INFO_URI}
-      - KAKAO_ISSUER=${KAKAO_ISSUER}
-      - DDL_AUTO=${DDL_AUTO}
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
-    command: java -jar app.jar
     networks:
       - common
+
+    # (A) Doppler env를 컨테이너에 "통째로" 주입
+    env_file:
+      - ./doppler.env
+
+    # (B) Doppler에 안 넣었거나, compose에서 강제하고 싶은 값만 여기서 오버라이드 가능
+    #     (가능하면 이것도 Doppler로 옮겨서 일원화하는 걸 권장)
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - REDIS_MODE=cluster
+      - REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+
     healthcheck:
       test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-  # ==================== Monitoring Stack ====================
 
-  # Prometheus - 메트릭 수집
+  # ==================== Monitoring Stack ====================
   prometheus:
     image: prom/prometheus:v3.8.1
     restart: unless-stopped
@@ -401,7 +363,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  # Grafana - 대시보드 시각화
+
   grafana:
     image: grafana/grafana:12.3.0
     restart: unless-stopped
@@ -425,7 +387,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  # Alertmanager - 알림 관리
+
   alertmanager:
     image: prom/alertmanager:v0.30.0
     restart: unless-stopped
@@ -448,7 +410,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  # Redis Exporter - Redis 메트릭 수집
+
   redis-exporter:
     image: oliver006/redis_exporter:v1.80.1
     restart: unless-stopped
@@ -467,7 +429,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  # Postgres Exporter - PostgreSQL 메트릭 수집
+
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
     restart: unless-stopped
@@ -485,6 +447,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
 networks:
   common:
     driver: bridge

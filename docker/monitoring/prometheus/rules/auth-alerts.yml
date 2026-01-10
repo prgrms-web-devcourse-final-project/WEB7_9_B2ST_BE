@@ -83,8 +83,7 @@ groups:
         annotations:
           summary: "이메일 발송 실패율 증가"
           description: "10분간 이메일 발송 실패율이 {{ $value | printf \"%.1f\" }}%입니다."
-          success_rate: "{{ printf \"%.1f\" (100 - $value) }}"
-          total_count: "{{ with query \"sum(increase(email_sent_total[10m]))\" }}{{ . | first | value }}{{ end }}"
+          threshold: "10%"
 
       # ⚠️ WARNING: 이메일 인증 실패 급증
       - alert: HighVerificationFailureRate
@@ -100,7 +99,7 @@ groups:
         annotations:
           summary: "이메일 인증 실패 급증"
           description: "10분간 이메일 인증 실패율이 {{ $value | printf \"%.1f\" }}%입니다."
-          success_rate: "{{ printf \"%.1f\" (100 - $value) }}"
+          threshold: "30%"
 
   # ==================== Member 도메인 알림 ====================
   - name: member_alerts

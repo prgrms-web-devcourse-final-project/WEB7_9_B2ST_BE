@@ -318,7 +318,6 @@ services:
     networks:
       - common
 
-    # ✅ "값까지 매핑" 방식 (A방법: doppler run으로 env가 들어와야 정상)
     environment:
       # ===== Profile =====
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
@@ -332,7 +331,7 @@ services:
       SPRING_DATA_REDIS_CLUSTER_NODES: redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
 
-      # ===== (유지) 커스텀 키: 앱에서 사용 중이면 유지 =====
+      # =====커스텀 키 =====
       POSTGRES_HOST: postgres
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_USER: ${POSTGRES_USER:-myuser}
@@ -343,7 +342,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
       REDIS_CLUSTER_NODES: redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
 
-      # ===== Mail (이번 장애 해결의 핵심) =====
+      # ===== Mail =====
       MAIL_HOST: ${MAIL_HOST}
       MAIL_PORT: ${MAIL_PORT}
       MAIL_USERNAME: ${MAIL_USERNAME}
@@ -351,7 +350,7 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME}
 
-      # ===== Spring Mail Properties (Doppler 저장된 키 전달) =====
+      # ===== Spring Mail Properties =====
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED}

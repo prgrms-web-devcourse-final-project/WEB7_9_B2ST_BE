@@ -318,12 +318,11 @@ services:
     networks:
       - common
 
-    # Doppler에서 다운로드한 env 파일 주입
-    env_file:
-      - ./doppler.env
+    # ⚠️ 중요: doppler run 방식 사용 시 env_file 불필요
+    # 환경변수 주입 방식:
+    #   - Doppler 환경변수: doppler run 명령어로 메모리에서 직접 주입
+    #   - Docker Compose 환경변수: 아래 environment에 명시
 
-    # Docker Compose 레벨에서 설정이 필요한 값만 오버라이드
-    # (나머지는 모두 Doppler의 doppler.env에서 주입됨)
     environment:
       # Database 호스트 (Docker 네트워크 내부)
       - POSTGRES_HOST=postgres

@@ -1,8 +1,8 @@
 # TT Backend 배포 가이드
 
 > **최종 수정일**: 2026-01-10  
-> **작성자**: Chehyeon-Kim 
-> **버전**: 2.0
+> **작성자**: Chehyeon-Kim
+> **버전**: 2.1 (doppler run 방식)
 
 ## 📋 목차
 
@@ -33,7 +33,7 @@ GitHub Actions 트리거
     ↓
 4. AWS SSM으로 EC2 배포 명령
     ↓
-5. EC2에서 Doppler로 환경변수 주입
+5. doppler run으로 환경변수 메모리 주입
     ↓
 6. Docker Compose로 서비스 재시작
     ↓
@@ -72,6 +72,7 @@ GitHub Actions 트리거
 │            Doppler                      │
 │  - 환경변수 중앙 관리                    │
 │  - 민감정보 암호화 저장                  │
+│  - doppler run으로 직접 주입            │
 └─────────────────────────────────────────┘
 ```
 
@@ -131,26 +132,28 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx
 
 ## 🔐 환경 변수 관리
 
-### Doppler 기반 환경변수 전략
+### Doppler 기반 환경변수 전략 (doppler run 방식)
 
 #### 장점
 ✅ **중앙 집중식 관리**: 모든 환경변수를 Doppler에서 관리  
-✅ **보안**: 암호화된 저장소, 접근 제어  
+✅ **최고 보안**: 환경변수가 메모리에만 존재, 파일 생성 안함  
 ✅ **버전 관리**: 변경 이력 추적  
 ✅ **환경별 분리**: dev, staging, prod 독립 관리  
-✅ **서버에 파일 미보관**: doppler.env는 배포 시에만 임시 생성 후 삭제
+✅ **파일 불필요**: doppler.env 파일을 생성하지 않음
 
-#### 환경변수 우선순위
+#### 환경변수 주입 방식
 
 ```
-1. Docker Compose의 environment (최우선)
-   → 현재: 비어있음 (모두 Doppler로 이관)
+1. Doppler 환경변수 (대부분)
+   → doppler run 명령어로 메모리에서 직접 주입
+   → 파일을 생성하지 않음
 
-2. env_file (doppler.env)
-   → Doppler에서 런타임에 생성
-   → 배포 완료 후 shred로 완전 삭제
+2. Docker Compose 환경변수 (일부)
+   → POSTGRES_HOST, REDIS_MODE 등 Docker 네트워크 설정
+   → docker-compose.yml의 environment 섹션에 명시
 
 3. 컨테이너 기본값
+   → 최종 fallback
 ```
 
 ### Doppler 환경변수 추가/수정 방법
@@ -214,34 +217,33 @@ git reset --hard origin/develop
 # 2. Docker 디렉토리로 이동
 cd docker/
 
-# 3. Doppler에서 환경변수 다운로드
+# 3. Doppler 환경 설정
 export DOPPLER_TOKEN="xxx"
 export DOPPLER_PROJECT=tt
 export DOPPLER_CONFIG=prd
 
-umask 077  # 파일 권한 600으로 생성
-doppler secrets download \
-  --project "$DOPPLER_PROJECT" \
-  --config "$DOPPLER_CONFIG" \
-  --format env \
-  --no-file > doppler.env
+# 4. Docker 이미지 Pull (doppler run 사용)
+doppler run --project "$DOPPLER_PROJECT" --config "$DOPPLER_CONFIG" -- \
+  docker compose pull
 
-chmod 600 doppler.env
-
-# 4. Docker 이미지 Pull & 재시작
-docker compose --env-file doppler.env pull app
-docker compose --env-file doppler.env up -d --force-recreate app
-
-# 5. 민감 파일 완전 삭제 (복구 불가)
-shred -vfz -n 3 doppler.env 2>/dev/null || rm -f doppler.env
+# 5. 컨테이너 재시작 (doppler run 사용)
+# 환경변수가 메모리에서 직접 docker compose로 전달됨
+doppler run --project "$DOPPLER_PROJECT" --config "$DOPPLER_CONFIG" -- \
+  docker compose up -d --force-recreate
 
 # 6. 정리
 docker image prune -f
 docker logout ghcr.io 2>/dev/null
 
 # 7. 배포 확인
-docker compose ps app
+docker compose ps
 ```
+
+**주요 특징**:
+- ✅ doppler.env 파일을 생성하지 않음
+- ✅ 환경변수가 메모리에만 존재
+- ✅ 파일 삭제 로직 불필요
+- ✅ 보안 위험 최소화
 
 ### 수동 배포 (필요시)
 
@@ -252,25 +254,19 @@ ssh ec2-user@your-ec2-ip
 # 배포 디렉토리로 이동
 cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/docker/
 
-# Doppler 환경변수 다운로드
+# Doppler 토큰 설정
 export DOPPLER_TOKEN="your-token"
-doppler secrets download \
-  --project tt \
-  --config prd \
-  --format env \
-  --no-file > doppler.env
 
-# 배포 실행
-docker compose --env-file doppler.env pull
-docker compose --env-file doppler.env up -d --force-recreate
-
-# 민감 파일 삭제
-shred -vfz -n 3 doppler.env
+# 배포 실행 (파일 생성 없이!)
+doppler run --project tt --config prd -- docker compose pull
+doppler run --project tt --config prd -- docker compose up -d --force-recreate
 
 # 상태 확인
 docker compose ps
 docker compose logs -f app
 ```
+
+**주의**: doppler.env 파일을 직접 생성할 필요가 없습니다!
 
 ---
 
@@ -285,7 +281,6 @@ ssh ec2-user@your-ec2-ip
 cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/docker/
 
 # 2. 이전 이미지 태그로 변경
-# docker-compose.yml에서 직접 수정하거나:
 export ROLLBACK_VERSION=v1.2.2
 
 # 3. 이전 버전 Pull
@@ -295,10 +290,9 @@ docker pull ghcr.io/chehyeon-kim23/tt_backend:$ROLLBACK_VERSION
 docker tag ghcr.io/chehyeon-kim23/tt_backend:$ROLLBACK_VERSION \
   ghcr.io/chehyeon-kim23/tt_backend:latest
 
-# 5. 재시작
-doppler secrets download --project tt --config prd --format env --no-file > doppler.env
-docker compose --env-file doppler.env up -d --force-recreate app
-shred -vfz -n 3 doppler.env
+# 5. 재시작 (doppler run 사용)
+export DOPPLER_TOKEN="your-token"
+doppler run --project tt --config prd -- docker compose up -d --force-recreate app
 
 # 6. 확인
 docker compose logs -f app
@@ -330,6 +324,9 @@ sudo systemctl status amazon-ssm-agent
 # Docker 서비스 상태
 sudo systemctl status docker
 
+# Doppler CLI 설치 확인
+doppler --version
+
 # 디스크 공간
 df -h
 
@@ -344,6 +341,9 @@ docker compose logs app
 ```bash
 # Doppler CLI 설치 확인
 doppler --version
+
+# 재설치
+(curl -Ls https://cli.doppler.com/install.sh || wget -qO- https://cli.doppler.com/install.sh) | sh
 
 # 토큰 테스트
 export DOPPLER_TOKEN="your-token"
@@ -364,25 +364,32 @@ docker compose ps
 docker compose logs --tail=100 app
 
 # 헬스체크 확인
-docker inspect tt_backend_app | grep -A 10 Health
+docker inspect <container_id> | grep -A 10 Health
+
+# 환경변수 확인
+docker compose exec app printenv | grep -E "SPRING_PROFILES_ACTIVE|POSTGRES|REDIS"
 ```
 
 **일반적인 원인**:
-- 환경변수 누락
+- 환경변수 누락 (Doppler에 등록되지 않음)
 - DB 연결 실패
 - 포트 충돌
 - 메모리 부족
 
 ### 문제 4: doppler.env 파일이 남아있어요
 
-**정상 상황**: 배포 완료 후 자동 삭제됨
+**이 문제는 발생하지 않습니다!**
 
-**수동 삭제**:
+doppler run 방식에서는 doppler.env 파일을 생성하지 않습니다.
+
+만약 파일이 있다면:
+- 이전 배포 방식의 잔재
+- 수동으로 생성한 파일
+
+**해결 방법**:
 ```bash
-# 파일 완전 삭제
-shred -vfz -n 3 doppler.env
-
-# 또는
+# 즉시 삭제
+cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/docker/
 rm -f doppler.env
 ```
 
@@ -417,7 +424,19 @@ curl http://localhost:8080/actuator/health
 docker compose ps app
 ```
 
-#### 2. 로그 확인
+#### 2. 환경변수 확인
+```bash
+# 주요 환경변수 확인
+docker compose exec app printenv | grep -E "SPRING_PROFILES_ACTIVE|POSTGRES|REDIS"
+
+# 예상 출력:
+# SPRING_PROFILES_ACTIVE=prod
+# POSTGRES_HOST=postgres
+# POSTGRES_USER=tt_user
+# REDIS_MODE=cluster
+```
+
+#### 3. 로그 확인
 ```bash
 # 실시간 로그
 docker compose logs -f app
@@ -429,7 +448,7 @@ docker compose logs --tail=100 app
 docker compose logs app | grep ERROR
 ```
 
-#### 3. Grafana 대시보드
+#### 4. Grafana 대시보드
 ```
 URL: http://your-ec2-ip:3001
 ID: admin
@@ -443,7 +462,7 @@ PW: (Doppler의 GRAFANA_PASSWORD)
 - Database Connection Pool
 - Redis 응답 시간
 
-#### 4. Prometheus 메트릭
+#### 5. Prometheus 메트릭
 ```
 URL: http://your-ec2-ip:9090
 ```
@@ -491,12 +510,14 @@ hikaricp_connections_active
 ### 배포 후
 
 - [ ] 애플리케이션 헬스체크 통과
+- [ ] 환경변수 정상 주입 확인 (`SPRING_PROFILES_ACTIVE=prod`)
 - [ ] 주요 API 엔드포인트 테스트
 - [ ] 에러 로그 확인
 - [ ] Grafana 메트릭 정상 확인
 - [ ] Redis Cluster 연결 확인
 - [ ] PostgreSQL 연결 확인
 - [ ] 모니터링 알림 정상 작동 확인
+- [ ] **doppler.env 파일이 없는지 확인** (있으면 안됨!)
 
 ---
 
@@ -504,7 +525,7 @@ hikaricp_connections_active
 
 ### 1. 환경변수 관리
 - ✅ 모든 민감정보는 Doppler에 보관
-- ✅ 서버에 .env 파일 영구 저장 금지
+- ✅ **doppler run 방식 사용** (파일 생성 안함)
 - ✅ 환경변수 변경 시 Doppler에서만 수정
 - ✅ 로컬 개발도 Doppler 사용 권장
 
@@ -515,13 +536,71 @@ hikaricp_connections_active
 - ✅ .dockerignore로 불필요한 파일 제외
 
 ### 3. 배포
-- ✅ Blue-Green 배포 고려 (무중단)
+- ✅ doppler run으로 환경변수 주입 (가장 안전)
 - ✅ 배포 전 백업 확인
 - ✅ 모니터링 알림 활성화
 - ✅ 롤백 계획 수립
 
 ### 4. 보안
 - ✅ 최소 권한 원칙 (IAM, Docker)
-- ✅ 민감 파일 shred로 완전 삭제
+- ✅ **파일을 생성하지 않음** (doppler run)
 - ✅ 정기적인 보안 패치
 - ✅ 이미지 취약점 스캔 (Trivy)
+
+---
+
+## 🔄 방식 비교
+
+### doppler run 방식 (현재) ⭐ 추천
+```bash
+doppler run --project tt --config prd -- docker compose up -d
+```
+
+**장점**:
+- ✅ 파일을 아예 생성하지 않음 (가장 안전)
+- ✅ 환경변수가 메모리에만 존재
+- ✅ 파일 삭제 걱정 불필요
+- ✅ 코드가 간결
+
+### doppler.env 파일 방식 (이전)
+```bash
+doppler secrets download > doppler.env
+docker compose --env-file doppler.env up -d
+shred -vfz -n 3 doppler.env  # 삭제 필수!
+```
+
+**단점**:
+- ⚠️ 임시 파일 생성 (보안 위험)
+- ⚠️ 파일 삭제를 잊으면 위험
+- ⚠️ 코드가 복잡
+
+---
+
+## 📞 긴급 연락처
+
+### 장애 발생 시
+1. **즉시 롤백** (위 롤백 절차 참조)
+2. **로그 수집** (`docker compose logs app > incident.log`)
+3. **팀 채널 공유** (Slack #tech-alerts)
+4. **포스트모템 작성**
+
+### 담당자
+- **DevOps Lead**: @devops-lead
+- **Backend Lead**: @backend-lead
+- **On-call**: Slack #on-call
+
+---
+
+## 📅 변경 이력
+
+| 날짜 | 버전 | 변경 내용 | 작성자 |
+|------|------|-----------|--------|
+| 2026-01-10 | 2.1 | doppler run 방식으로 변경 (파일 생성 불필요) | Chehyeon-Kim |
+| 2026-01-10 | 2.0 | Doppler 통합, 보안 강화, Alpine 이미지 전환 | DevOps |
+| 2025-12-15 | 1.5 | 모니터링 스택 추가 (Prometheus, Grafana) | DevOps |
+| 2025-11-20 | 1.0 | 최초 배포 프로세스 구축 | DevOps |
+
+---
+
+**마지막 업데이트**: 2026-01-10  
+**문서 관리자**: Chehyeon-Kim

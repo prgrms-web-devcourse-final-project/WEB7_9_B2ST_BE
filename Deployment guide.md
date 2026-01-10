@@ -114,7 +114,7 @@ SPRING_PROFILES_ACTIVE=prod
 
 # Monitoring
 GRAFANA_PASSWORD=secure_grafana_password
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx
+SLACK_WEBHOOK_AUTH=https://hooks.slack.com/services/xxx
 
 # ... 기타 애플리케이션별 환경변수
 ```

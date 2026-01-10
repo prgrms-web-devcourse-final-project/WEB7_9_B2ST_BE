@@ -135,7 +135,7 @@ jobs:
               "GITHUB_TOKEN=$(sudo cat /etc/tt-secrets/github-token)",
               "echo \"$GITHUB_TOKEN\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
           
-              "# alertmanager.yml가 스스로 환경변수를 참조하지 않아, 스크립트로 치환"
+              "# alertmanager.yml가 스스로 환경변수를 참조하지 않아, 스크립트로 치환",
               "set -a && source doppler.env && set +a",
               "envsubst < monitoring/alertmanager/alertmanager.yml > /tmp/alertmanager-resolved.yml",
               "cp /tmp/alertmanager-resolved.yml monitoring/alertmanager/alertmanager.yml",

@@ -60,6 +60,7 @@ src/main/generated/
 !docker/monitoring/prometheus/prometheus.yml
 !docker/monitoring/prometheus/rules/*.yml
 !docker/monitoring/grafana/provisioning/**/*.yml
+!docker/monitoring/alertmanager/alertmanager.yml
 
 ### custom ###
 src/main/resources/application-secret.yml

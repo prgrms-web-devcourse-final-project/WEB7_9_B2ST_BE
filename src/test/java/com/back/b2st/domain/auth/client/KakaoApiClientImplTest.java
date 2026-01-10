@@ -21,8 +21,6 @@ import com.back.b2st.domain.auth.dto.oauth.KakaoTokenRes;
 import com.back.b2st.domain.auth.error.AuthErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 
-import tools.jackson.databind.ObjectMapper;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("KakaoApiClientImpl 테스트")
 class KakaoApiClientImplTest {
@@ -37,12 +35,10 @@ class KakaoApiClientImplTest {
 	private RestTemplate restTemplate;
 	@Mock
 	private KakaoJwksClient jwksClient;
-	private ObjectMapper objectMapper;
 
 	@BeforeEach
 	void setUp() {
-		objectMapper = new ObjectMapper();
-		kakaoApiClient = new KakaoApiClientImpl(restTemplate, objectMapper, jwksClient);
+		kakaoApiClient = new KakaoApiClientImpl(restTemplate, jwksClient);
 
 		// 설정값 주입
 		ReflectionTestUtils.setField(kakaoApiClient, "clientId", CLIENT_ID);

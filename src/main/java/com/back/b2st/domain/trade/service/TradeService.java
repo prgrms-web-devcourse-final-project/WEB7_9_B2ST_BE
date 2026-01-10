@@ -8,15 +8,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.performance.entity.Performance;
+import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
-import com.back.b2st.domain.reservation.entity.Reservation;
-import com.back.b2st.domain.reservation.repository.ReservationRepository;
-import com.back.b2st.domain.seat.seat.entity.Seat;
-import com.back.b2st.domain.seat.seat.repository.SeatRepository;
-import com.back.b2st.domain.ticket.entity.Ticket;
-import com.back.b2st.domain.ticket.repository.TicketRepository;
-import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
+	import com.back.b2st.domain.reservation.entity.Reservation;
+	import com.back.b2st.domain.reservation.repository.ReservationRepository;
+	import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
+	import com.back.b2st.domain.seat.seat.entity.Seat;
+	import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+	import com.back.b2st.domain.ticket.entity.Ticket;
+	import com.back.b2st.domain.ticket.repository.TicketRepository;
+	import com.back.b2st.domain.trade.dto.request.CreateTradeReq;
 import com.back.b2st.domain.trade.dto.request.UpdateTradeReq;
 import com.back.b2st.domain.trade.dto.response.CreateTradeRes;
 import com.back.b2st.domain.trade.dto.response.TradeRes;
@@ -36,20 +39,23 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class TradeService {
+	public class TradeService {
 
-	private final TradeRepository tradeRepository;
-	private final TradeRequestRepository tradeRequestRepository;
-	private final TicketRepository ticketRepository;
-	private final SeatRepository seatRepository;
-	private final ReservationRepository reservationRepository;
-	private final PerformanceScheduleRepository performanceScheduleRepository;
+		private final TradeRepository tradeRepository;
+		private final TradeRequestRepository tradeRequestRepository;
+		private final TicketRepository ticketRepository;
+		private final SeatRepository seatRepository;
+		private final SeatGradeRepository seatGradeRepository;
+		private final ReservationRepository reservationRepository;
+		private final PerformanceScheduleRepository performanceScheduleRepository;
+		private final PerformanceRepository performanceRepository;
 
 	public TradeRes getTrade(Long tradeId) {
 		Trade trade = tradeRepository.findById(tradeId)
 			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
 
-		return TradeRes.from(trade);
+		String performanceTitle = getPerformanceTitle(trade.getPerformanceId());
+		return TradeRes.from(trade, performanceTitle);
 	}
 
 	public Page<TradeRes> getTrades(TradeType type, TradeStatus status, Pageable pageable) {
@@ -65,7 +71,10 @@ public class TradeService {
 			trades = tradeRepository.findAll(pageable);
 		}
 
-		return trades.map(TradeRes::from);
+		return trades.map(trade -> {
+			String performanceTitle = getPerformanceTitle(trade.getPerformanceId());
+			return TradeRes.from(trade, performanceTitle);
+		});
 	}
 
 	@Transactional
@@ -101,15 +110,17 @@ public class TradeService {
 				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다."));
 
 			Long scheduleId = reservation.getScheduleId();
-			PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
-				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다."));
-			Long performanceId = schedule.getPerformance().getPerformanceId();
+				PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
+					.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다."));
+				Long performanceId = schedule.getPerformance().getPerformanceId();
 
-			Trade trade = TradeMapper.toEntity(
-				request,
-				ticket,
-				seat,
-				reservation,
+				validateTransferPriceWithinOriginalPrice(request, performanceId, ticket.getSeatId());
+
+				Trade trade = TradeMapper.toEntity(
+					request,
+					ticket,
+					seat,
+					reservation,
 				performanceId,
 				scheduleId,
 				memberId
@@ -138,15 +149,19 @@ public class TradeService {
 	}
 
 	@Transactional
-	public void updateTrade(Long tradeId, UpdateTradeReq request, Long memberId) {
-		Trade trade = findTradeById(tradeId);
+		public void updateTrade(Long tradeId, UpdateTradeReq request, Long memberId) {
+			Trade trade = findTradeById(tradeId);
 
-		validateTradeOwner(trade, memberId);
-		validateTradeIsActive(trade);
-		validateTradeIsTransfer(trade);
+			validateTradeOwner(trade, memberId);
+			validateTradeIsActive(trade);
+			validateTradeIsTransfer(trade);
 
-		trade.updatePrice(request.price());
-	}
+			Ticket ticket = ticketRepository.findById(trade.getTicketId())
+				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "보유하지 않은 티켓입니다."));
+			validateTransferPriceWithinOriginalPrice(request.price(), trade.getPerformanceId(), ticket.getSeatId());
+
+			trade.updatePrice(request.price());
+		}
 
 	@Transactional
 	public void deleteTrade(Long tradeId, Long memberId) {
@@ -164,17 +179,37 @@ public class TradeService {
 			.orElseThrow(() -> new BusinessException(TradeErrorCode.TRADE_NOT_FOUND));
 	}
 
-	private void validateTradeType(CreateTradeReq request) {
-		if (request.type() == TradeType.EXCHANGE) {
-			if (request.price() != null) {
-				throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "교환은 가격을 설정할 수 없습니다.");
-			}
-		} else if (request.type() == TradeType.TRANSFER) {
-			if (request.price() == null || request.price() <= 0) {
-				throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "양도 가격은 필수입니다.");
+		private void validateTradeType(CreateTradeReq request) {
+			if (request.type() == TradeType.EXCHANGE) {
+				if (request.price() != null) {
+					throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "교환은 가격을 설정할 수 없습니다.");
+				}
+			} else if (request.type() == TradeType.TRANSFER) {
+				if (request.price() == null || request.price() <= 0) {
+					throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "양도 가격은 필수입니다.");
+				}
 			}
 		}
-	}
+
+		private void validateTransferPriceWithinOriginalPrice(CreateTradeReq request, Long performanceId, Long seatId) {
+			if (request.type() != TradeType.TRANSFER) {
+				return;
+			}
+			validateTransferPriceWithinOriginalPrice(request.price(), performanceId, seatId);
+		}
+
+		private void validateTransferPriceWithinOriginalPrice(Integer price, Long performanceId, Long seatId) {
+			if (price == null) {
+				return;
+			}
+			Integer originalPrice = seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(performanceId, seatId)
+				.map(seatGrade -> seatGrade.getPrice())
+				.orElseThrow(() -> new BusinessException(TradeErrorCode.INVALID_REQUEST, "좌석 가격 정보가 없습니다."));
+
+			if (price > originalPrice) {
+				throw new BusinessException(TradeErrorCode.TRANSFER_PRICE_EXCEEDS_ORIGINAL);
+			}
+		}
 
 	private void validateTradeOwner(Trade trade, Long memberId) {
 		if (!trade.getMemberId().equals(memberId)) {
@@ -203,5 +238,11 @@ public class TradeService {
 		if (!pendingRequests.isEmpty()) {
 			throw new BusinessException(TradeErrorCode.INVALID_REQUEST, "대기 중인 교환 신청이 있어 삭제할 수 없습니다.");
 		}
+	}
+
+	private String getPerformanceTitle(Long performanceId) {
+		return performanceRepository.findById(performanceId)
+			.map(Performance::getTitle)
+			.orElse("알 수 없음");
 	}
 }

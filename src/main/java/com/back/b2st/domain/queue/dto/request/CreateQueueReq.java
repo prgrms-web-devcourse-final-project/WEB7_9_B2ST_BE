@@ -8,8 +8,8 @@ import jakarta.validation.constraints.NotNull;
  * 대기열 생성 요청 DTO
  */
 public record CreateQueueReq(
-	@NotNull(message = "회차 ID는 필수입니다.")
-	Long scheduleId,
+	@NotNull(message = "공연 ID는 필수입니다.")
+	Long performanceId,
 
 	@NotBlank(message = "대기열 타입은 필수입니다.")
 	String queueType,

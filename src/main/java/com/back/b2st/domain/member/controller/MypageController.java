@@ -1,7 +1,6 @@
 package com.back.b2st.domain.member.controller;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,8 +63,8 @@ public class MypageController {
 	 * @param userPrincipal 현재 로그인한 사용자 정보
 	 * @param request       탈퇴 요청 정보 (비밀번호)
 	 */
-	@DeleteMapping("/withdraw")
-	@Operation(summary = "회원 탈퇴", description = "비밀번호 확인 후 탈퇴 처리 (30일간 복구 가능)")
+	@PostMapping("/withdraw")
+	@Operation(summary = "회원 탈퇴", description = "일반회원은 비밀번호 확인, 소셜회원은 바로 탈퇴 (30일간 복구 가능)")
 	public BaseResponse<Void> withdraw(@CurrentUser UserPrincipal userPrincipal,
 		@Valid @RequestBody WithdrawReq request) {
 		memberService.withdraw(userPrincipal.getId(), request);

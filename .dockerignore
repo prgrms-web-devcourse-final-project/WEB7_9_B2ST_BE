@@ -1,0 +1,57 @@
+# Git 관련
+.git
+.gitignore
+.gitattributes
+
+# IDE 설정
+.idea
+.vscode
+*.iml
+*.ipr
+*.iws
+
+# Gradle 빌드 캐시 (builder 단계에서 새로 생성)
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# 테스트 관련
+**/test/resources/test-data/
+
+# 문서
+*.md
+README*
+docs/
+LICENSE
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+
+# 환경 변수 (절대 포함되면 안됨)
+.env
+.env.*
+doppler.env
+*.env
+
+# Docker 관련
+docker/
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# 로그
+logs/
+*.log
+
+# OS 파일
+.DS_Store
+Thumbs.db
+
+# 기타
+node_modules/
+bin/
+out/
+tmp/
+temp/

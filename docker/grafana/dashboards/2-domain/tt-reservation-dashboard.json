@@ -1,0 +1,95 @@
+# ----- 예약 현황 (ReservationMetrics 기반) -----
+
+# 예약 생성 추이
+sum(rate(reservation_total{action="created"
+}[
+    1m
+]))
+
+# 예약 완료 추이
+sum(rate(reservation_total{action="completed"
+}[
+    1m
+]))
+
+# 예약 실패 추이
+sum(rate(reservation_total{action="failed"
+}[
+    1m
+]))
+
+# 예약 만료 추이
+sum(rate(reservation_total{action="expired"
+}[
+    1m
+]))
+
+# 예약 취소 추이
+sum(rate(reservation_total{action="cancelled"
+}[
+    1m
+]))
+
+# 예약 전환율 (완료/생성)
+sum(rate(reservation_total{action="completed"
+}[
+    1h
+])) / sum(rate(reservation_total{action="created"
+}[
+    1h
+])) * 100
+
+# 현재 PENDING 상태 예약 수
+reservation_pending_count
+
+# 예약 생성 처리 시간 P95
+histogram_quantile(0.95, sum(rate(reservation_creation_duration_seconds_bucket[
+    5m
+])) by (le))
+
+# 예약 생성 처리 시간 P99
+histogram_quantile(0.99, sum(rate(reservation_creation_duration_seconds_bucket[
+    5m
+])) by (le))
+
+
+# ----- Reservation API 성능 -----
+
+# Reservation API P95 응답시간
+histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=~"/api/reservations.*"
+}[
+    5m
+])) by (le))
+
+# Reservation API P99 응답시간
+histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{uri=~"/api/reservations.*"
+}[
+    5m
+])) by (le))
+
+# Reservation API 에러율
+sum(rate(http_server_requests_seconds_count{uri=~"/api/reservations.*", status=~"5.."
+}[
+    5m
+])) / sum(rate(http_server_requests_seconds_count{uri=~"/api/reservations.*"
+}[
+    5m
+])) * 100
+
+# Reservation API RPS
+sum(rate(http_server_requests_seconds_count{uri=~"/api/reservations.*"
+}[
+    1m
+]))
+
+# Reservation API HTTP 상태별 분포
+sum(rate(http_server_requests_seconds_count{uri=~"/api/reservations.*"
+}[
+    5m
+])) by (status)
+
+# Reservation API 메서드별 RPS
+sum(rate(http_server_requests_seconds_count{uri=~"/api/reservations.*"
+}[
+    1m
+])) by (method)

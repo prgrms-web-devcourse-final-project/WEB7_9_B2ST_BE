@@ -1,0 +1,16 @@
+# Grafana Data Sources Provisioning
+# Prometheus를 기본 데이터 소스로 자동 설정
+
+apiVersion: 1
+
+datasources:
+  # Prometheus - 메인 메트릭 저장소
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      httpMethod: POST

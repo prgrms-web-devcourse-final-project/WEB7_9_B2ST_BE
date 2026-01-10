@@ -18,6 +18,7 @@ public record SectionLayoutRes(
 ) {
 	public record GradeInfo(
 		SeatGradeType grade,
+		Integer price,
 		List<String> rows
 	) {
 	}
@@ -39,6 +40,7 @@ public record SectionLayoutRes(
 				List<GradeInfo> grades = byGrade.entrySet().stream()
 					.map(gradeEntry -> new GradeInfo(
 						gradeEntry.getKey(),
+						gradeEntry.getValue().get(0).price(),
 						gradeEntry.getValue().stream()
 							.map(SeatInfoRes::rowLabel)
 							.distinct()

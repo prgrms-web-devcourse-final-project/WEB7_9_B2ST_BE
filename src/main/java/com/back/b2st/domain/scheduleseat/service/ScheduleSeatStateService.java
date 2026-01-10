@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.performanceschedule.error.PerformanceScheduleErrorCode;
+import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.queue.service.QueueAccessService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
@@ -19,13 +22,34 @@ public class ScheduleSeatStateService {
 
 	private final ScheduleSeatLockService scheduleSeatLockService;
 	private final SeatHoldTokenService seatHoldTokenService;
+	private final QueueAccessService queueAccessService;
 
 	private final ScheduleSeatRepository scheduleSeatRepository;
+	private final PerformanceScheduleRepository performanceScheduleRepository;
 
-	/** === 상태 변경 AVAILABLE → HOLD === */
+	/** === 좌석 잡기 (HOLD) === */
 	@Transactional
 	public void holdSeat(Long memberId, Long scheduleId, Long seatId) {
 
+		// 0. 대기열 통과 검증 (락 이전)
+		Long performanceId = performanceScheduleRepository.findPerformanceIdByScheduleId(scheduleId)
+			.orElseThrow(() -> new BusinessException(PerformanceScheduleErrorCode.SCHEDULE_NOT_FOUND));
+
+		queueAccessService.assertEnterable(performanceId, memberId);
+
+		holdSeatInternal(memberId, scheduleId, seatId);
+	}
+
+	/**
+	 * 신청예매(PRERESERVE) 좌석 HOLD는 대기열 없이 진행하므로, 대기열 검증을 생략한 HOLD를 제공합니다.
+	 * - 신청예매 전용 컨트롤러에서만 사용해야 합니다.
+	 */
+	@Transactional
+	public void holdSeatWithoutQueue(Long memberId, Long scheduleId, Long seatId) {
+		holdSeatInternal(memberId, scheduleId, seatId);
+	}
+
+	private void holdSeatInternal(Long memberId, Long scheduleId, Long seatId) {
 		// 1. 좌석 락 획득
 		String lockValue = scheduleSeatLockService.tryLock(scheduleId, seatId, memberId);
 		if (lockValue == null) {
@@ -43,41 +67,6 @@ public class ScheduleSeatStateService {
 			// 4. HOLD 확정 후 즉시 락 해제
 			scheduleSeatLockService.unlock(scheduleId, seatId, lockValue);
 		}
-	}
-
-	/** === Reservation 생성 직전에 DB 좌석이 유효한 HOLD 상태인지 검증 === */
-	@Transactional(readOnly = true)
-	public void validateHoldState(Long scheduleId, Long seatId) {
-		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
-
-		if (seat.getStatus() != SeatStatus.HOLD) {
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
-		}
-
-		LocalDateTime expiredAt = seat.getHoldExpiredAt();
-		LocalDateTime now = LocalDateTime.now();
-
-		if (expiredAt != null && expiredAt.isBefore(now)) {
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
-		}
-	}
-
-	/** === Reservation expiresAt 동기화를 위한 holdExpiredAt 반환 === */
-	@Transactional(readOnly = true)
-	public LocalDateTime getHoldExpiredAtOrThrow(Long scheduleId, Long seatId) {
-		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
-
-		if (seat.getStatus() != SeatStatus.HOLD) {
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_HOLD);
-		}
-
-		LocalDateTime expiredAt = seat.getHoldExpiredAt();
-		if (expiredAt == null) {
-			// hold()에서 반드시 세팅하지만, 데이터 이상 상황 방어
-			throw new BusinessException(ScheduleSeatErrorCode.SEAT_HOLD_EXPIRED);
-		}
-
-		return expiredAt;
 	}
 
 	/** === 만료된 HOLD 좌석을 AVAILABLE로 일괄 복구 === */
@@ -98,10 +87,28 @@ public class ScheduleSeatStateService {
 		return updated;
 	}
 
+	@Transactional
+	public void releaseHold(Long scheduleId, Long seatId) {
+		changeToAvailable(scheduleId, seatId);
+		seatHoldTokenService.remove(scheduleId, seatId);
+	}
+
+	@Transactional
+	public void releaseForceHold(Long scheduleId, Long seatId) {
+		forceToAvailable(scheduleId, seatId);
+		seatHoldTokenService.remove(scheduleId, seatId);
+	}
+
+	@Transactional
+	public void confirmHold(Long scheduleId, Long seatId) {
+		changeToSold(scheduleId, seatId);
+		seatHoldTokenService.remove(scheduleId, seatId);
+	}
+
 	// === 상태 변경 AVAILABLE → HOLD === //
 	@Transactional
 	public void changeToHold(Long scheduleId, Long seatId) {
-		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
+		ScheduleSeat seat = getScheduleSeatWithLock(scheduleId, seatId);
 
 		if (seat.getStatus() == SeatStatus.SOLD) {
 			throw new BusinessException(ScheduleSeatErrorCode.SEAT_ALREADY_SOLD);
@@ -118,7 +125,7 @@ public class ScheduleSeatStateService {
 	// === 상태 변경 HOLD → AVAILABLE === //
 	@Transactional
 	public void changeToAvailable(Long scheduleId, Long seatId) {
-		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
+		ScheduleSeat seat = getScheduleSeatWithLock(scheduleId, seatId);
 
 		if (seat.getStatus() == SeatStatus.AVAILABLE) {
 			return;
@@ -131,10 +138,25 @@ public class ScheduleSeatStateService {
 		seat.release();
 	}
 
+	@Transactional
+	public void forceToAvailable(Long scheduleId, Long seatId) {
+		ScheduleSeat seat = getScheduleSeatWithLock(scheduleId, seatId);
+
+		if (seat.getStatus() == SeatStatus.AVAILABLE) {
+			seatHoldTokenService.remove(scheduleId, seatId);
+			return;
+		}
+
+		// SOLD든 HOLD든 운영 복구 목적으로 AVAILABLE로 강제
+		seat.release();
+
+		seatHoldTokenService.remove(scheduleId, seatId);
+	}
+
 	// === 상태 변경 HOLD → SOLD === //
 	@Transactional
 	public void changeToSold(Long scheduleId, Long seatId) {
-		ScheduleSeat seat = getScheduleSeat(scheduleId, seatId);
+		ScheduleSeat seat = getScheduleSeatWithLock(scheduleId, seatId);
 
 		if (seat.getStatus() == SeatStatus.SOLD) {
 			return;
@@ -147,10 +169,10 @@ public class ScheduleSeatStateService {
 		seat.sold();
 	}
 
-	// === 좌석 조회 공통 로직 === //
-	private ScheduleSeat getScheduleSeat(Long scheduleId, Long seatId) {
+	// === 좌석 조회 공통 로직 (락) === //
+	private ScheduleSeat getScheduleSeatWithLock(Long scheduleId, Long seatId) {
 		return scheduleSeatRepository
-			.findByScheduleIdAndSeatId(scheduleId, seatId)
+			.findByScheduleIdAndSeatIdWithLock(scheduleId, seatId)
 			.orElseThrow(() -> new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND));
 	}
 }

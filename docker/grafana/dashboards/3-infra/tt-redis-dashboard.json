@@ -1,0 +1,75 @@
+# redis_exporter 필요
+
+# ----- Redis 메모리 -----
+
+# Redis 메모리 사용량
+redis_memory_used_bytes
+
+# Redis 메모리 최대
+redis_memory_max_bytes
+
+# Redis 메모리 사용률 (%)
+redis_memory_used_bytes / redis_memory_max_bytes * 100
+
+# Redis RSS 메모리
+redis_memory_used_rss_bytes
+
+
+# ----- Redis 연결 -----
+
+# 연결된 클라이언트 수
+redis_connected_clients
+
+# 차단된 클라이언트 수
+redis_blocked_clients
+
+# 거부된 연결 수 (5분간)
+increase(redis_rejected_connections_total[5m])
+
+
+# ----- Redis 명령 -----
+
+# 초당 명령 수
+rate(redis_commands_total[1m])
+
+# 명령별 초당 수
+rate(redis_commands_total[1m]) by (cmd)
+
+# 초당 처리된 명령 수 (redis info)
+redis_instantaneous_ops_per_sec
+
+
+# ----- Redis 키 -----
+
+# 전체 키 수
+redis_db_keys
+
+# 만료 대기 중인 키 수
+redis_db_keys_expiring
+
+# 초당 만료된 키 수
+rate(redis_expired_keys_total[1m])
+
+# 초당 퇴치된 키 수
+rate(redis_evicted_keys_total[1m])
+
+
+# ----- Redis 히트율 -----
+
+# 키스페이스 히트율 (%)
+rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) * 100
+
+# 키스페이스 히트 수
+rate(redis_keyspace_hits_total[1m])
+
+# 키스페이스 미스 수
+rate(redis_keyspace_misses_total[1m])
+
+
+# ----- Redis 복제 -----
+
+# 연결된 슬레이브 수
+redis_connected_slaves
+
+# 복제 지연 (초)
+redis_replica_offset

@@ -1,0 +1,67 @@
+# ----- Container CPU -----
+
+# CPU 사용률 (%) - Pod별
+sum(rate(container_cpu_usage_seconds_total{container="b2st-backend"}[5m])) by (pod) * 100
+
+# CPU 사용량 (cores)
+sum(rate(container_cpu_usage_seconds_total{container="b2st-backend"}[5m])) by (pod)
+
+# CPU 요청량 대비 사용률
+sum(rate(container_cpu_usage_seconds_total{container="b2st-backend"}[5m])) by (pod) / sum(kube_pod_container_resource_requests{resource="cpu", container="b2st-backend"}) by (pod) * 100
+
+
+# ----- Container 메모리 -----
+
+# 메모리 사용량 (bytes)
+container_memory_usage_bytes{container="b2st-backend"}
+
+# 메모리 제한 대비 사용률 (%)
+container_memory_usage_bytes{container="b2st-backend"} / container_spec_memory_limit_bytes{container="b2st-backend"} * 100
+
+# 메모리 워킹 셋
+container_memory_working_set_bytes{container="b2st-backend"}
+
+
+# ----- Container 네트워크 -----
+
+# 네트워크 수신 (bytes/s)
+rate(container_network_receive_bytes_total{pod=~"b2st.*"}[1m])
+
+# 네트워크 송신 (bytes/s)
+rate(container_network_transmit_bytes_total{pod=~"b2st.*"}[1m])
+
+# 네트워크 수신 패킷 (/s)
+rate(container_network_receive_packets_total{pod=~"b2st.*"}[1m])
+
+# 네트워크 송신 패킷 (/s)
+rate(container_network_transmit_packets_total{pod=~"b2st.*"}[1m])
+
+# 네트워크 에러 (수신)
+rate(container_network_receive_errors_total{pod=~"b2st.*"}[5m])
+
+# 네트워크 에러 (송신)
+rate(container_network_transmit_errors_total{pod=~"b2st.*"}[5m])
+
+
+# ----- Container 디스크 I/O -----
+
+# 디스크 읽기 (bytes/s)
+rate(container_fs_reads_bytes_total{container="b2st-backend"}[1m])
+
+# 디스크 쓰기 (bytes/s)
+rate(container_fs_writes_bytes_total{container="b2st-backend"}[1m])
+
+
+# ----- Pod 상태 -----
+
+# Pod 재시작 횟수
+kube_pod_container_status_restarts_total{container="b2st-backend"}
+
+# Pod 상태
+kube_pod_status_phase{pod=~"b2st.*"}
+
+# Ready 상태 Pod 수
+sum(kube_pod_status_ready{pod=~"b2st.*", condition="true"})
+
+# Pending Pod 수
+sum(kube_pod_status_phase{pod=~"b2st.*", phase="Pending"})

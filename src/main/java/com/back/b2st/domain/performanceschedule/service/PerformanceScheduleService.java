@@ -14,6 +14,11 @@ import com.back.b2st.domain.performanceschedule.dto.response.PerformanceSchedule
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.error.PerformanceScheduleErrorCode;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
+import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
+import com.back.b2st.domain.seat.seat.entity.Seat;
+import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +31,9 @@ public class PerformanceScheduleService {
 	private final PerformanceRepository performanceRepository;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 
+	private final SeatRepository seatRepository;
+	private final ScheduleSeatRepository scheduleSeatRepository;
+
 	/**
 	 * 회차 생성 (관리자)
 	 * - performanceId는 URL Path를 단일 기준으로 사용한다.
@@ -33,7 +41,7 @@ public class PerformanceScheduleService {
 	@Transactional
 	public PerformanceScheduleCreateRes createSchedule(Long performanceId, PerformanceScheduleCreateReq request) {
 		Performance performance = performanceRepository.findById(performanceId)
-				.orElseThrow(() -> new BusinessException(PerformanceScheduleErrorCode.PERFORMANCE_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(PerformanceScheduleErrorCode.PERFORMANCE_NOT_FOUND));
 
 		// 시간/라운드 중복 방지 규칙은 추후 repository 기반으로 여기서 검증
 		// validateDuplicatedRoundNo(performanceId, request.roundNo());
@@ -45,16 +53,44 @@ public class PerformanceScheduleService {
 		validateBookingTime(request);
 
 		PerformanceSchedule schedule = PerformanceSchedule.builder()
-				.performance(performance)
-				.startAt(request.startAt())
-				.roundNo(request.roundNo())
-				.bookingType(request.bookingType())
-				.bookingOpenAt(request.bookingOpenAt())
-				.bookingCloseAt(request.bookingCloseAt())
-				.build();
+			.performance(performance)
+			.startAt(request.startAt())
+			.roundNo(request.roundNo())
+			.bookingType(request.bookingType())
+			.bookingOpenAt(request.bookingOpenAt())
+			.bookingCloseAt(request.bookingCloseAt())
+			.build();
 
 		PerformanceSchedule saved = performanceScheduleRepository.save(schedule);
+
+		createScheduleSeats(saved.getPerformanceScheduleId(), performance.getVenue().getVenueId());
+
 		return PerformanceScheduleCreateRes.from(saved);
+	}
+
+	/**
+	 * 회차별 좌석(ScheduleSeat) 생성
+	 */
+	private void createScheduleSeats(Long scheduleId, Long venueId) {
+
+		// 이미 생성된 회차 좌석이 있으면 재생성하지 않음 (중복 방지)
+		if (scheduleSeatRepository.existsByScheduleId(scheduleId)) {
+			return;
+		}
+
+		List<Seat> seats = seatRepository.findByVenueId(venueId);
+		if (seats.isEmpty()) {
+			throw new BusinessException(ScheduleSeatErrorCode.SEAT_NOT_FOUND);
+		}
+
+		List<ScheduleSeat> scheduleSeats = seats.stream()
+			.map(seat -> ScheduleSeat.builder()
+				.scheduleId(scheduleId)
+				.seatId(seat.getId())
+				.build())
+			.toList();
+
+		scheduleSeatRepository.saveAll(scheduleSeats);
 	}
 
 	/**
@@ -66,10 +102,10 @@ public class PerformanceScheduleService {
 		}
 
 		return performanceScheduleRepository
-				.findAllByPerformance_PerformanceIdOrderByStartAtAsc(performanceId)
-				.stream()
-				.map(PerformanceScheduleListRes::from)
-				.toList();
+			.findAllByPerformance_PerformanceIdOrderByStartAtAsc(performanceId)
+			.stream()
+			.map(PerformanceScheduleListRes::from)
+			.toList();
 	}
 
 	/**
@@ -78,8 +114,8 @@ public class PerformanceScheduleService {
 	 */
 	public PerformanceScheduleDetailRes getSchedule(Long performanceId, Long scheduleId) {
 		PerformanceSchedule schedule = performanceScheduleRepository
-				.findByPerformance_PerformanceIdAndPerformanceScheduleId(performanceId, scheduleId)
-				.orElseThrow(() -> new BusinessException(PerformanceScheduleErrorCode.SCHEDULE_NOT_FOUND));
+			.findByPerformance_PerformanceIdAndPerformanceScheduleId(performanceId, scheduleId)
+			.orElseThrow(() -> new BusinessException(PerformanceScheduleErrorCode.SCHEDULE_NOT_FOUND));
 
 		return PerformanceScheduleDetailRes.from(schedule);
 	}

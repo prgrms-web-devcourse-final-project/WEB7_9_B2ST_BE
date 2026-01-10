@@ -22,6 +22,7 @@ public record AppliedLotteryInfo(
 	LocalDateTime startAt,
 	Integer roundNo,
 	SeatGradeType gradeType,
+	Integer price,
 	Integer quantity,
 	LotteryStatus status
 ) {

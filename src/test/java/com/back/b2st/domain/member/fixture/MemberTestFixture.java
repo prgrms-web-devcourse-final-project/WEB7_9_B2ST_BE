@@ -29,6 +29,22 @@ public class MemberTestFixture {
 		return member;
 	}
 
+	public static Member createAdminMemberWithId(Long id, String email, String encodedPassword) {
+		Member member = Member.builder()
+			.email(email)
+			.password(encodedPassword)
+			.name("관리자")
+			.phone("01012345678")
+			.birth(LocalDate.of(1990, 1, 1))
+			.role(Member.Role.ADMIN)
+			.provider(Member.Provider.EMAIL)
+			.isEmailVerified(true)
+			.isIdentityVerified(false)
+			.build();
+		ReflectionTestUtils.setField(member, "id", id);
+		return member;
+	}
+
 	// 밑으로 dto 빌더 헬퍼
 	public static WithdrawReq buildWithdrawReq(String password) {
 		return new WithdrawReq(password);

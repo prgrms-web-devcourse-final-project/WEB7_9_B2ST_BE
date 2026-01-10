@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.lang.reflect.Field;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -19,8 +21,10 @@ import com.back.b2st.domain.performance.entity.Performance;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
@@ -34,6 +38,9 @@ class ReservationPaymentHandlerTest {
 
 	@Mock
 	private ReservationRepository reservationRepository;
+
+	@Mock
+	private ReservationSeatRepository reservationSeatRepository;
 
 	@Mock
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -64,20 +71,35 @@ class ReservationPaymentHandlerTest {
 		Long memberId = 100L;
 		Long scheduleId = 10L;
 		Long seatId = 20L;
+		Long scheduleSeatId = 99L;
 		Long performanceId = 5L;
 		Long expectedPrice = 50000L;
 
-		Reservation reservation = createReservation(reservationId, memberId, scheduleId, seatId,
-			ReservationStatus.CREATED);
-		ScheduleSeat scheduleSeat = createScheduleSeat(scheduleId, seatId, SeatStatus.HOLD);
+		Reservation reservation =
+			createReservation(reservationId, memberId, scheduleId, ReservationStatus.PENDING);
+
+		ReservationSeat reservationSeat = mock(ReservationSeat.class);
+		when(reservationSeat.getScheduleSeatId()).thenReturn(scheduleSeatId);
+
+		ScheduleSeat scheduleSeat = mock(ScheduleSeat.class);
+		when(scheduleSeat.getStatus()).thenReturn(SeatStatus.HOLD);
+		when(scheduleSeat.getScheduleId()).thenReturn(scheduleId);
+		when(scheduleSeat.getSeatId()).thenReturn(seatId);
+
 		PerformanceSchedule schedule = createPerformanceSchedule(scheduleId, performanceId);
+
 		SeatGrade seatGrade = createSeatGrade(performanceId, seatId, expectedPrice);
 
-		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
-		when(scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId))
+		when(reservationRepository.findById(reservationId))
+			.thenReturn(Optional.of(reservation));
+		when(reservationSeatRepository.findByReservationId(reservationId))
+			.thenReturn(List.of(reservationSeat));
+		when(scheduleSeatRepository.findById(scheduleSeatId))
 			.thenReturn(Optional.of(scheduleSeat));
-		doNothing().when(seatHoldTokenService).validateOwnership(scheduleId, seatId, memberId);
-		when(performanceScheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
+		doNothing().when(seatHoldTokenService)
+			.validateOwnership(scheduleId, seatId, memberId);
+		when(performanceScheduleRepository.findById(scheduleId))
+			.thenReturn(Optional.of(schedule));
 		when(seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(performanceId, seatId))
 			.thenReturn(Optional.of(seatGrade));
 
@@ -107,7 +129,7 @@ class ReservationPaymentHandlerTest {
 	@DisplayName("loadAndValidate: 다른 회원의 예매인 경우 UNAUTHORIZED_PAYMENT_ACCESS 예외")
 	void loadAndValidate_throwsException_whenUnauthorized() {
 		// Given
-		Reservation reservation = createReservation(1L, 100L, 10L, 20L, ReservationStatus.PENDING);
+		Reservation reservation = createReservation(1L, 100L, 10L, ReservationStatus.PENDING);
 		when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
 
 		// When & Then
@@ -121,7 +143,7 @@ class ReservationPaymentHandlerTest {
 	@DisplayName("loadAndValidate: 예매 상태가 PENDING이 아닌 경우 DOMAIN_NOT_PAYABLE 예외")
 	void loadAndValidate_throwsException_whenReservationNotPending() {
 		// Given
-		Reservation reservation = createReservation(1L, 100L, 10L, 20L, ReservationStatus.COMPLETED);
+		Reservation reservation = createReservation(1L, 100L, 10L, ReservationStatus.COMPLETED);
 		when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
 
 		// When & Then
@@ -135,9 +157,13 @@ class ReservationPaymentHandlerTest {
 	@DisplayName("loadAndValidate: 스케줄 좌석을 찾을 수 없는 경우 DOMAIN_NOT_FOUND 예외")
 	void loadAndValidate_throwsException_whenScheduleSeatNotFound() {
 		// Given
-		Reservation reservation = createReservation(1L, 100L, 10L, 20L, ReservationStatus.PENDING);
+		Reservation reservation = createReservation(1L, 100L, 10L, ReservationStatus.PENDING);
+		ReservationSeat reservationSeat = mock(ReservationSeat.class);
+
+		when(reservationSeat.getScheduleSeatId()).thenReturn(999L);
 		when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
-		when(scheduleSeatRepository.findByScheduleIdAndSeatId(10L, 20L)).thenReturn(Optional.empty());
+		when(reservationSeatRepository.findByReservationId(1L)).thenReturn(List.of(reservationSeat));
+		when(scheduleSeatRepository.findById(999L)).thenReturn(Optional.empty());
 
 		// When & Then
 		assertThatThrownBy(() -> handler.loadAndValidate(1L, 100L))
@@ -150,12 +176,16 @@ class ReservationPaymentHandlerTest {
 	@DisplayName("loadAndValidate: 좌석 상태가 HOLD가 아닌 경우 DOMAIN_NOT_PAYABLE 예외")
 	void loadAndValidate_throwsException_whenSeatNotHold() {
 		// Given
-		Reservation reservation = createReservation(1L, 100L, 10L, 20L, ReservationStatus.PENDING);
+		Reservation reservation = createReservation(1L, 100L, 10L, ReservationStatus.PENDING);
+
+		ReservationSeat reservationSeat = mock(ReservationSeat.class);
+		when(reservationSeat.getScheduleSeatId()).thenReturn(20L);
+
 		ScheduleSeat scheduleSeat = createScheduleSeat(10L, 20L, SeatStatus.AVAILABLE);
 
 		when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
-		when(scheduleSeatRepository.findByScheduleIdAndSeatId(10L, 20L))
-			.thenReturn(Optional.of(scheduleSeat));
+		when(reservationSeatRepository.findByReservationId(1L)).thenReturn(List.of(reservationSeat));
+		when(scheduleSeatRepository.findById(20L)).thenReturn(Optional.of(scheduleSeat));
 
 		// When & Then
 		assertThatThrownBy(() -> handler.loadAndValidate(1L, 100L))
@@ -168,14 +198,26 @@ class ReservationPaymentHandlerTest {
 	@DisplayName("loadAndValidate: 공연 일정을 찾을 수 없는 경우 DOMAIN_NOT_FOUND 예외")
 	void loadAndValidate_throwsException_whenScheduleNotFound() {
 		// Given
-		Reservation reservation = createReservation(1L, 100L, 10L, 20L, ReservationStatus.PENDING);
-		ScheduleSeat scheduleSeat = createScheduleSeat(10L, 20L, SeatStatus.HOLD);
+		Reservation reservation = createReservation(1L, 100L, 10L, ReservationStatus.PENDING);
+		ReservationSeat reservationSeat = mock(ReservationSeat.class);
+		when(reservationSeat.getScheduleSeatId()).thenReturn(20L);
 
-		when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
-		when(scheduleSeatRepository.findByScheduleIdAndSeatId(10L, 20L))
+		ScheduleSeat scheduleSeat = createScheduleSeat(10L, 20L, SeatStatus.HOLD);
+		when(scheduleSeat.getStatus()).thenReturn(SeatStatus.HOLD);
+		when(scheduleSeat.getScheduleId()).thenReturn(10L);
+		when(scheduleSeat.getSeatId()).thenReturn(20L);
+
+		when(reservationRepository.findById(1L))
+			.thenReturn(Optional.of(reservation));
+		when(reservationSeatRepository.findByReservationId(1L))
+			.thenReturn(List.of(reservationSeat));
+		when(scheduleSeatRepository.findById(20L))
 			.thenReturn(Optional.of(scheduleSeat));
+
 		doNothing().when(seatHoldTokenService).validateOwnership(10L, 20L, 100L);
-		when(performanceScheduleRepository.findById(10L)).thenReturn(Optional.empty());
+
+		when(performanceScheduleRepository.findById(10L))
+			.thenReturn(Optional.empty());
 
 		// When & Then
 		assertThatThrownBy(() -> handler.loadAndValidate(1L, 100L))
@@ -194,17 +236,31 @@ class ReservationPaymentHandlerTest {
 		Long seatId = 20L;
 		Long performanceId = 5L;
 
-		Reservation reservation = createReservation(reservationId, memberId, scheduleId, seatId,
-			ReservationStatus.PENDING);
+		Reservation reservation = createReservation(reservationId, memberId, scheduleId, ReservationStatus.PENDING);
+
+		ReservationSeat reservationSeat = mock(ReservationSeat.class);
+		when(reservationSeat.getScheduleSeatId()).thenReturn(20L);
+
 		ScheduleSeat scheduleSeat = createScheduleSeat(scheduleId, seatId, SeatStatus.HOLD);
+		when(scheduleSeat.getStatus()).thenReturn(SeatStatus.HOLD);
+		when(scheduleSeat.getScheduleId()).thenReturn(scheduleId);
+		when(scheduleSeat.getSeatId()).thenReturn(seatId);
+
 		PerformanceSchedule schedule = createPerformanceSchedule(scheduleId, performanceId);
 
-		when(reservationRepository.findById(reservationId)).thenReturn(Optional.of(reservation));
-		when(scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId))
+		when(reservationRepository.findById(reservationId))
+			.thenReturn(Optional.of(reservation));
+		when(reservationSeatRepository.findByReservationId(reservationId))
+			.thenReturn(List.of(reservationSeat));
+		when(scheduleSeatRepository.findById(20L))
 			.thenReturn(Optional.of(scheduleSeat));
+
 		doNothing().when(seatHoldTokenService).validateOwnership(scheduleId, seatId, memberId);
-		when(performanceScheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule));
-		when(seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(performanceId, seatId))
+
+		when(performanceScheduleRepository.findById(scheduleId))
+			.thenReturn(Optional.of(schedule));
+		when(seatGradeRepository
+			.findTopByPerformanceIdAndSeatIdOrderByIdDesc(performanceId, seatId))
 			.thenReturn(Optional.empty());
 
 		// When & Then
@@ -214,12 +270,11 @@ class ReservationPaymentHandlerTest {
 			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 	}
 
-	private Reservation createReservation(Long id, Long memberId, Long scheduleId, Long seatId,
-		ReservationStatus status) {
+	private Reservation createReservation(Long id, Long memberId, Long scheduleId, ReservationStatus status) {
 		Reservation reservation = Reservation.builder()
 			.memberId(memberId)
 			.scheduleId(scheduleId)
-			.seatId(seatId)
+			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		setField(reservation, "id", id);
 		setField(reservation, "status", status);
@@ -255,5 +310,14 @@ class ReservationPaymentHandlerTest {
 		SeatGrade seatGrade = mock(SeatGrade.class);
 		when(seatGrade.getPrice()).thenReturn(price.intValue());
 		return seatGrade;
+	}
+
+	private void createReservationSeat(Reservation reservation, ScheduleSeat seat) {
+		reservationSeatRepository.save(
+			ReservationSeat.builder()
+				.reservationId(reservation.getId())
+				.scheduleSeatId(seat.getId())
+				.build()
+		);
 	}
 }

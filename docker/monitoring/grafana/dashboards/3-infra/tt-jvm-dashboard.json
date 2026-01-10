@@ -1,0 +1,73 @@
+# ----- 힙 메모리 -----
+
+# 힙 메모리 사용률 (%)
+jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} * 100
+
+# 힙 메모리 사용량 (bytes)
+jvm_memory_used_bytes{area="heap"}
+
+# 힙 메모리 최대 (bytes)
+jvm_memory_max_bytes{area="heap"}
+
+# 힙 메모리 커밋 (bytes)
+jvm_memory_committed_bytes{area="heap"}
+
+
+# ----- Non-Heap 메모리 -----
+
+# Non-Heap 메모리 사용량
+jvm_memory_used_bytes{area="nonheap"}
+
+# Metaspace 사용량
+jvm_memory_used_bytes{id="Metaspace"}
+
+
+# ----- GC -----
+
+# GC 일시정지 시간 (초/분)
+rate(jvm_gc_pause_seconds_sum[5m])
+
+# GC 발생 횟수 (/분)
+rate(jvm_gc_pause_seconds_count[5m])
+
+# GC 일시정지 시간 누적 (5분)
+increase(jvm_gc_pause_seconds_sum[5m])
+
+# GC Collector별 횟수
+increase(jvm_gc_pause_seconds_count[5m]) by (gc, cause)
+
+
+# ----- 스레드 -----
+
+# 활성 스레드 수
+jvm_threads_live_threads
+
+# 피크 스레드 수
+jvm_threads_peak_threads
+
+# 데몬 스레드 수
+jvm_threads_daemon_threads
+
+# 스레드 상태별 분포
+jvm_threads_states_threads
+
+
+# ----- 클래스 로딩 -----
+
+# 로딩된 클래스 수
+jvm_classes_loaded_classes
+
+# 언로드된 클래스 수
+jvm_classes_unloaded_classes_total
+
+
+# ----- CPU -----
+
+# 프로세스 CPU 사용률
+process_cpu_usage * 100
+
+# 시스템 CPU 사용률
+system_cpu_usage * 100
+
+# CPU 수
+system_cpu_count

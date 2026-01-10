@@ -27,6 +27,7 @@ public enum QueueErrorCode implements ErrorCode {
 	// Redis 연동 관련
 	REDIS_CONNECTION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Q201", "Redis 연결 오류가 발생했습니다."),
 	REDIS_OPERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Q202", "Redis 작업 중 오류가 발생했습니다."),
+	QUEUE_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "Q203", "대기열 시스템이 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요."),
 
 	// 데이터 정합성 관련
 	QUEUE_DATA_INCONSISTENT(HttpStatus.INTERNAL_SERVER_ERROR, "Q301", "대기열 데이터 불일치가 발생했습니다."),
@@ -39,4 +40,3 @@ public enum QueueErrorCode implements ErrorCode {
 	private final String code;
 	private final String message;
 }
-

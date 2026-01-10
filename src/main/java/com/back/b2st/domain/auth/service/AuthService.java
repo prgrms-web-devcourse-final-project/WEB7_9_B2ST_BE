@@ -26,6 +26,7 @@ import com.back.b2st.domain.auth.entity.OAuthNonce;
 import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.entity.WithdrawalRecoveryToken;
 import com.back.b2st.domain.auth.error.AuthErrorCode;
+import com.back.b2st.domain.auth.metrics.AuthMetrics;
 import com.back.b2st.domain.auth.repository.OAuthNonceRepository;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.domain.auth.repository.WithdrawalRecoveryRepository;
@@ -60,6 +61,8 @@ public class AuthService {
 	private final OAuthNonceRepository nonceRepository;
 	private final LoginSecurityService loginSecurityService;
 	private final ApplicationEventPublisher eventPublisher;
+	private final AuthMetrics authMetrics;
+
 	@Value("${oauth.kakao.client-id}")
 	private String kakaoClientId;
 	@Value("${oauth.kakao.redirect-uri}")
@@ -93,17 +96,20 @@ public class AuthService {
 			loginSecurityService.onLoginSuccess(email, clientIp);
 			eventPublisher.publishEvent(LoginEvent.success(email, clientIp));
 
+			authMetrics.recordLoginSuccess("EMAIL");
 			// JWT 발급
 			return generateTokenForMember(member);
 		} catch (BusinessException e) {
 			// 로그인 실패 처리(시도 횟수 증가)
 			loginSecurityService.recordFailedAttempt(email, clientIp);
 			eventPublisher.publishEvent(LoginEvent.failure(email, clientIp, e.getMessage(), e.getErrorCode()));
+			authMetrics.recordLoginFailure("EMAIL", e.getErrorCode().getCode());
 			throw e;
 		} catch (Exception e) {
 			// 기타 예외 처리
 			loginSecurityService.recordFailedAttempt(email, clientIp);
 			eventPublisher.publishEvent(LoginEvent.failure(email, clientIp, e.getMessage(), null));
+			authMetrics.recordLoginFailure("EMAIL", "UNKNOWN_ERROR");
 			throw e;
 		}
 	}
@@ -116,24 +122,28 @@ public class AuthService {
 	 */
 	@Transactional
 	public TokenInfo kakaoLogin(KakaoLoginReq request) {
-		// OIDC 호출. 액세스 토큰 발급 + 정보 조회
-		KakaoIdTokenPayload payload = fetchKakaoUserInfo(request.code());
+		try {
+			// OIDC 호출. 액세스 토큰 발급 + 정보 조회
+			KakaoIdTokenPayload payload = fetchKakaoUserInfo(request.code());
+			// nonce 검증
+			validateNonce(payload.nonce());
+			// 검증
+			validateKakaoEmail(payload);
 
-		// nonce 검증
-		validateNonce(payload.nonce());
+			// 회원 처리
+			Member member = findOrCreateKakaoMember(payload);
+			validateNotWithdrawn(member);
 
-		// 검증
-		validateKakaoEmail(payload);
+			// JWT 발급
+			TokenInfo tokenInfo = generateTokenForMember(member);
+			log.info("[Kakao] 로그인 성공: MemberID={}, Email={}", member.getId(), maskEmail(member.getEmail()));
 
-		// 회원 처리
-		Member member = findOrCreateKakaoMember(payload);
-		validateNotWithdrawn(member);
-
-		// JWT 발급
-		TokenInfo tokenInfo = generateTokenForMember(member);
-		log.info("[Kakao] 로그인 성공: MemberID={}, Email={}", member.getId(), maskEmail(member.getEmail()));
-
-		return tokenInfo;
+			authMetrics.recordLoginSuccess("KAKAO");
+			return tokenInfo;
+		} catch (BusinessException e) {
+			authMetrics.recordLoginFailure("KAKAO", e.getErrorCode().getCode());
+			throw e;
+		}
 	}
 
 	/**
@@ -213,6 +223,7 @@ public class AuthService {
 		saveRefreshToken(email, newToken.refreshToken(),
 			storedToken.getFamily(), storedToken.getGeneration() + 1);
 
+		authMetrics.recordTokenReissue();
 		return newToken;
 	}
 
@@ -224,6 +235,7 @@ public class AuthService {
 	@Transactional
 	public void logout(UserPrincipal principal) {
 		refreshTokenRepository.deleteById(principal.getEmail());
+		authMetrics.recordLogout();
 	}
 
 	/**

@@ -9,13 +9,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.back.b2st.domain.payment.entity.DomainType;
-import com.back.b2st.domain.payment.error.PaymentErrorCode;
-import com.back.b2st.domain.ticket.entity.Ticket;
-import com.back.b2st.domain.ticket.error.TicketErrorCode;
-import com.back.b2st.domain.ticket.repository.TicketRepository;
-import com.back.b2st.domain.trade.entity.Trade;
-import com.back.b2st.domain.trade.entity.TradeType;
+	import com.back.b2st.domain.payment.entity.DomainType;
+	import com.back.b2st.domain.payment.error.PaymentErrorCode;
+	import com.back.b2st.domain.seat.grade.entity.SeatGrade;
+	import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
+	import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
+	import com.back.b2st.domain.ticket.entity.Ticket;
+	import com.back.b2st.domain.ticket.error.TicketErrorCode;
+	import com.back.b2st.domain.ticket.repository.TicketRepository;
+	import com.back.b2st.domain.trade.entity.Trade;
+	import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
 import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.global.error.exception.BusinessException;
@@ -33,10 +36,14 @@ class TradePaymentHandlerTest {
 	@Autowired
 	private TicketRepository ticketRepository;
 
+	@Autowired
+	private SeatGradeRepository seatGradeRepository;
+
 	@BeforeEach
 	void setup() {
 		ticketRepository.deleteAll();
 		tradeRepository.deleteAll();
+		seatGradeRepository.deleteAll();
 	}
 
 	@Test
@@ -328,6 +335,15 @@ class TradePaymentHandlerTest {
 			.build();
 		Trade savedTrade = tradeRepository.save(trade);
 
+		seatGradeRepository.save(
+			SeatGrade.builder()
+				.performanceId(1L)
+				.seatId(1L)
+				.grade(SeatGradeType.STANDARD)
+				.price(50000)
+				.build()
+		);
+
 		// when
 		PaymentTarget result = tradePaymentHandler.loadAndValidate(savedTrade.getId(), buyerId);
 
@@ -335,5 +351,50 @@ class TradePaymentHandlerTest {
 		assertThat(result.domainType()).isEqualTo(DomainType.TRADE);
 		assertThat(result.domainId()).isEqualTo(savedTrade.getId());
 		assertThat(result.expectedAmount()).isEqualTo(price.longValue());
+	}
+
+	@Test
+	@DisplayName("loadAndValidate - 양도 가격이 정가를 초과하면 예외 발생")
+	void loadAndValidate_priceAboveOriginal() {
+		// given
+		Long sellerId = 1L;
+		Long buyerId = 2L;
+
+		Ticket ticket = Ticket.builder()
+			.reservationId(1L)
+			.memberId(sellerId)
+			.seatId(1L)
+			.qrCode("QR-9")
+			.build();
+		ticketRepository.save(ticket);
+
+		Trade trade = Trade.builder()
+			.memberId(sellerId)
+			.performanceId(1L)
+			.scheduleId(1L)
+			.ticketId(ticket.getId())
+			.type(TradeType.TRANSFER)
+			.price(60000)
+			.totalCount(1)
+			.section("A")
+			.row("5")
+			.seatNumber("12")
+			.build();
+		Trade savedTrade = tradeRepository.save(trade);
+
+		seatGradeRepository.save(
+			SeatGrade.builder()
+				.performanceId(1L)
+				.seatId(1L)
+				.grade(SeatGradeType.STANDARD)
+				.price(50000)
+				.build()
+		);
+
+		// when & then
+		assertThatThrownBy(() -> tradePaymentHandler.loadAndValidate(savedTrade.getId(), buyerId))
+			.isInstanceOf(BusinessException.class)
+			.extracting(ex -> ((BusinessException) ex).getErrorCode())
+			.isEqualTo(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 	}
 }

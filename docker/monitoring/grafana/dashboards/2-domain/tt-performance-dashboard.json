@@ -1,0 +1,55 @@
+# ----- 공연 현황 (PerformanceMetrics 기반) -----
+
+# 공연 상세 조회 추이 (공연별)
+sum(rate(performance_view_total[
+    1m
+])) by (performance_id)
+
+# 공연 상세 조회 전체 RPS
+sum(rate(performance_view_total[
+    1m
+]))
+
+# 회차 조회 추이 (회차별)
+sum(rate(schedule_view_total[
+    1m
+])) by (schedule_id)
+
+# 좌석 선택 추이 (등급별)
+sum(rate(seat_selection_total[
+    1m
+])) by (schedule_id, grade)
+
+# 좌석 등급별 선택 분포
+sum(rate(seat_selection_total[
+    5m
+])) by (grade)
+
+# 인기 공연 TOP 10 (조회수 기준)
+topk(10, sum(increase(performance_view_total[
+    24h
+])) by (performance_id))
+
+
+# ----- Performance API 성능 -----
+
+# Performance API P95 응답시간
+histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=~"/api/performances.*"
+}[
+    5m
+])) by (le))
+
+# Performance API 에러율
+sum(rate(http_server_requests_seconds_count{uri=~"/api/performances.*", status=~"5.."
+}[
+    5m
+])) / sum(rate(http_server_requests_seconds_count{uri=~"/api/performances.*"
+}[
+    5m
+])) * 100
+
+# Performance API RPS
+sum(rate(http_server_requests_seconds_count{uri=~"/api/performances.*"
+}[
+    1m
+]))

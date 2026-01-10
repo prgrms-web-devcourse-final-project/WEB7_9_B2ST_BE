@@ -1,0 +1,121 @@
+# 각 도메인은 자신의 SLACK_WEBHOOK_XXX 환경변수 사용
+
+global:
+  resolve_timeout: 5m
+
+# 라우팅 설정
+route:
+  receiver: 'slack-auth-default'
+  group_by: [ 'alertname', 'severity', 'domain' ]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # ==================== CRITICAL (즉시 알림) ====================
+    # 계정 잠금 폭증 - 공격 가능성
+    - match:
+        alertname: HighAccountLockRate
+      receiver: 'slack-security-critical'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # 보안 위협 탐지
+    - match:
+        alertname: SecurityThreatDetected
+      receiver: 'slack-security-critical'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # 로그인 실패 급증 - Brute Force 가능성
+    - match:
+        alertname: LoginFailureSpike
+      receiver: 'slack-security-critical'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # ==================== WARNING ====================
+    # 로그인 성공률 저하
+    - match:
+        alertname: LowLoginSuccessRate
+      receiver: 'slack-auth-warning'
+      repeat_interval: 2h
+
+    # 이메일 발송 실패율 증가
+    - match:
+        alertname: HighEmailFailureRate
+      receiver: 'slack-email-warning'
+      repeat_interval: 2h
+
+    # 이메일 인증 실패 급증
+    - match:
+        alertname: HighVerificationFailureRate
+      receiver: 'slack-email-warning'
+      repeat_interval: 2h
+
+    # Rate Limit 다수 트리거
+    - match:
+        alertname: RateLimitTriggered
+      receiver: 'slack-auth-warning'
+      repeat_interval: 1h
+
+    # ==================== INFO ====================
+    # 회원가입/탈퇴 통계
+    - match:
+        domain: member
+        severity: info
+      receiver: 'slack-member-info'
+      repeat_interval: 24h
+
+# ==================== Auth 도메인 수신자 ====================
+receivers:
+  # 기본 (라우팅 안 된 알림)
+  - name: 'slack-auth-default'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_AUTH}'
+        channel: '#tt-auth-alerts'
+        send_resolved: true
+
+  # 보안 Critical - 즉시 대응 필요
+  - name: 'slack-security-critical'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_AUTH}'
+        channel: '#tt-auth-alerts'
+        send_resolved: true
+
+  # Auth Warning - 주의 필요
+  - name: 'slack-auth-warning'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_AUTH}'
+        channel: '#tt-auth-alerts'
+        send_resolved: true
+
+  # Email Warning
+  - name: 'slack-email-warning'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_AUTH}'
+        channel: '#tt-auth-alerts'
+        send_resolved: true
+
+  # Member 정보성 알림 (일간 리포트 등)
+  - name: 'slack-member-info'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_AUTH}'
+        channel: '#tt-auth-alerts'
+        send_resolved: false
+
+# 알림 억제 규칙
+inhibit_rules:
+  # Critical 있으면 같은 alertname의 Warning 억제
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: [ 'alertname' ]
+
+  # 전체 서비스 다운이면 개별 알림 억제
+  - source_match:
+      alertname: 'ServiceDown'
+    target_match_re:
+      alertname: '.+'
+    equal: [ 'instance' ]

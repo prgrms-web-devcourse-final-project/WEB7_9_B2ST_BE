@@ -14,14 +14,20 @@ import com.back.b2st.domain.queue.entity.QueueType;
 public interface QueueRepository extends JpaRepository<Queue, Long> {
 
 	/**
-	 * 회차 ID와 대기열 타입으로 대기열 조회
+	 * 공연 ID로 대기열 조회
+	 * UNIQUE 제약: (performance_id)
 	 */
-	Optional<Queue> findByScheduleIdAndQueueType(Long scheduleId, QueueType queueType);
+	Optional<Queue> findByPerformanceId(Long performanceId);
 
 	/**
-	 * 회차 ID로 모든 대기열 조회
+	 * 대기열 존재 여부 확인 (공연 기준)
 	 */
-	List<Queue> findByScheduleId(Long scheduleId);
+	boolean existsByPerformanceId(Long performanceId);
+
+	/**
+	 * 여러 공연의 대기열 목록 일괄 조회
+	 */
+	List<Queue> findByPerformanceIdIn(Collection<Long> performanceIds);
 
 	/**
 	 * 대기열 타입으로 조회
@@ -29,23 +35,9 @@ public interface QueueRepository extends JpaRepository<Queue, Long> {
 	List<Queue> findByQueueType(QueueType queueType);
 
 	/**
-	 * 여러 회차의 대기열 목록 일괄 조회
-	 */
-	List<Queue> findByScheduleIdIn(Collection<Long> scheduleIds);
-
-	/**
-	 * 대기열 존재 여부 확인
-	 */
-	boolean existsByScheduleIdAndQueueType(Long scheduleId, QueueType queueType);
-
-	/**
-	 * 특정 회차의 대기열 개수
-	 */
-	long countByScheduleId(Long scheduleId);
-
-	/**
 	 * 대용량 대기열 조회 (동시 입장 허용 수가 특정 값 이상)
 	 */
 	@Query("SELECT q FROM Queue q WHERE q.maxActiveUsers >= :minActiveUsers")
 	List<Queue> findLargeCapacityQueues(@Param("minActiveUsers") Integer minActiveUsers);
 }
+

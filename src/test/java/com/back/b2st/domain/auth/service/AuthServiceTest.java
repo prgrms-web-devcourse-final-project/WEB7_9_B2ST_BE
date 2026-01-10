@@ -32,6 +32,7 @@ import com.back.b2st.domain.auth.dto.request.RecoveryEmailReq;
 import com.back.b2st.domain.auth.entity.RefreshToken;
 import com.back.b2st.domain.auth.entity.WithdrawalRecoveryToken;
 import com.back.b2st.domain.auth.error.AuthErrorCode;
+import com.back.b2st.domain.auth.metrics.AuthMetrics;
 import com.back.b2st.domain.auth.repository.OAuthNonceRepository;
 import com.back.b2st.domain.auth.repository.RefreshTokenRepository;
 import com.back.b2st.domain.auth.repository.WithdrawalRecoveryRepository;
@@ -86,6 +87,9 @@ class AuthServiceTest {
 
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
+
+	@Mock
+	private AuthMetrics authMetrics;
 
 	// 헬퍼 메서드
 	private Member createActiveMember(Long id, String email) {

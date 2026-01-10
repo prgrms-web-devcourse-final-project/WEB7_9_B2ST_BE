@@ -7,6 +7,7 @@ public record ScheduleSeatViewRes(
 	Long scheduleSeatId,
 	Long seatId,
 
+	Long sectionId,
 	String sectionName,
 	String rowLabel,
 	Integer seatNumber,

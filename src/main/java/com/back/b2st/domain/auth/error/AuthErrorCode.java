@@ -18,9 +18,9 @@ public enum AuthErrorCode implements ErrorCode {
 
 	// 탈퇴 철회
 	RECOVERY_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND, "A406", "복구 토큰이 유효하지 않거나 만료되었습니다."),
-	// 회원 상태 노출 방지를 위해 모호한 메시지 사용
+	// 회원 상태 노출 방지 차원서 모호한 메시지 사용
 	NOT_WITHDRAWN_MEMBER(HttpStatus.BAD_REQUEST, "A407", "요청을 처리할 수 없습니다."),
-	WITHDRAWAL_PERIOD_EXPIRED(HttpStatus.BAD_REQUEST, "A408", "복구 가능 기간(30일)이 만료되었습니다."),
+	WITHDRAWAL_PERIOD_EXPIRED(HttpStatus.BAD_REQUEST, "A408", "요청을 처리할 수 없습니다."),
 
 	// 소셜 로그인
 	OAUTH_AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "A409", "소셜 로그인 인증에 실패했습니다."),
@@ -34,7 +34,8 @@ public enum AuthErrorCode implements ErrorCode {
 	// 일반적으로 발생하지 않음 (이메일 기준 조회라서)
 	OAUTH_ALREADY_LINKED(HttpStatus.CONFLICT, "A412", "이미 다른 계정에 연동된 소셜 계정입니다."),
 
-	ACCOUNT_LOCKED(HttpStatus.FORBIDDEN, "A413", "로그인 시도 횟수를 초과하여 계정이 일시적으로 잠겼습니다.");
+	ACCOUNT_LOCKED(HttpStatus.FORBIDDEN, "A413", "이메일 또는 비밀번호가 정확하지 않습니다."),
+	ACCOUNT_NOT_LOCKED(HttpStatus.NOT_FOUND, "A414", "해당 계정은 잠금 상태가 아닙니다.");
 
 	private final HttpStatus status;
 	private final String code;

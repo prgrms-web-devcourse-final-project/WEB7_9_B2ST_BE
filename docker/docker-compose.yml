@@ -296,7 +296,7 @@ services:
       redis-node-6:
         condition: service_healthy
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-tt_redis_pass}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
     volumes:
       - ./init-cluster.sh:/init-cluster.sh:ro
     command: sh /init-cluster.sh
@@ -319,23 +319,66 @@ services:
       - common
 
     environment:
-      # ✅ (핵심) prod 강제
-      - SPRING_PROFILES_ACTIVE=prod
+      # ===== Profile =====
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
 
-      # ✅ (핵심) DB 접속을 localhost가 아니라 postgres 서비스로 강제
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-tt_db}
-      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-myuser}
-      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-mypassword}
+      # ===== DB (Spring 표준 키) =====
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-tt_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-myuser}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
 
-      # ✅ Redis 클러스터를 Spring이 확실히 인식하도록 표준 키로 주입
-      - SPRING_DATA_REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
-      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-tt_redis_pass}
+      # ===== Redis (Spring 표준 키) =====
+      SPRING_DATA_REDIS_CLUSTER_NODES: redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
 
-      # (유지) 기존 커스텀 키가 앱에서 사용된다면 같이 둬도 됨
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - REDIS_MODE=cluster
-      - REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+      # =====커스텀 키 =====
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-myuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+      POSTGRES_DB: ${POSTGRES_DB:-tt_db}
+
+      REDIS_MODE: cluster
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
+      REDIS_CLUSTER_NODES: redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+
+      # ===== Mail =====
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+
+      # ===== Spring Mail Properties =====
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED}
+
+      # ===== AWS / S3 =====
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+
+      # ===== JWT =====
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+
+      # ===== Kakao OAuth =====
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      KAKAO_ISSUER: ${KAKAO_ISSUER}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
+      KAKAO_TOKEN_URI: ${KAKAO_TOKEN_URI}
+      KAKAO_USER_INFO_URI: ${KAKAO_USER_INFO_URI}
+
+      # ===== Slack =====
+      SLACK_WEBHOOK_AUTH: ${SLACK_WEBHOOK_AUTH}
+
+      # ===== JPA / Hibernate =====
+      DDL_AUTO: ${DDL_AUTO}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      SPRING_JPA_PROPERTIES_HIBERNATE_HBM2DDL_HALT_ON_ERROR: ${SPRING_JPA_PROPERTIES_HIBERNATE_HBM2DDL_HALT_ON_ERROR}
 
     healthcheck:
       test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1" ]
@@ -378,10 +421,10 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123!}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123!}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
@@ -401,8 +444,6 @@ services:
       - prometheus
     ports:
       - "9093:9093"
-    environment:
-      - SLACK_WEBHOOK_AUTH=${SLACK_WEBHOOK_AUTH}
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
@@ -417,8 +458,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # NOTE: redis_exporter는 멀티 주소/클러스터를 완전 지원하지 않는 경우가 많아서
-  # 일단 한 노드만 붙도록(health 통과) 설정을 보수적으로 바꿈
+  # NOTE: redis_exporter는 멀티 주소/클러스터를 완전 지원하지 않는 경우가 많아서 한 노드만 붙임
   redis-exporter:
     image: oliver006/redis_exporter:v1.80.1
     restart: unless-stopped
@@ -428,8 +468,8 @@ services:
     ports:
       - "9121:9121"
     environment:
-      - REDIS_ADDR=redis://redis-node-1:7000
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-tt_redis_pass}
+      REDIS_ADDR: redis://redis-node-1:7000
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
     networks:
       - common
     healthcheck:
@@ -447,7 +487,7 @@ services:
     ports:
       - "9187:9187"
     environment:
-      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-tt_db}?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-tt_db}?sslmode=disable
     networks:
       - common
     healthcheck:

@@ -126,20 +126,23 @@ jobs:
 
               "cd docker/",
 
-              "# EC2에 저장된 토큰 파일에서 안전하게 읽기 (SSM 로그에 노출 안됨)",
-              "export DOPPLER_TOKEN=$(sudo cat /etc/tt-secrets/doppler-token)",
+              "# Doppler token: trailing newline/CRLF 제거해서 안정적으로 주입",
+              "export DOPPLER_TOKEN=\"$(sudo tr -d \"\\r\\n\" < /etc/tt-secrets/doppler-token)\"",
               "export DOPPLER_PROJECT=tt",
               "export DOPPLER_CONFIG=prd",
 
-              "# GitHub 토큰도 파일에서 읽기",
-              "GITHUB_TOKEN=$(sudo cat /etc/tt-secrets/github-token)",
+              "# GitHub token: ghcr 로그인 후 즉시 폐기(변수는 쉘 종료 시 사라짐)",
+              "GITHUB_TOKEN=\"$(sudo tr -d \"\\r\\n\" < /etc/tt-secrets/github-token)\"",
               "echo \"$GITHUB_TOKEN\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
-          
-              "# alertmanager.yml가 스스로 환경변수를 참조하지 않아, 스크립트로 치환",
-              "set -a && source doppler.env && set +a",
-              "envsubst < monitoring/alertmanager/alertmanager.yml > /tmp/alertmanager-resolved.yml",
-              "cp /tmp/alertmanager-resolved.yml monitoring/alertmanager/alertmanager.yml",
+              "unset GITHUB_TOKEN",
 
+              "# (권장) doppler secrets를 파일로 남기지 않고, envsubst에만 잠깐 쓰기",
+              "# alertmanager.yml는 런타임 치환이 필요하므로 doppler run 환경에서 envsubst 실행",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- bash -lc \"envsubst < monitoring/alertmanager/alertmanager.yml > /tmp/alertmanager-resolved.yml\"",
+              "cp /tmp/alertmanager-resolved.yml monitoring/alertmanager/alertmanager.yml",
+              "rm -f /tmp/alertmanager-resolved.yml",
+
+              "# compose 전체를 doppler run으로 감싸서, compose 파싱/컨테이너 실행 모두 동일 env 보장",
               "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose pull",
               "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose up -d --force-recreate",
 
@@ -147,7 +150,9 @@ jobs:
               "docker logout ghcr.io 2>/dev/null",
 
               "echo \"Deployment completed at $(date)\"",
-              "docker compose ps"
+
+              "# 마지막 상태 조회도 doppler run으로 감싸서 경고(예: SLACK_WEBHOOK_AUTH) 방지",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose ps"
             ]
           }' \
           --region ${{ secrets.AWS_REGION }}

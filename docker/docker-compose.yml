@@ -401,6 +401,8 @@ services:
       - prometheus
     ports:
       - "9093:9093"
+    environment:
+      - SLACK_WEBHOOK_AUTH=${SLACK_WEBHOOK_AUTH}
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager

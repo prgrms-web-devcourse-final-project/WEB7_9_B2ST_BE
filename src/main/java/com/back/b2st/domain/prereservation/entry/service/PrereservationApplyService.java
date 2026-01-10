@@ -43,9 +43,6 @@ public class PrereservationApplyService {
 	@Value("${prereservation.application.strict:true}")
 	private boolean applicationStrict = true;
 
-	@Value("${app.frontend.my-page-url:https://doncrytt.vercel.app/my-page}")
-	private String myPageUrl = "https://doncrytt.vercel.app/my-page";
-
 	@Transactional
 	public void apply(Long scheduleId, Long memberId, String email, Long sectionId) {
 		PerformanceSchedule schedule = getScheduleOrThrow(scheduleId);
@@ -170,12 +167,6 @@ public class PrereservationApplyService {
 			endAt.format(EMAIL_TIME_FORMATTER)
 		);
 
-		emailSender.sendNotificationEmail(
-			email,
-			"[TT] 신청 예매 사전 신청 완료",
-			message,
-			"예매 바로가기",
-			myPageUrl
-		);
+		emailSender.sendNotificationEmail(email, "[TT] 신청 예매 사전 신청 완료", message);
 	}
 }

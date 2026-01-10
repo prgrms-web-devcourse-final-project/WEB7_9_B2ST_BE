@@ -50,21 +50,6 @@
             white-space: pre-line;
         }
 
-        .action-button {
-            display: inline-block;
-            padding: 12px 20px;
-            background: #ef4444;
-            color: #ffffff !important;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 700;
-            margin-top: 12px;
-        }
-
-        .action-button:hover {
-            background: #dc2626;
-        }
-
         .footer {
             background-color: #f8f9fa;
             padding: 20px;
@@ -84,7 +69,6 @@
         <div class="message-box" th:text="${message}">
             알림 메시지
         </div>
-        <a class="action-button" th:if="${actionUrl != null}" th:href="${actionUrl}" th:text="${actionText}">바로가기</a>
     </div>
     <div class="footer">
         <p>본 메일은 발신 전용이며, 회신되지 않습니다.</p>

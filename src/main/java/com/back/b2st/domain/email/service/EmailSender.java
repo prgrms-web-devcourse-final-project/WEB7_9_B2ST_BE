@@ -3,7 +3,6 @@ package com.back.b2st.domain.email.service;
 import static com.back.b2st.global.util.MaskingUtil.*;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -59,17 +58,6 @@ public class EmailSender {
 			Map.of(
 				"message", message
 			));
-	}
-
-	@Async("emailExecutor")
-	public void sendNotificationEmail(String to, String subject, String message, String actionText, String actionUrl) {
-		Map<String, Object> variables = new HashMap<>();
-		variables.put("message", message);
-		if (actionUrl != null && !actionUrl.isBlank()) {
-			variables.put("actionUrl", actionUrl);
-			variables.put("actionText", (actionText == null || actionText.isBlank()) ? "바로가기" : actionText);
-		}
-		sendTemplateEmail(to, subject, "email/notification", variables);
 	}
 
 	@Async("emailExecutor")

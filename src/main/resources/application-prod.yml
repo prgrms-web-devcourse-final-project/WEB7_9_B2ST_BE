@@ -67,9 +67,9 @@ queue:
     entry-ttl-minutes: 10
   sync:
     enabled: true  # 프로덕션에서는 동기화 활성화
-    lua:
-      enabled: true
-      fallback-enabled: true
+  lua:
+    enabled: true
+    fallback-enabled: true
 
 # ==================== Circuit Breaker 설정 (운영 환경) ====================
 resilience4j:
@@ -121,7 +121,7 @@ management:
 
   endpoint:
     health:
-      show-details: when_authorized  # 운영 환경: 인증된 사용자만 상세 정보
+      show-details: when-authorized  # 운영 환경: 인증된 사용자만 상세 정보
 
   health:
     circuitbreakers:

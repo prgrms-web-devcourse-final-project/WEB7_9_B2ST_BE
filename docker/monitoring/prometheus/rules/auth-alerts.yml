@@ -1,0 +1,166 @@
+# TT Project - Auth/Member/Email Domain Alert Rules
+# 담당: 인증/인가 도메인
+
+groups:
+  # ==================== Auth 도메인 알림 ====================
+  - name: auth_alerts
+    interval: 30s
+    rules:
+      # 🚨 CRITICAL: 로그인 실패 급증 (Brute Force 의심)
+      - alert: LoginFailureSpike
+        expr: |
+          sum(rate(auth_login_total{result="failure"}[5m])) > 10
+        for: 2m
+        labels:
+          severity: critical
+          domain: auth
+        annotations:
+          summary: "로그인 실패 급증 탐지"
+          description: "5분간 로그인 실패가 분당 10회 이상입니다. Brute Force 공격 가능성."
+          current_value: "{{ $value | printf \"%.2f\" }} failures/min"
+          threshold: "10 failures/min"
+
+      # 🚨 CRITICAL: 계정 잠금 다수 발생
+      - alert: HighAccountLockRate
+        expr: |
+          sum(increase(auth_account_locked_total[10m])) > 5
+        for: 1m
+        labels:
+          severity: critical
+          domain: auth
+        annotations:
+          summary: "계정 잠금 다수 발생"
+          description: "10분간 {{ $value }}개 계정이 잠겼습니다. 공격 또는 시스템 이상 확인 필요."
+          current_value: "{{ $value }} locks"
+          threshold: "5 locks/10min"
+
+      # ⚠️ WARNING: 로그인 성공률 저하
+      - alert: LowLoginSuccessRate
+        expr: |
+          (
+            sum(rate(auth_login_total{result="success"}[15m])) 
+            / sum(rate(auth_login_total[15m]))
+          ) * 100 < 80
+        for: 5m
+        labels:
+          severity: warning
+          domain: auth
+        annotations:
+          summary: "로그인 성공률 저하"
+          description: "15분간 로그인 성공률이 {{ $value | printf \"%.1f\" }}%로 80% 미만입니다."
+          current_value: "{{ $value | printf \"%.1f\" }}%"
+          threshold: "80%"
+
+      # ⚠️ WARNING: Rate Limit 과다 트리거
+      - alert: RateLimitTriggered
+        expr: |
+          sum(increase(security_rate_limit_triggered_total[10m])) by (endpoint) > 20
+        for: 2m
+        labels:
+          severity: warning
+          domain: auth
+        annotations:
+          summary: "Rate Limit 과다 트리거"
+          description: "엔드포인트 {{ $labels.endpoint }}에서 10분간 {{ $value }}회 Rate Limit 발동."
+          current_value: "{{ $value }} triggers"
+          threshold: "20 triggers/10min"
+
+  # ==================== Email 도메인 알림 ====================
+  - name: email_alerts
+    interval: 30s
+    rules:
+      # ⚠️ WARNING: 이메일 발송 실패율 증가
+      - alert: HighEmailFailureRate
+        expr: |
+          (
+            sum(rate(email_sent_total{result="failure"}[10m])) 
+            / sum(rate(email_sent_total[10m]))
+          ) * 100 > 10
+        for: 5m
+        labels:
+          severity: warning
+          domain: email
+        annotations:
+          summary: "이메일 발송 실패율 증가"
+          description: "10분간 이메일 발송 실패율이 {{ $value | printf \"%.1f\" }}%입니다."
+          success_rate: "{{ printf \"%.1f\" (100 - $value) }}"
+          total_count: "{{ with query \"sum(increase(email_sent_total[10m]))\" }}{{ . | first | value }}{{ end }}"
+
+      # ⚠️ WARNING: 이메일 인증 실패 급증
+      - alert: HighVerificationFailureRate
+        expr: |
+          (
+            sum(rate(email_verification_total{result="failure"}[10m])) 
+            / sum(rate(email_verification_total[10m]))
+          ) * 100 > 30
+        for: 5m
+        labels:
+          severity: warning
+          domain: email
+        annotations:
+          summary: "이메일 인증 실패 급증"
+          description: "10분간 이메일 인증 실패율이 {{ $value | printf \"%.1f\" }}%입니다."
+          success_rate: "{{ printf \"%.1f\" (100 - $value) }}"
+
+  # ==================== Member 도메인 알림 ====================
+  - name: member_alerts
+    interval: 30s
+    rules:
+      # ⚠️ WARNING: 회원 탈퇴 급증
+      - alert: HighWithdrawRate
+        expr: |
+          sum(increase(member_withdraw_total[1h])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          domain: member
+        annotations:
+          summary: "회원 탈퇴 급증"
+          description: "1시간 동안 {{ $value }}명이 탈퇴했습니다. 서비스 이슈 확인 필요."
+          current_value: "{{ $value }} withdrawals"
+          threshold: "10 withdrawals/hour"
+
+  # ==================== 보안 위협 알림 ====================
+  - name: security_alerts
+    interval: 15s
+    rules:
+      # 🚨 CRITICAL: 보안 위협 탐지
+      - alert: SecurityThreatDetected
+        expr: |
+          sum(increase(security_threat_detected_total{severity="HIGH"}[5m])) > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: security
+        annotations:
+          summary: "고위험 보안 위협 탐지"
+          description: "심각도 HIGH의 보안 위협이 탐지되었습니다. 즉시 확인 필요."
+
+  # ==================== 서비스 헬스체크 ====================
+  - name: service_health
+    interval: 30s
+    rules:
+      # 🚨 CRITICAL: 서비스 다운
+      - alert: ServiceDown
+        expr: up{job="tt-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          domain: infra
+        annotations:
+          summary: "TT 백엔드 서비스 다운"
+          description: "Spring Boot 애플리케이션이 응답하지 않습니다."
+
+      # ⚠️ WARNING: API 응답 지연
+      - alert: HighApiLatency
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_server_requests_seconds_bucket{uri=~"/api/auth.*"}[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          domain: auth
+        annotations:
+          summary: "Auth API 응답 지연"
+          description: "Auth API의 P95 응답시간이 {{ $value | printf \"%.2f\" }}초로 2초를 초과합니다."

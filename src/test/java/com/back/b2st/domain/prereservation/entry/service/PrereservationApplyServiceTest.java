@@ -271,7 +271,13 @@ class PrereservationApplyServiceTest {
 
 		// then
 		then(prereservationRepository).should().save(any(Prereservation.class));
-		then(emailSender).should().sendNotificationEmail(eq(email), eq("[TT] 신청 예매 사전 신청 완료"), anyString());
+		then(emailSender).should().sendNotificationEmail(
+			eq(email),
+			eq("[TT] 신청 예매 사전 신청 완료"),
+			anyString(),
+			eq("예매 바로가기"),
+			eq("https://doncrytt.vercel.app/my-page")
+		);
 	}
 
 	@Test

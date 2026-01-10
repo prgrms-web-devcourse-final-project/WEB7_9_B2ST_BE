@@ -1,24 +1,44 @@
 # 1단계: Gradle로 Spring Boot JAR 빌드
-FROM gradle:8.10.0-jdk21 AS builder
+FROM gradle:8.10.0-jdk21-alpine AS builder
 
 WORKDIR /app
 
+# 의존성 캐싱 레이어
 COPY build.gradle settings.gradle ./
 COPY gradle gradle
 COPY gradlew .
-RUN chmod +x gradlew
+RUN chmod +x gradlew && \
+    ./gradlew dependencies --no-daemon
 
-RUN ./gradlew dependencies --no-daemon
-
+# 애플리케이션 빌드
 COPY src src
 RUN ./gradlew bootJar --no-daemon -x test
 
-# 2단계: 실행용 이미지
-FROM eclipse-temurin:21-jre
+# 2단계: 실행용 이미지 (최소화)
+FROM eclipse-temurin:21-jre-alpine
+
+# 보안: 비-root 유저 생성
+RUN addgroup -S spring && adduser -S spring -G spring
+
 WORKDIR /app
 
+# JAR 파일만 복사
 COPY --from=builder /app/build/libs/*.jar app.jar
+
+# 소유권 변경
+RUN chown spring:spring app.jar
+
+# 비-root 유저로 전환
+USER spring
 
 EXPOSE 8080
 
-CMD ["java", "-jar", "app.jar"]
+# 성능 최적화된 JVM 옵션
+ENTRYPOINT ["java", \
+    "-XX:+UseContainerSupport", \
+    "-XX:MaxRAMPercentage=75.0", \
+    "-XX:InitialRAMPercentage=50.0", \
+    "-XX:+UseG1GC", \
+    "-XX:+DisableExplicitGC", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-jar", "app.jar"]

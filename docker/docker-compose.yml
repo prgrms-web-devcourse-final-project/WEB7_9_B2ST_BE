@@ -318,15 +318,18 @@ services:
     networks:
       - common
 
-    # (A) Doppler env를 컨테이너에 "통째로" 주입
+    # Doppler에서 다운로드한 env 파일 주입
     env_file:
       - ./doppler.env
 
-    # (B) Doppler에 안 넣었거나, compose에서 강제하고 싶은 값만 여기서 오버라이드
+    # Docker Compose 레벨에서 설정이 필요한 값만 오버라이드
+    # (나머지는 모두 Doppler의 doppler.env에서 주입됨)
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
+      # Database 호스트 (Docker 네트워크 내부)
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+
+      # Redis 클러스터 설정
       - REDIS_MODE=cluster
       - REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
 

@@ -4,9 +4,9 @@ services:
     image: postgres:16-alpine
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-myuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+      POSTGRES_DB: ${POSTGRES_DB:-tt_db}
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -15,7 +15,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myuser}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,9 +48,9 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7000:7000"
       - "17000:17000"
@@ -59,7 +59,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: [ "CMD", "redis-cli", "-p", "7000", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
+      test: [ "CMD", "redis-cli", "-p", "7000", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -91,9 +91,9 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7001:7001"
       - "17001:17001"
@@ -102,7 +102,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: [ "CMD", "redis-cli", "-p", "7001", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
+      test: [ "CMD", "redis-cli", "-p", "7001", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -134,9 +134,9 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7002:7002"
       - "17002:17002"
@@ -145,7 +145,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: [ "CMD", "redis-cli", "-p", "7002", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
+      test: [ "CMD", "redis-cli", "-p", "7002", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -177,9 +177,9 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7003:7003"
       - "17003:17003"
@@ -188,7 +188,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: [ "CMD", "redis-cli", "-p", "7003", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
+      test: [ "CMD", "redis-cli", "-p", "7003", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -220,9 +220,9 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7004:7004"
       - "17004:17004"
@@ -231,7 +231,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: [ "CMD", "redis-cli", "-p", "7004", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
+      test: [ "CMD", "redis-cli", "-p", "7004", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -263,9 +263,9 @@ services:
       - --save
       - "60 10000"
       - --requirepass
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
       - --masterauth
-      - ${REDIS_PASSWORD:-your-password}
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
       - "7005:7005"
       - "17005:17005"
@@ -274,7 +274,7 @@ services:
     networks:
       - common
     healthcheck:
-      test: [ "CMD", "redis-cli", "-p", "7005", "-a", "${REDIS_PASSWORD:-your-password}", "ping" ]
+      test: [ "CMD", "redis-cli", "-p", "7005", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -318,16 +318,22 @@ services:
     networks:
       - common
 
-    # 환경변수 주입 방식:
-    #   - Doppler 환경변수: doppler run 명령어로 메모리에서 직접 주입
-    #   - Docker Compose 환경변수: 아래 environment에 명시
-
     environment:
-      # Database 호스트 (Docker 네트워크 내부)
+      # ✅ (핵심) prod 강제
+      - SPRING_PROFILES_ACTIVE=prod
+
+      # ✅ (핵심) DB 접속을 localhost가 아니라 postgres 서비스로 강제
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-tt_db}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-myuser}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-mypassword}
+
+      # ✅ Redis 클러스터를 Spring이 확실히 인식하도록 표준 키로 주입
+      - SPRING_DATA_REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-tt_redis_pass}
+
+      # (유지) 기존 커스텀 키가 앱에서 사용된다면 같이 둬도 됨
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-
-      # Redis 클러스터 설정
       - REDIS_MODE=cluster
       - REDIS_CLUSTER_NODES=redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
 
@@ -395,8 +401,6 @@ services:
       - prometheus
     ports:
       - "9093:9093"
-    environment:
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
@@ -411,6 +415,8 @@ services:
       timeout: 10s
       retries: 3
 
+  # NOTE: redis_exporter는 멀티 주소/클러스터를 완전 지원하지 않는 경우가 많아서
+  # 일단 한 노드만 붙도록(health 통과) 설정을 보수적으로 바꿈
   redis-exporter:
     image: oliver006/redis_exporter:v1.80.1
     restart: unless-stopped
@@ -420,8 +426,8 @@ services:
     ports:
       - "9121:9121"
     environment:
-      - REDIS_ADDR=redis://redis-node-1:7000,redis://redis-node-2:7001,redis://redis-node-3:7002
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_ADDR=redis://redis-node-1:7000
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-tt_redis_pass}
     networks:
       - common
     healthcheck:
@@ -439,7 +445,7 @@ services:
     ports:
       - "9187:9187"
     environment:
-      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-tt_db}?sslmode=disable
     networks:
       - common
     healthcheck:

@@ -57,6 +57,9 @@ src/main/generated/
 !src/main/resources/application-test.yml
 !docker/init-redis-cluster.sh
 !docker/docker-compose.redis-cluster.yml
+!docker/monitoring/prometheus/prometheus.yml
+!docker/monitoring/prometheus/rules/*.yml
+!docker/monitoring/grafana/provisioning/**/*.yml
 
 ### custom ###
 src/main/resources/application-secret.yml

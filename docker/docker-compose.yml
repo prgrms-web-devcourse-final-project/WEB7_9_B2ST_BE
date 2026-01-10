@@ -1,25 +1,3 @@
-# 통합 Docker Compose 파일
-# PostgreSQL + Redis Cluster + Spring Boot App + Monitoring Stack
-#
-# 사용 방법:
-#   docker-compose up -d
-#   docker-compose logs -f app
-#
-# 모니터링 접근:
-#   - Prometheus: http://localhost:9090
-#   - Grafana: http://localhost:3001 (admin / admin123!)
-#   - Alertmanager: http://localhost:9093
-#
-# Redis Cluster 초기화:
-#   - redis-cluster-init 서비스가 자동으로 초기화합니다
-#   - 이미 초기화되어 있으면 자동으로 스킵됩니다 (cluster_state:ok 체크)
-#   - app 서비스는 redis-cluster-init 완료 후 자동 시작됩니다
-#
-#    운영 가이드:
-#   - 배포 시: docker compose up -d 만 사용 (자동 초기화)
-#   - 장애/복구 시: bash docker/init-redis-cluster.sh 사용
-#   - 상세: OPERATIONS_RUNBOOK.md 참고
-
 services:
   # ==================== PostgreSQL ====================
   postgres:

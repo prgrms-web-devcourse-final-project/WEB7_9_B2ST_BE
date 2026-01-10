@@ -104,12 +104,12 @@ jobs:
           INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TT-ec2-1" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
           echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
 
-      - name: AWS SSM Send-Command (doppler run 방식)
+      - name: AWS SSM Send-Command (보안 강화 - Parameter Store 사용)
         run: |
           aws ssm send-command \
           --instance-ids "${{ env.INSTANCE_ID }}" \
           --document-name "AWS-RunShellScript" \
-          --comment "Deploy Spring Boot with doppler run" \
+          --comment "Deploy Spring Boot with doppler run (secure)" \
           --parameters '{
             "commands": [
               "#!/bin/bash",
@@ -126,11 +126,14 @@ jobs:
 
               "cd docker/",
 
-              "export DOPPLER_TOKEN=\"${{ secrets.DOPPLER_TOKEN }}\"",
+              "# AWS Parameter Store에서 안전하게 토큰 가져오기",
+              "export DOPPLER_TOKEN=$(aws ssm get-parameter --name /tt/doppler-token --with-decryption --query Parameter.Value --output text --region ap-northeast-2)",
               "export DOPPLER_PROJECT=tt",
               "export DOPPLER_CONFIG=prd",
 
-              "echo \"${{ secrets.PERSONAL_ACCESS_TOKEN }}\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
+              "# GitHub 토큰도 Parameter Store에서 가져오기",
+              "GITHUB_TOKEN=$(aws ssm get-parameter --name /tt/github-token --with-decryption --query Parameter.Value --output text --region ap-northeast-2)",
+              "echo \"$GITHUB_TOKEN\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
 
               "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose pull",
               "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose up -d --force-recreate",

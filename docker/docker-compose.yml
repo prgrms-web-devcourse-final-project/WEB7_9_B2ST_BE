@@ -522,4 +522,3 @@ volumes:
   prometheus_data:
   grafana_data:
   alertmanager_data:
-# trigger deploy

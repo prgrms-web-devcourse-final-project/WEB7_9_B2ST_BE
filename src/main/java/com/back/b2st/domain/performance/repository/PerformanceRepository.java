@@ -1,5 +1,6 @@
 package com.back.b2st.domain.performance.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,14 +28,14 @@ public interface PerformanceRepository extends JpaRepository<Performance, Long> 
 
 	@EntityGraph(attributePaths = "venue")
 	@Query("""
-        select p
-        from Performance p
-        where p.status = :status
-          and (
-               lower(p.title) like lower(concat('%', :keyword, '%'))
-            or lower(p.category) like lower(concat('%', :keyword, '%'))
-          )
-    """)
+		    select p
+		    from Performance p
+		    where p.status = :status
+		      and (
+		           lower(p.title) like lower(concat('%', :keyword, '%'))
+		        or lower(p.category) like lower(concat('%', :keyword, '%'))
+		      )
+		""")
 	Page<Performance> searchActive(
 		@Param("status") PerformanceStatus status,
 		@Param("keyword") String keyword,
@@ -54,11 +55,11 @@ public interface PerformanceRepository extends JpaRepository<Performance, Long> 
 
 	@EntityGraph(attributePaths = "venue")
 	@Query("""
-        select p
-        from Performance p
-        where lower(p.title) like lower(concat('%', :keyword, '%'))
-           or lower(p.category) like lower(concat('%', :keyword, '%'))
-    """)
+		    select p
+		    from Performance p
+		    where lower(p.title) like lower(concat('%', :keyword, '%'))
+		       or lower(p.category) like lower(concat('%', :keyword, '%'))
+		""")
 	Page<Performance> searchAll(@Param("keyword") String keyword, Pageable pageable);
 
 	/* =========================
@@ -71,32 +72,36 @@ public interface PerformanceRepository extends JpaRepository<Performance, Long> 
 	/* 사용자용 (ACTIVE만) - Cursor */
 	@EntityGraph(attributePaths = "venue")
 	@Query("""
-        select p
-        from Performance p
-        where p.status = :status
-          and (:cursor is null or p.performanceId < :cursor)
-        order by p.performanceId desc
-    """)
+		    select p
+		    from Performance p
+		    where p.status = :status
+		      and p.endDate >= :todayStart
+		      and (:cursor is null or p.performanceId < :cursor)
+		    order by p.performanceId desc
+		""")
 	List<Performance> findByStatusWithCursor(
 		@Param("status") PerformanceStatus status,
+		@Param("todayStart") LocalDateTime todayStart,
 		@Param("cursor") Long cursor,
 		Pageable pageable
 	);
 
 	@EntityGraph(attributePaths = "venue")
 	@Query("""
-        select p
-        from Performance p
-        where p.status = :status
-          and (:cursor is null or p.performanceId < :cursor)
-          and (
-               lower(p.title) like lower(concat('%', :keyword, '%'))
-            or lower(p.category) like lower(concat('%', :keyword, '%'))
-          )
-        order by p.performanceId desc
-    """)
+		    select p
+		    from Performance p
+		    where p.status = :status
+		      and p.endDate >= :todayStart
+		      and (:cursor is null or p.performanceId < :cursor)
+		      and (
+		           lower(p.title) like lower(concat('%', :keyword, '%'))
+		        or lower(p.category) like lower(concat('%', :keyword, '%'))
+		      )
+		    order by p.performanceId desc
+		""")
 	List<Performance> searchActiveWithCursor(
 		@Param("status") PerformanceStatus status,
+		@Param("todayStart") LocalDateTime todayStart,
 		@Param("keyword") String keyword,
 		@Param("cursor") Long cursor,
 		Pageable pageable
@@ -105,11 +110,11 @@ public interface PerformanceRepository extends JpaRepository<Performance, Long> 
 	/* 관리자용 (상태 무관) - Cursor */
 	@EntityGraph(attributePaths = "venue")
 	@Query("""
-        select p
-        from Performance p
-        where (:cursor is null or p.performanceId < :cursor)
-        order by p.performanceId desc
-    """)
+		    select p
+		    from Performance p
+		    where (:cursor is null or p.performanceId < :cursor)
+		    order by p.performanceId desc
+		""")
 	List<Performance> findAllWithCursor(
 		@Param("cursor") Long cursor,
 		Pageable pageable
@@ -117,15 +122,15 @@ public interface PerformanceRepository extends JpaRepository<Performance, Long> 
 
 	@EntityGraph(attributePaths = "venue")
 	@Query("""
-        select p
-        from Performance p
-        where (:cursor is null or p.performanceId < :cursor)
-          and (
-               lower(p.title) like lower(concat('%', :keyword, '%'))
-            or lower(p.category) like lower(concat('%', :keyword, '%'))
-          )
-        order by p.performanceId desc
-    """)
+		    select p
+		    from Performance p
+		    where (:cursor is null or p.performanceId < :cursor)
+		      and (
+		           lower(p.title) like lower(concat('%', :keyword, '%'))
+		        or lower(p.category) like lower(concat('%', :keyword, '%'))
+		      )
+		    order by p.performanceId desc
+		""")
 	List<Performance> searchAllWithCursor(
 		@Param("keyword") String keyword,
 		@Param("cursor") Long cursor,

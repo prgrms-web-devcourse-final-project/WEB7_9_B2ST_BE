@@ -168,7 +168,7 @@ class PrereservationTimeTableServiceTest {
 		Venue venue = mock(Venue.class);
 
 		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusDays(1));
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusHours(1));
 		given(schedule.getPerformance()).willReturn(performance);
 		given(performance.getVenue()).willReturn(venue);
 		given(venue.getVenueId()).willReturn(VENUE_ID);
@@ -176,4 +176,3 @@ class PrereservationTimeTableServiceTest {
 		return schedule;
 	}
 }
-

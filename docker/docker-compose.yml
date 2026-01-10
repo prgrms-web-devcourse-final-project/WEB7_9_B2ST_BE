@@ -322,8 +322,7 @@ services:
     env_file:
       - ./doppler.env
 
-    # (B) Doppler에 안 넣었거나, compose에서 강제하고 싶은 값만 여기서 오버라이드 가능
-    #     (가능하면 이것도 Doppler로 옮겨서 일원화하는 걸 권장)
+    # (B) Doppler에 안 넣었거나, compose에서 강제하고 싶은 값만 여기서 오버라이드
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - POSTGRES_HOST=postgres

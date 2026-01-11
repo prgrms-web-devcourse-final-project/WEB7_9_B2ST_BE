@@ -60,7 +60,12 @@ public interface PrereservationBookingRepository extends JpaRepository<Prereserv
 		@Param("now") LocalDateTime now
 	);
 
-	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
+	@Query("""
+		select b.id
+		  from PrereservationBooking b
+		 where b.scheduleId in :scheduleIds
+		""")
+	List<Long> findIdsByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
 
-	boolean existsByScheduleIdIn(List<Long> scheduleIds);
+	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
 }

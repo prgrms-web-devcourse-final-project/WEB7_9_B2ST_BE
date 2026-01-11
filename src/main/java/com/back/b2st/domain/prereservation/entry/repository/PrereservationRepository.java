@@ -19,6 +19,4 @@ public interface PrereservationRepository extends JpaRepository<Prereservation, 
 	);
 
 	void deleteAllByPerformanceScheduleIdIn(List<Long> performanceScheduleIds);
-
-	boolean existsByPerformanceScheduleIdIn(List<Long> performanceScheduleIds);
 }

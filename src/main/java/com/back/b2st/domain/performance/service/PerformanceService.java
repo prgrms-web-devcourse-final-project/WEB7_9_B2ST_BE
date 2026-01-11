@@ -21,6 +21,8 @@ import com.back.b2st.domain.performance.mapper.PerformanceMapper;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
 import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
+import com.back.b2st.domain.payment.entity.DomainType;
+import com.back.b2st.domain.payment.repository.PaymentRepository;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
 import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
@@ -43,6 +45,9 @@ import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.s3.dto.response.PresignedUrlRes;
 import com.back.b2st.global.s3.service.S3Service;
+
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 
 import lombok.RequiredArgsConstructor;
 
@@ -68,6 +73,8 @@ public class PerformanceService {
 	private final TradeRepository tradeRepository;
 	private final TradeRequestRepository tradeRequestRepository;
 	private final QueueRepository queueRepository;
+	private final PaymentRepository paymentRepository;
+	private final Environment environment;
 
 	private final PerformanceMapper performanceMapper;
 	private final S3Service s3Service;
@@ -223,25 +230,44 @@ public class PerformanceService {
 	// 관리자: 삭제
 	@Transactional
 	public void deletePerformance(Long performanceId) {
+		if (environment.acceptsProfiles(Profiles.of("prod"))) {
+			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_DELETE_NOT_ALLOWED);
+		}
+
 		if (!performanceRepository.existsById(performanceId)) {
 			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND);
 		}
 
 		List<Long> scheduleIds = performanceScheduleRepository.findIdsByPerformanceId(performanceId);
-		if (!scheduleIds.isEmpty()) {
-			if (reservationRepository.existsByScheduleIdIn(scheduleIds)
-				|| lotteryEntryRepository.existsByScheduleIdIn(scheduleIds)
-				|| prereservationRepository.existsByPerformanceScheduleIdIn(scheduleIds)
-				|| prereservationBookingRepository.existsByScheduleIdIn(scheduleIds)) {
-				throw new BusinessException(PerformanceErrorCode.PERFORMANCE_DELETE_NOT_ALLOWED);
-			}
-		}
 
-		if (tradeRepository.existsByPerformanceId(performanceId)) {
-			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_DELETE_NOT_ALLOWED);
-		}
+		List<Long> reservationIds = scheduleIds.isEmpty()
+			? List.of()
+			: reservationRepository.findIdsByScheduleIdIn(scheduleIds);
+		List<Long> prereservationBookingIds = scheduleIds.isEmpty()
+			? List.of()
+			: prereservationBookingRepository.findIdsByScheduleIdIn(scheduleIds);
+		List<Long> lotteryEntryIds = scheduleIds.isEmpty()
+			? List.of()
+			: lotteryEntryRepository.findIdsByScheduleIdIn(scheduleIds);
+		List<Long> lotteryResultIds = lotteryEntryIds.isEmpty()
+			? List.of()
+			: lotteryResultRepository.findIdsByLotteryEntryIdIn(lotteryEntryIds);
 
 		List<Long> tradeIds = tradeRepository.findIdsByPerformanceId(performanceId);
+
+		if (!reservationIds.isEmpty()) {
+			paymentRepository.deleteAllByDomainTypeAndDomainIdIn(DomainType.RESERVATION, reservationIds);
+		}
+		if (!prereservationBookingIds.isEmpty()) {
+			paymentRepository.deleteAllByDomainTypeAndDomainIdIn(DomainType.PRERESERVATION, prereservationBookingIds);
+		}
+		if (!lotteryResultIds.isEmpty()) {
+			paymentRepository.deleteAllByDomainTypeAndDomainIdIn(DomainType.LOTTERY, lotteryResultIds);
+		}
+		if (!tradeIds.isEmpty()) {
+			paymentRepository.deleteAllByDomainTypeAndDomainIdIn(DomainType.TRADE, tradeIds);
+		}
+
 		if (!tradeIds.isEmpty()) {
 			tradeRequestRepository.deleteAllByTrade_IdIn(tradeIds);
 			tradeRepository.deleteAllByPerformanceId(performanceId);
@@ -250,7 +276,6 @@ public class PerformanceService {
 		queueRepository.deleteByPerformanceId(performanceId);
 
 		if (!scheduleIds.isEmpty()) {
-			List<Long> lotteryEntryIds = lotteryEntryRepository.findIdsByScheduleIdIn(scheduleIds);
 			if (!lotteryEntryIds.isEmpty()) {
 				lotteryResultRepository.deleteAllByLotteryEntryIdIn(lotteryEntryIds);
 			}
@@ -260,7 +285,6 @@ public class PerformanceService {
 			prereservationTimeTableRepository.deleteAllByPerformanceScheduleIdIn(scheduleIds);
 			prereservationBookingRepository.deleteAllByScheduleIdIn(scheduleIds);
 
-			List<Long> reservationIds = reservationRepository.findIdsByScheduleIdIn(scheduleIds);
 			if (!reservationIds.isEmpty()) {
 				reservationSeatRepository.deleteAllByReservationIdIn(reservationIds);
 				ticketRepository.deleteAllByReservationIdIn(reservationIds);
@@ -268,7 +292,6 @@ public class PerformanceService {
 			reservationRepository.deleteAllByScheduleIdIn(scheduleIds);
 
 			scheduleSeatRepository.deleteAllByScheduleIdIn(scheduleIds);
-
 			performanceScheduleRepository.deleteAllByPerformanceId(performanceId);
 		}
 

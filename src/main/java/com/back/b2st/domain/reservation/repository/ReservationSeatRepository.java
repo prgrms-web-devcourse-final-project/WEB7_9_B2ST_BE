@@ -16,4 +16,6 @@ public interface ReservationSeatRepository
 	boolean existsByReservationId(Long reservationId);
 
 	int countByReservationId(Long reservationId);
+
+	void deleteAllByReservationIdIn(List<Long> reservationIds);
 }

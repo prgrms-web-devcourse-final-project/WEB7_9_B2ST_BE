@@ -27,6 +27,7 @@ import com.back.b2st.domain.prereservation.entry.repository.PrereservationReposi
 import com.back.b2st.domain.prereservation.policy.repository.PrereservationTimeTableRepository;
 import com.back.b2st.domain.queue.repository.QueueRepository;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
@@ -60,6 +61,7 @@ public class PerformanceService {
 	private final PrereservationRepository prereservationRepository;
 	private final PrereservationTimeTableRepository prereservationTimeTableRepository;
 	private final ReservationRepository reservationRepository;
+	private final ReservationSeatRepository reservationSeatRepository;
 	private final TicketRepository ticketRepository;
 	private final LotteryEntryRepository lotteryEntryRepository;
 	private final LotteryResultRepository lotteryResultRepository;
@@ -245,19 +247,19 @@ public class PerformanceService {
 			prereservationTimeTableRepository.deleteAllByPerformanceScheduleIdIn(scheduleIds);
 			prereservationBookingRepository.deleteAllByScheduleIdIn(scheduleIds);
 
-			scheduleSeatRepository.deleteAllByScheduleIdIn(scheduleIds);
-
 			List<Long> reservationIds = reservationRepository.findIdsByScheduleIdIn(scheduleIds);
 			if (!reservationIds.isEmpty()) {
+				reservationSeatRepository.deleteAllByReservationIdIn(reservationIds);
 				ticketRepository.deleteAllByReservationIdIn(reservationIds);
 			}
 			reservationRepository.deleteAllByScheduleIdIn(scheduleIds);
+
+			scheduleSeatRepository.deleteAllByScheduleIdIn(scheduleIds);
 
 			performanceScheduleRepository.deleteAllByPerformanceId(performanceId);
 		}
 
 		seatGradeRepository.deleteAllByPerformanceId(performanceId);
-
 		performanceRepository.deleteById(performanceId);
 	}
 

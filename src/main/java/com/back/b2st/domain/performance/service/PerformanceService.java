@@ -2,7 +2,6 @@ package com.back.b2st.domain.performance.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -47,9 +46,6 @@ import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.s3.dto.response.PresignedUrlRes;
 import com.back.b2st.global.s3.service.S3Service;
 
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
-
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -75,16 +71,11 @@ public class PerformanceService {
 	private final TradeRequestRepository tradeRequestRepository;
 	private final QueueRepository queueRepository;
 	private final PaymentRepository paymentRepository;
-	private final Environment environment;
 
 	private final PerformanceMapper performanceMapper;
 	private final S3Service s3Service;
 
 	private static final String POSTER_PREFIX = "performances/posters";
-	private static final Set<String> PROD_DELETABLE_TEST_TITLES = Set.of(
-		"2024 아이유 콘서트 - HEREH WORLD TOUR",
-		"연극 - B2ST 신청예매 테스트"
-	);
 
 	/*
 	 * =========================
@@ -235,11 +226,8 @@ public class PerformanceService {
 	// 관리자: 삭제
 	@Transactional
 	public void deletePerformance(Long performanceId) {
-		Performance performance = performanceRepository.findById(performanceId)
-			.orElseThrow(() -> new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND));
-
-		if (environment.acceptsProfiles(Profiles.of("prod")) && !isDeletableTestPerformanceInProd(performance)) {
-			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_DELETE_NOT_ALLOWED);
+		if (!performanceRepository.existsById(performanceId)) {
+			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND);
 		}
 
 		List<Long> scheduleIds = performanceScheduleRepository.findIdsByPerformanceId(performanceId);
@@ -301,24 +289,6 @@ public class PerformanceService {
 
 		seatGradeRepository.deleteAllByPerformanceId(performanceId);
 		performanceRepository.deleteById(performanceId);
-	}
-
-	private boolean isDeletableTestPerformanceInProd(Performance performance) {
-		String title = performance.getTitle();
-		if (title == null) {
-			return false;
-		}
-
-		String trimmed = title.trim();
-		if (trimmed.isEmpty()) {
-			return false;
-		}
-
-		if (trimmed.startsWith("[TEST]") || trimmed.contains("테스트")) {
-			return true;
-		}
-
-		return PROD_DELETABLE_TEST_TITLES.contains(trimmed);
 	}
 
 	/*

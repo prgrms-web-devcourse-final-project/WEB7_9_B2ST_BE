@@ -40,6 +40,15 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 
 	List<Long> findByScheduleId(Long scheduleId);
 
+	@Query("""
+		select le.id
+		  from LotteryEntry le
+		 where le.scheduleId in :scheduleIds
+		""")
+	List<Long> findIdsByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
+
+	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
+
 	/**
 	 * 신청 정보 확인
 	 * @param performanceScheduleId

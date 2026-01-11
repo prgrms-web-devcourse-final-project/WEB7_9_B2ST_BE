@@ -102,4 +102,11 @@ public interface LotteryResultRepository extends JpaRepository<LotteryResult, Lo
 		  AND lr.paid = false
 		""")
 	long countUnpaidAll(@Param("now") LocalDateTime now);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+		delete from LotteryResult lr
+		where lr.lotteryEntryId in :lotteryEntryIds
+		""")
+	int deleteAllByLotteryEntryIdIn(@Param("lotteryEntryIds") List<Long> lotteryEntryIds);
 }

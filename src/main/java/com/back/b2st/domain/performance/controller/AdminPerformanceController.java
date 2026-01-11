@@ -100,7 +100,7 @@ public class AdminPerformanceController {
 	 * 공연 삭제 (관리자)
 	 * DELETE /api/admin/performances/{performanceId}
 	 */
-	@Operation(summary = "공연 삭제", description = "개발 환경의 테스트 데이터 정리용 삭제 API입니다. 운영(prod) 환경에서는 409를 반환합니다.")
+	@Operation(summary = "공연 삭제", description = "테스트 데이터 정리용 삭제 API입니다. 운영(prod) 환경에서는 테스트 공연만 삭제할 수 있습니다.")
 	@DeleteMapping("/{performanceId}")
 	public BaseResponse<Void> deletePerformance(
 		@Parameter(description = "공연 ID", example = "1") @PathVariable Long performanceId) {

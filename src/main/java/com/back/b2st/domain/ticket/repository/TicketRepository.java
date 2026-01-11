@@ -17,4 +17,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 	List<Ticket> findByMemberId(Long memberId);
 
 	List<Ticket> findByReservationId(Long reservationId);
+
+	void deleteAllByReservationIdIn(List<Long> reservationIds);
 }

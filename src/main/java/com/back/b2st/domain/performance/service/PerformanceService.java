@@ -19,18 +19,35 @@ import com.back.b2st.domain.performance.entity.PerformanceStatus;
 import com.back.b2st.domain.performance.error.PerformanceErrorCode;
 import com.back.b2st.domain.performance.mapper.PerformanceMapper;
 import com.back.b2st.domain.performance.repository.PerformanceRepository;
+import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
+import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
+import com.back.b2st.domain.payment.entity.DomainType;
+import com.back.b2st.domain.payment.repository.PaymentRepository;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
+import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
+import com.back.b2st.domain.prereservation.policy.repository.PrereservationTimeTableRepository;
+import com.back.b2st.domain.queue.repository.QueueRepository;
+import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
+import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.grade.entity.SeatGrade;
 import com.back.b2st.domain.seat.grade.entity.SeatGradeType;
 import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.error.SeatErrorCode;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
+import com.back.b2st.domain.ticket.repository.TicketRepository;
+import com.back.b2st.domain.trade.repository.TradeRepository;
+import com.back.b2st.domain.trade.repository.TradeRequestRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
 import com.back.b2st.domain.venue.venue.repository.VenueRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.s3.dto.response.PresignedUrlRes;
 import com.back.b2st.global.s3.service.S3Service;
+
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 
 import lombok.RequiredArgsConstructor;
 
@@ -44,6 +61,20 @@ public class PerformanceService {
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final SeatRepository seatRepository;
 	private final SeatGradeRepository seatGradeRepository;
+	private final ScheduleSeatRepository scheduleSeatRepository;
+	private final PrereservationBookingRepository prereservationBookingRepository;
+	private final PrereservationRepository prereservationRepository;
+	private final PrereservationTimeTableRepository prereservationTimeTableRepository;
+	private final ReservationRepository reservationRepository;
+	private final ReservationSeatRepository reservationSeatRepository;
+	private final TicketRepository ticketRepository;
+	private final LotteryEntryRepository lotteryEntryRepository;
+	private final LotteryResultRepository lotteryResultRepository;
+	private final TradeRepository tradeRepository;
+	private final TradeRequestRepository tradeRequestRepository;
+	private final QueueRepository queueRepository;
+	private final PaymentRepository paymentRepository;
+	private final Environment environment;
 
 	private final PerformanceMapper performanceMapper;
 	private final S3Service s3Service;
@@ -199,9 +230,72 @@ public class PerformanceService {
 	// 관리자: 삭제
 	@Transactional
 	public void deletePerformance(Long performanceId) {
+		if (environment.acceptsProfiles(Profiles.of("prod"))) {
+			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_DELETE_NOT_ALLOWED);
+		}
+
 		if (!performanceRepository.existsById(performanceId)) {
 			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND);
 		}
+
+		List<Long> scheduleIds = performanceScheduleRepository.findIdsByPerformanceId(performanceId);
+
+		List<Long> reservationIds = scheduleIds.isEmpty()
+			? List.of()
+			: reservationRepository.findIdsByScheduleIdIn(scheduleIds);
+		List<Long> prereservationBookingIds = scheduleIds.isEmpty()
+			? List.of()
+			: prereservationBookingRepository.findIdsByScheduleIdIn(scheduleIds);
+		List<Long> lotteryEntryIds = scheduleIds.isEmpty()
+			? List.of()
+			: lotteryEntryRepository.findIdsByScheduleIdIn(scheduleIds);
+		List<Long> lotteryResultIds = lotteryEntryIds.isEmpty()
+			? List.of()
+			: lotteryResultRepository.findIdsByLotteryEntryIdIn(lotteryEntryIds);
+
+		List<Long> tradeIds = tradeRepository.findIdsByPerformanceId(performanceId);
+
+		if (!reservationIds.isEmpty()) {
+			paymentRepository.deleteAllByDomainTypeAndDomainIdIn(DomainType.RESERVATION, reservationIds);
+		}
+		if (!prereservationBookingIds.isEmpty()) {
+			paymentRepository.deleteAllByDomainTypeAndDomainIdIn(DomainType.PRERESERVATION, prereservationBookingIds);
+		}
+		if (!lotteryResultIds.isEmpty()) {
+			paymentRepository.deleteAllByDomainTypeAndDomainIdIn(DomainType.LOTTERY, lotteryResultIds);
+		}
+		if (!tradeIds.isEmpty()) {
+			paymentRepository.deleteAllByDomainTypeAndDomainIdIn(DomainType.TRADE, tradeIds);
+		}
+
+		if (!tradeIds.isEmpty()) {
+			tradeRequestRepository.deleteAllByTrade_IdIn(tradeIds);
+			tradeRepository.deleteAllByPerformanceId(performanceId);
+		}
+
+		queueRepository.deleteByPerformanceId(performanceId);
+
+		if (!scheduleIds.isEmpty()) {
+			if (!lotteryEntryIds.isEmpty()) {
+				lotteryResultRepository.deleteAllByLotteryEntryIdIn(lotteryEntryIds);
+			}
+			lotteryEntryRepository.deleteAllByScheduleIdIn(scheduleIds);
+
+			prereservationRepository.deleteAllByPerformanceScheduleIdIn(scheduleIds);
+			prereservationTimeTableRepository.deleteAllByPerformanceScheduleIdIn(scheduleIds);
+			prereservationBookingRepository.deleteAllByScheduleIdIn(scheduleIds);
+
+			if (!reservationIds.isEmpty()) {
+				reservationSeatRepository.deleteAllByReservationIdIn(reservationIds);
+				ticketRepository.deleteAllByReservationIdIn(reservationIds);
+			}
+			reservationRepository.deleteAllByScheduleIdIn(scheduleIds);
+
+			scheduleSeatRepository.deleteAllByScheduleIdIn(scheduleIds);
+			performanceScheduleRepository.deleteAllByPerformanceId(performanceId);
+		}
+
+		seatGradeRepository.deleteAllByPerformanceId(performanceId);
 		performanceRepository.deleteById(performanceId);
 	}
 

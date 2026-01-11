@@ -36,6 +36,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 		""")
 	List<Long> findExpiredPendingIds(@Param("pending") ReservationStatus pending, @Param("now") LocalDateTime now);
 
+	@Query("""
+		select r.id
+		  from Reservation r
+		 where r.scheduleId in :scheduleIds
+		""")
+	List<Long> findIdsByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
+
+	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
+
 	/** PENDING -> EXPIRED 일괄 처리 */
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("""

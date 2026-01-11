@@ -33,6 +33,9 @@ public enum PerformanceErrorCode implements ErrorCode {
 	BOOKING_CLOSED(HttpStatus.BAD_REQUEST, "P304", "예매가 마감되었습니다."),
 	BOOKING_POLICY_NOT_SET(HttpStatus.BAD_REQUEST, "P305", "예매 정책이 설정되지 않았습니다."),
 
+	// 삭제 관련
+	PERFORMANCE_DELETE_NOT_ALLOWED(HttpStatus.CONFLICT, "P401", "운영 환경에서는 공연을 삭제할 수 없습니다."),
+
 	// 내부 오류
 	PERFORMANCE_INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "P999", "공연 시스템 내부 오류가 발생했습니다.");
 
@@ -40,4 +43,3 @@ public enum PerformanceErrorCode implements ErrorCode {
 	private final String code;
 	private final String message;
 }
-

@@ -19,6 +19,8 @@ public interface QueueRepository extends JpaRepository<Queue, Long> {
 	 */
 	Optional<Queue> findByPerformanceId(Long performanceId);
 
+	void deleteByPerformanceId(Long performanceId);
+
 	/**
 	 * 대기열 존재 여부 확인 (공연 기준)
 	 */
@@ -40,4 +42,3 @@ public interface QueueRepository extends JpaRepository<Queue, Long> {
 	@Query("SELECT q FROM Queue q WHERE q.maxActiveUsers >= :minActiveUsers")
 	List<Queue> findLargeCapacityQueues(@Param("minActiveUsers") Integer minActiveUsers);
 }
-

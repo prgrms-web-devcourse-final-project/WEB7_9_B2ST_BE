@@ -46,9 +46,6 @@ import com.back.b2st.global.error.exception.BusinessException;
 import com.back.b2st.global.s3.dto.response.PresignedUrlRes;
 import com.back.b2st.global.s3.service.S3Service;
 
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
-
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -74,7 +71,6 @@ public class PerformanceService {
 	private final TradeRequestRepository tradeRequestRepository;
 	private final QueueRepository queueRepository;
 	private final PaymentRepository paymentRepository;
-	private final Environment environment;
 
 	private final PerformanceMapper performanceMapper;
 	private final S3Service s3Service;
@@ -230,10 +226,6 @@ public class PerformanceService {
 	// 관리자: 삭제
 	@Transactional
 	public void deletePerformance(Long performanceId) {
-		if (environment.acceptsProfiles(Profiles.of("prod"))) {
-			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_DELETE_NOT_ALLOWED);
-		}
-
 		if (!performanceRepository.existsById(performanceId)) {
 			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND);
 		}

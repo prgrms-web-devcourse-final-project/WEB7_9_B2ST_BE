@@ -227,6 +227,20 @@ public class PerformanceService {
 			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_NOT_FOUND);
 		}
 
+		List<Long> scheduleIds = performanceScheduleRepository.findIdsByPerformanceId(performanceId);
+		if (!scheduleIds.isEmpty()) {
+			if (reservationRepository.existsByScheduleIdIn(scheduleIds)
+				|| lotteryEntryRepository.existsByScheduleIdIn(scheduleIds)
+				|| prereservationRepository.existsByPerformanceScheduleIdIn(scheduleIds)
+				|| prereservationBookingRepository.existsByScheduleIdIn(scheduleIds)) {
+				throw new BusinessException(PerformanceErrorCode.PERFORMANCE_DELETE_NOT_ALLOWED);
+			}
+		}
+
+		if (tradeRepository.existsByPerformanceId(performanceId)) {
+			throw new BusinessException(PerformanceErrorCode.PERFORMANCE_DELETE_NOT_ALLOWED);
+		}
+
 		List<Long> tradeIds = tradeRepository.findIdsByPerformanceId(performanceId);
 		if (!tradeIds.isEmpty()) {
 			tradeRequestRepository.deleteAllByTrade_IdIn(tradeIds);
@@ -235,7 +249,6 @@ public class PerformanceService {
 
 		queueRepository.deleteByPerformanceId(performanceId);
 
-		List<Long> scheduleIds = performanceScheduleRepository.findIdsByPerformanceId(performanceId);
 		if (!scheduleIds.isEmpty()) {
 			List<Long> lotteryEntryIds = lotteryEntryRepository.findIdsByScheduleIdIn(scheduleIds);
 			if (!lotteryEntryIds.isEmpty()) {

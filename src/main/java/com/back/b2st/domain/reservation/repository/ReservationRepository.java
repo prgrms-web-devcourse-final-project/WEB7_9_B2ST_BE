@@ -43,6 +43,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 		""")
 	List<Long> findIdsByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
 
+	boolean existsByScheduleIdIn(List<Long> scheduleIds);
+
 	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
 
 	/** PENDING -> EXPIRED 일괄 처리 */

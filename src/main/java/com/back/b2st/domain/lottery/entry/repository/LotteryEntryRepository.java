@@ -18,6 +18,7 @@ import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 
 public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long> {
 	boolean existsByMemberIdAndPerformanceIdAndScheduleId(Long memberId, Long performanceId, Long scheduleId);
+	boolean existsByScheduleIdIn(List<Long> scheduleIds);
 
 	@Query("""
 			SELECT new com.back.b2st.domain.lottery.entry.dto.response.AppliedLotteryInfo(

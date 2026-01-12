@@ -2,6 +2,8 @@
 > **TT(Ticket & Trade)** — 공연 예매(대기열/좌석 선점/추첨·신청 예매)와 교환·양도(거래), 결제 흐름을 지원하는 백엔드 서버입니다.
 
 ## 🎯 프로젝트 소개
+<img width="1408" height="633" alt="image" src="https://github.com/user-attachments/assets/23181df2-a498-4e96-9f33-7a71cb2848fc" />
+
 (작성)
 
 ## 👥 팀 구성 & 링크

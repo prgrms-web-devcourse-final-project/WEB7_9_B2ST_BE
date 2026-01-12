@@ -12,8 +12,10 @@ import com.back.b2st.domain.performanceschedule.dto.response.PerformanceSchedule
 import com.back.b2st.domain.performanceschedule.dto.response.PerformanceScheduleDetailRes;
 import com.back.b2st.domain.performanceschedule.dto.response.PerformanceScheduleListRes;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.error.PerformanceScheduleErrorCode;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.prereservation.policy.service.PrereservationTimeTableService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
@@ -33,6 +35,7 @@ public class PerformanceScheduleService {
 
 	private final SeatRepository seatRepository;
 	private final ScheduleSeatRepository scheduleSeatRepository;
+	private final PrereservationTimeTableService prereservationTimeTableService;
 
 	/**
 	 * 회차 생성 (관리자)
@@ -62,6 +65,10 @@ public class PerformanceScheduleService {
 			.build();
 
 		PerformanceSchedule saved = performanceScheduleRepository.save(schedule);
+
+		if (saved.getBookingType() == BookingType.PRERESERVE) {
+			prereservationTimeTableService.ensureDefaultTimeTablesIfMissing(saved.getPerformanceScheduleId());
+		}
 
 		createScheduleSeats(saved.getPerformanceScheduleId(), performance.getVenue().getVenueId());
 

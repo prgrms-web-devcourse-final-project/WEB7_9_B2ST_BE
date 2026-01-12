@@ -71,7 +71,7 @@ class PrereservationInitDataFlowTest {
 			.status(PerformanceStatus.ACTIVE)
 			.build());
 
-		LocalDateTime bookingOpenAt = LocalDateTime.now().plusHours(1);
+		LocalDateTime bookingOpenAt = LocalDateTime.now().plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0);
 		LocalDateTime bookingCloseAt = bookingOpenAt.plusHours(3);
 
 		PerformanceSchedule schedule = performanceScheduleRepository.save(PerformanceSchedule.builder()
@@ -129,4 +129,3 @@ class PrereservationInitDataFlowTest {
 			.isFalse();
 	}
 }
-

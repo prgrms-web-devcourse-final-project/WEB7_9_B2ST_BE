@@ -24,6 +24,7 @@ import com.back.b2st.domain.performanceschedule.entity.BookingType;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.error.PerformanceScheduleErrorCode;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
+import com.back.b2st.domain.prereservation.policy.service.PrereservationTimeTableService;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
 import com.back.b2st.domain.seat.seat.entity.Seat;
@@ -45,6 +46,9 @@ class PerformanceScheduleServiceTest {
 
 	@Mock
 	private ScheduleSeatRepository scheduleSeatRepository;
+
+	@Mock
+	private PrereservationTimeTableService prereservationTimeTableService;
 
 	@InjectMocks
 	private PerformanceScheduleService performanceScheduleService;

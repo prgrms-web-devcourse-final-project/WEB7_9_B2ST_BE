@@ -1,6 +1,7 @@
 package com.back.b2st.domain.prereservation.entry.service;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,8 +9,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import com.back.b2st.domain.prereservation.entry.dto.response.PrereservationRes;
 import com.back.b2st.domain.prereservation.entry.entity.Prereservation;
 import com.back.b2st.domain.prereservation.entry.error.PrereservationErrorCode;
 import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
+import com.back.b2st.domain.prereservation.policy.service.PrereservationTimeTableService;
 import com.back.b2st.domain.prereservation.policy.service.PrereservationSlotService;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
@@ -38,10 +40,14 @@ public class PrereservationApplyService {
 	private final SectionRepository sectionRepository;
 	private final PrereservationRepository prereservationRepository;
 	private final PrereservationSlotService prereservationSlotService;
+	private final PrereservationTimeTableService prereservationTimeTableService;
 	private final EmailSender emailSender;
 
 	@Value("${prereservation.application.strict:true}")
 	private boolean applicationStrict = true;
+
+	@Value("${prereservation.slot.strict:true}")
+	private boolean slotStrict = true;
 
 	@Value("${app.frontend.my-page-url:https://doncrytt.vercel.app/my-page}")
 	private String myPageUrl = "https://doncrytt.vercel.app/my-page";
@@ -61,11 +67,12 @@ public class PrereservationApplyService {
 
 		if (applicationStrict) {
 			LocalDateTime now = LocalDateTime.now();
-			LocalDateTime applyOpenAt = bookingOpenAt.minusDays(1);
+			LocalDateTime applyOpenAt = bookingOpenAt.toLocalDate().minusDays(1).atStartOfDay();
+			LocalDateTime applyCloseAt = bookingOpenAt.toLocalDate().atTime(LocalTime.MIDNIGHT);
 			if (now.isBefore(applyOpenAt)) {
 				throw new BusinessException(PrereservationErrorCode.APPLICATION_NOT_OPEN);
 			}
-			if (!now.isBefore(bookingOpenAt)) {
+			if (!now.isBefore(applyCloseAt)) {
 				throw new BusinessException(PrereservationErrorCode.APPLICATION_CLOSED);
 			}
 		}
@@ -96,9 +103,25 @@ public class PrereservationApplyService {
 		}
 
 		if (email != null && !email.isBlank()) {
-			var slot = prereservationSlotService.calculateSlotOrThrow(schedule, section);
+			var slot = slotStrict
+				? calculateSlotOrEnsure(scheduleId, schedule, section)
+				: new PrereservationSlotService.Slot(
+				schedule.getBookingOpenAt(),
+				schedule.getBookingCloseAt() != null
+					? schedule.getBookingCloseAt()
+					: schedule.getBookingOpenAt().plusDays(30)
+			);
 			sendAppliedEmail(email, section.getSectionName(), slot.startAt(), slot.endAt());
 		}
+	}
+
+	private PrereservationSlotService.Slot calculateSlotOrEnsure(
+		Long scheduleId,
+		PerformanceSchedule schedule,
+		Section section
+	) {
+		prereservationTimeTableService.ensureDefaultTimeTablesIfMissing(scheduleId);
+		return prereservationSlotService.calculateSlotOrThrow(schedule, section);
 	}
 
 	@Transactional(readOnly = true)
@@ -159,10 +182,10 @@ public class PrereservationApplyService {
 	private void sendAppliedEmail(String email, String sectionName, LocalDateTime startAt, LocalDateTime endAt) {
 		String message = """
 			신청 예매 사전 신청이 완료되었습니다.
-
+			
 			- 신청 구역: %s
 			- 예매 가능 시간: %s ~ %s
-
+			
 			해당 시간 외에는 예매가 불가능합니다.
 			""".formatted(
 			sectionName,

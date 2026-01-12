@@ -1,14 +1,12 @@
-version: '3.8'
 services:
-  # 데이터베이스 설정
+  # ==================== PostgreSQL ====================
   postgres:
     image: postgres:16-alpine
-    container_name: tt_postgres
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-myuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+      POSTGRES_DB: ${POSTGRES_DB:-tt_db}
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -16,55 +14,488 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - common
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myuser}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # 레디스 설정
-  redis:
-    image: redis:alpine
-    container_name: tt_redis
-    restart: always
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+  # ==================== Redis Cluster ====================
+  redis-node-1:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --port
+      - "7000"
+      - --cluster-enabled
+      - "yes"
+      - --cluster-config-file
+      - nodes-1.conf
+      - --cluster-node-timeout
+      - "5000"
+      - --cluster-announce-ip
+      - redis-node-1
+      - --cluster-announce-port
+      - "7000"
+      - --cluster-announce-bus-port
+      - "17000"
+      - --appendonly
+      - "yes"
+      - --save
+      - "900 1"
+      - --save
+      - "300 10"
+      - --save
+      - "60 10000"
+      - --requirepass
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+      - --masterauth
+      - ${REDIS_PASSWORD:-tt_redis_pass}
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "7000:7000"
+      - "17000:17000"
+    volumes:
+      - redis-node-1-data:/data
     networks:
       - common
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "7000", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # 스프링 부트 애플리케이션 설정
+  redis-node-2:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --port
+      - "7001"
+      - --cluster-enabled
+      - "yes"
+      - --cluster-config-file
+      - nodes-2.conf
+      - --cluster-node-timeout
+      - "5000"
+      - --cluster-announce-ip
+      - redis-node-2
+      - --cluster-announce-port
+      - "7001"
+      - --cluster-announce-bus-port
+      - "17001"
+      - --appendonly
+      - "yes"
+      - --save
+      - "900 1"
+      - --save
+      - "300 10"
+      - --save
+      - "60 10000"
+      - --requirepass
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+      - --masterauth
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+    ports:
+      - "7001:7001"
+      - "17001:17001"
+    volumes:
+      - redis-node-2-data:/data
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "7001", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-node-3:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --port
+      - "7002"
+      - --cluster-enabled
+      - "yes"
+      - --cluster-config-file
+      - nodes-3.conf
+      - --cluster-node-timeout
+      - "5000"
+      - --cluster-announce-ip
+      - redis-node-3
+      - --cluster-announce-port
+      - "7002"
+      - --cluster-announce-bus-port
+      - "17002"
+      - --appendonly
+      - "yes"
+      - --save
+      - "900 1"
+      - --save
+      - "300 10"
+      - --save
+      - "60 10000"
+      - --requirepass
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+      - --masterauth
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+    ports:
+      - "7002:7002"
+      - "17002:17002"
+    volumes:
+      - redis-node-3-data:/data
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "7002", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-node-4:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --port
+      - "7003"
+      - --cluster-enabled
+      - "yes"
+      - --cluster-config-file
+      - nodes-4.conf
+      - --cluster-node-timeout
+      - "5000"
+      - --cluster-announce-ip
+      - redis-node-4
+      - --cluster-announce-port
+      - "7003"
+      - --cluster-announce-bus-port
+      - "17003"
+      - --appendonly
+      - "yes"
+      - --save
+      - "900 1"
+      - --save
+      - "300 10"
+      - --save
+      - "60 10000"
+      - --requirepass
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+      - --masterauth
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+    ports:
+      - "7003:7003"
+      - "17003:17003"
+    volumes:
+      - redis-node-4-data:/data
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "7003", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-node-5:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --port
+      - "7004"
+      - --cluster-enabled
+      - "yes"
+      - --cluster-config-file
+      - nodes-5.conf
+      - --cluster-node-timeout
+      - "5000"
+      - --cluster-announce-ip
+      - redis-node-5
+      - --cluster-announce-port
+      - "7004"
+      - --cluster-announce-bus-port
+      - "17004"
+      - --appendonly
+      - "yes"
+      - --save
+      - "900 1"
+      - --save
+      - "300 10"
+      - --save
+      - "60 10000"
+      - --requirepass
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+      - --masterauth
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+    ports:
+      - "7004:7004"
+      - "17004:17004"
+    volumes:
+      - redis-node-5-data:/data
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "7004", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-node-6:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --port
+      - "7005"
+      - --cluster-enabled
+      - "yes"
+      - --cluster-config-file
+      - nodes-6.conf
+      - --cluster-node-timeout
+      - "5000"
+      - --cluster-announce-ip
+      - redis-node-6
+      - --cluster-announce-port
+      - "7005"
+      - --cluster-announce-bus-port
+      - "17005"
+      - --appendonly
+      - "yes"
+      - --save
+      - "900 1"
+      - --save
+      - "300 10"
+      - --save
+      - "60 10000"
+      - --requirepass
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+      - --masterauth
+      - ${REDIS_PASSWORD:-tt_redis_pass}
+    ports:
+      - "7005:7005"
+      - "17005:17005"
+    volumes:
+      - redis-node-6-data:/data
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "7005", "-a", "${REDIS_PASSWORD:-tt_redis_pass}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== Redis Cluster 초기화 ====================
+  redis-cluster-init:
+    image: redis:7-alpine
+    depends_on:
+      redis-node-1:
+        condition: service_healthy
+      redis-node-2:
+        condition: service_healthy
+      redis-node-3:
+        condition: service_healthy
+      redis-node-4:
+        condition: service_healthy
+      redis-node-5:
+        condition: service_healthy
+      redis-node-6:
+        condition: service_healthy
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
+    volumes:
+      - ./init-cluster.sh:/init-cluster.sh:ro
+    command: sh /init-cluster.sh
+    networks:
+      - common
+    restart: "no"
+
+  # ==================== Spring Boot Application ====================
   app:
     image: ghcr.io/chehyeon-kim23/tt_backend:latest
-    container_name: tt_app
     restart: always
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis-cluster-init:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - MAIL_HOST=${MAIL_HOST}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USERNAME=${MAIL_USERNAME}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
-      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_ACCESS_EXPIRATION=${JWT_ACCESS_EXPIRATION}
-      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION}
-      - KAKAO_CLIENT_ID=${KAKAO_CLIENT_ID}
-      - KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
-      - KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
-      - KAKAO_TOKEN_URI=${KAKAO_TOKEN_URI}
-      - KAKAO_USER_INFO_URI=${KAKAO_USER_INFO_URI}
-      - KAKAO_ISSUER=${KAKAO_ISSUER}
-      - DDL_AUTO=${DDL_AUTO}
-    command: java -jar app.jar
     networks:
       - common
+
+    environment:
+      # ===== Profile =====
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+
+      # ===== DB (Spring 표준 키) =====
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-tt_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-myuser}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+
+      # ===== Redis (Spring 표준 키) =====
+      SPRING_DATA_REDIS_CLUSTER_NODES: redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
+
+      # =====커스텀 키 =====
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-myuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+      POSTGRES_DB: ${POSTGRES_DB:-tt_db}
+
+      REDIS_MODE: cluster
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
+      REDIS_CLUSTER_NODES: redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+
+      # ===== Mail =====
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
+
+      # ===== Spring Mail Properties =====
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED}
+
+      # ===== AWS / S3 =====
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+
+      # ===== JWT =====
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+
+      # ===== Kakao OAuth =====
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      KAKAO_ISSUER: ${KAKAO_ISSUER}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
+      KAKAO_TOKEN_URI: ${KAKAO_TOKEN_URI}
+      KAKAO_USER_INFO_URI: ${KAKAO_USER_INFO_URI}
+
+      # ===== Slack =====
+      SLACK_WEBHOOK_AUTH: ${SLACK_WEBHOOK_AUTH}
+
+      # ===== JPA / Hibernate =====
+      DDL_AUTO: ${DDL_AUTO}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+      SPRING_JPA_PROPERTIES_HIBERNATE_HBM2DDL_HALT_ON_ERROR: ${SPRING_JPA_PROPERTIES_HIBERNATE_HBM2DDL_HALT_ON_ERROR}
+
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==================== Monitoring Stack ====================
+  prometheus:
+    image: prom/prometheus:v3.8.1
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:12.3.0
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123!}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  alertmanager:
+    image: prom/alertmanager:v0.30.0
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # NOTE: redis_exporter는 멀티 주소/클러스터를 완전 지원하지 않는 경우가 많아서 한 노드만 붙임
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.80.1
+    restart: unless-stopped
+    depends_on:
+      redis-node-1:
+        condition: service_healthy
+    ports:
+      - "9121:9121"
+    environment:
+      REDIS_ADDR: redis://redis-node-1:7000
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-tt_redis_pass}
+    networks:
+      - common
+    # redis_exporter는 distroless 이미지라 shell 없음 - Prometheus scrape가 healthcheck 역할.
+    healthcheck:
+      test: [ "NONE" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@postgres:5432/${POSTGRES_DB:-tt_db}?sslmode=disable
+    networks:
+      - common
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9187/metrics" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   common:
@@ -72,3 +503,12 @@ networks:
 
 volumes:
   postgres_data:
+  redis-node-1-data:
+  redis-node-2-data:
+  redis-node-3-data:
+  redis-node-4-data:
+  redis-node-5-data:
+  redis-node-6-data:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:

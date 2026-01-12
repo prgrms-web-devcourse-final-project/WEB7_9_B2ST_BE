@@ -17,6 +17,17 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 
 	List<PerformanceSchedule> findAllByPerformance_PerformanceIdOrderByStartAtAsc(Long performanceId);
 
+	@Query("""
+		select ps.performanceScheduleId
+		from PerformanceSchedule ps
+		where ps.performance.performanceId = :performanceId
+		""")
+	List<Long> findIdsByPerformanceId(@Param("performanceId") Long performanceId);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("delete from PerformanceSchedule ps where ps.performance.performanceId = :performanceId")
+	void deleteAllByPerformanceId(@Param("performanceId") Long performanceId);
+
 	Optional<PerformanceSchedule> findByPerformance_PerformanceIdAndPerformanceScheduleId(
 		Long performanceId,
 		Long performanceScheduleId
@@ -50,15 +61,23 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 					ps.performanceScheduleId
 			)
 			FROM PerformanceSchedule ps
-			JOIN ps.performance
 			WHERE ps.bookingCloseAt >= :start
 			  AND ps.bookingCloseAt < :end
 			  AND ps.drawCompleted = false
-			  AND ps.performance.performanceId = ps.performance.performanceId
 		""")
 	List<DrawTargetPerformance> findByClosedBetweenAndNotDrawn(
 		@Param("start") LocalDateTime startDate,
 		@Param("end") LocalDateTime endDate);
+
+	@Query("""
+			SELECT new com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance(
+					ps.performance.performanceId,
+					ps.performanceScheduleId
+			)
+			FROM PerformanceSchedule ps
+			WHERE ps.drawCompleted = false
+		""")
+	List<DrawTargetPerformance> findByNotDrawn();
 
 	/**
 	 * 회차 추첨 완료 업데이트
@@ -71,4 +90,49 @@ public interface PerformanceScheduleRepository extends JpaRepository<Performance
 		where ps.performanceScheduleId = :scheduleId
 		""")
 	void updateStautsById(@Param("scheduleId") Long scheduleId);
+
+	/**
+	 * 오늘부터 n일 이내에 시작하는 추첨 공연을 조회 - 좌석 배치 미진행
+	 */
+	@Query("""
+			SELECT new com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance(
+					ps.performance.performanceId,
+					ps.performanceScheduleId
+			)
+			FROM PerformanceSchedule ps
+			JOIN ps.performance
+			WHERE ps.startAt >= :today
+			  AND ps.startAt < :threeDaysLater
+			  AND ps.bookingType = com.back.b2st.domain.performanceschedule.entity.BookingType.LOTTERY
+			  AND ps.drawCompleted = true
+			  AND ps.seatAllocated = false
+		""")
+	List<DrawTargetPerformance> findByOpenBetween(
+		@Param("today") LocalDateTime startDate,
+		@Param("threeDaysLater") LocalDateTime endDate);
+
+	// test
+	@Query("""
+			SELECT new com.back.b2st.domain.performanceschedule.dto.DrawTargetPerformance(
+					ps.performance.performanceId,
+					ps.performanceScheduleId
+			)
+			FROM PerformanceSchedule ps
+			JOIN ps.performance
+			WHERE ps.bookingType = com.back.b2st.domain.performanceschedule.entity.BookingType.LOTTERY
+			  AND ps.drawCompleted = true
+			  AND ps.seatAllocated = false
+		""")
+	List<DrawTargetPerformance> findByOpenBetween();
+
+	/**
+	 * scheduleId로 performanceId 조회 (대기열/검증 등에서 사용)
+	 */
+	@Query("""
+			select ps.performance.performanceId
+			from PerformanceSchedule ps
+			where ps.performanceScheduleId = :scheduleId
+		""")
+	Optional<Long> findPerformanceIdByScheduleId(@Param("scheduleId") Long scheduleId);
+
 }

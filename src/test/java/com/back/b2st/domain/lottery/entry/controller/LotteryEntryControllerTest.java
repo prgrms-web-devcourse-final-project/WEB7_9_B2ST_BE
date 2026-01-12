@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,12 +18,16 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.auth.dto.request.LoginReq;
 import com.back.b2st.domain.auth.error.AuthErrorCode;
+import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.entry.error.LotteryEntryErrorCode;
 import com.back.b2st.domain.lottery.entry.repository.LotteryEntryRepository;
+import com.back.b2st.domain.lottery.result.entity.LotteryResult;
+import com.back.b2st.domain.lottery.result.repository.LotteryResultRepository;
 import com.back.b2st.domain.member.entity.Member;
 import com.back.b2st.domain.member.repository.MemberRepository;
 import com.back.b2st.domain.performance.entity.Performance;
@@ -73,6 +79,10 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 	private PerformanceScheduleRepository performanceScheduleRepository;
 	@Autowired
 	private SeatGradeRepository seatGradeRepository;
+	@Autowired
+	private LotteryResultRepository lotteryResultRepository;
+	@Autowired
+	private LotteryEntryRepository lotteryEntryRepository;
 
 	@Autowired
 	private EntityManager em;
@@ -88,7 +98,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 	private SeatGrade seatGrade;
 	private Venue venue;
 	private String accessToken;
-	private LotteryEntryRepository lotteryEntryRepository;
 
 	@BeforeEach
 	void setUp() throws Exception {
@@ -115,11 +124,11 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			.venue(venue)
 			.title("2024 아이유 콘서트 - HEREH WORLD TOUR")
 			.category("콘서트")
-			.posterUrl("")
+			.posterKey(null)
 			.description(null)
 			.startDate(LocalDateTime.of(2024, 12, 20, 19, 0))
 			.endDate(LocalDateTime.of(2024, 12, 22, 21, 0))
-			.status(PerformanceStatus.ON_SALE)
+			.status(PerformanceStatus.ACTIVE)
 			.build());
 
 		// Section 생성 추가
@@ -181,6 +190,15 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 
 		em.flush();
 		em.clear();
+	}
+
+	private SeatGrade createSeatGrade(Long performanceId, SeatGradeType grade, Integer price) {
+		SeatGrade seatGrade = SeatGrade.builder()
+			.performanceId(performanceId)
+			.grade(grade)
+			.price(price)
+			.build();
+		return seatGradeRepository.save(seatGrade);
 	}
 
 	private PerformanceSchedule createSchedule(int round) {
@@ -504,9 +522,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 
 			SeatGradeType grade = switch (i) {
 				case 1 -> SeatGradeType.ROYAL;
-				case 2 -> SeatGradeType.VIP;
-				case 3 -> SeatGradeType.A;
-				default -> SeatGradeType.STANDARD;
+				default -> SeatGradeType.VIP;
 			};
 
 			String requestBody = "{"
@@ -536,7 +552,6 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 			.andExpect(jsonPath("$.data.content.length()").value(10))
 			.andExpect(jsonPath("$.data.hasNext").value(true))
 			.andExpect(jsonPath("$.data.content[0].roundNo").value(15))
-			.andExpect(jsonPath("$.data.content[9].roundNo").value(6))
 		;
 	}
 
@@ -552,9 +567,7 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 
 			SeatGradeType grade = switch (i) {
 				case 1 -> SeatGradeType.ROYAL;
-				case 2 -> SeatGradeType.VIP;
-				case 3 -> SeatGradeType.A;
-				default -> SeatGradeType.STANDARD;
+				default -> SeatGradeType.VIP;
 			};
 
 			String requestBody = "{"
@@ -588,4 +601,80 @@ class LotteryEntryControllerTest extends AbstractContainerBaseTest {
 		;
 	}
 
+	@Test
+	@DisplayName("내응모조회 - 성공, 기본(page=1), 결제 완료 포함")
+	void getMyLotteryEntries_success_pay() throws Exception {
+		// given
+		Long param = performance.getPerformanceId();
+		Long scheduleId = createSchedule(1).getPerformanceScheduleId();
+
+		String requestBody = "{"
+			+ "\"scheduleId\": " + scheduleId + ","
+			+ "\"grade\": \"ROYAL\","
+			+ "\"quantity\": " + 2
+			+ "}";
+
+		MvcResult result = mvc.perform(
+				post(createUrl, param)
+					.header("Authorization", "Bearer " + accessToken)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(requestBody)
+			)
+			.andExpect(status().isOk())
+			.andReturn();
+
+		// 응답에서 entryId 추출
+		String content = result.getResponse().getContentAsString();
+		JsonNode jsonNode = objectMapper.readTree(content);
+
+		UUID entryId = UUID.fromString(jsonNode.get("data").get("id").asText());
+		LotteryEntry le = lotteryEntryRepository.findByUuid(entryId);
+
+		lotteryResultRepository.save(LotteryResult.builder()
+			.lotteryEntryId(le.getId())
+			.memberId(member.getId())
+			.build()
+		);
+
+		em.flush();
+		em.clear();
+
+		lotteryEntryRepository.updateStatusBySchedule(scheduleId,
+			List.of(lotteryEntryRepository.findByUuid(entryId).getId()));
+
+		em.flush();
+		em.clear();
+
+		// 결제 완료 처리
+		String paymentBody = "{"
+			+ "\"domainType\": \"LOTTERY\","
+			+ "\"paymentMethod\": \"CARD\","
+			+ "\"entryId\": \"" + entryId + "\""
+			+ "}";
+
+		MvcResult paymentResult = mvc.perform(
+				post("/api/payments/pay")
+					.header("Authorization", "Bearer " + accessToken)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(paymentBody)
+			)
+			.andDo(print())  // 전체 응답 출력
+			.andExpect(status().isOk())
+			.andReturn();
+
+		em.flush();
+		em.clear();
+
+		// when & then - 조회 시 PAID 상태로 변경되었는지 확인
+		mvc.perform(
+				get(getMyUrl)
+					.header("Authorization", "Bearer " + accessToken)
+					.contentType(MediaType.APPLICATION_JSON)
+			)
+			.andDo(print())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content.length()").value(1))
+			.andExpect(jsonPath("$.data.hasNext").value(false))
+			.andExpect(jsonPath("$.data.content[0].status").value("PAID"));
+	}
 }

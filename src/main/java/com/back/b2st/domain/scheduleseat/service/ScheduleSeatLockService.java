@@ -14,7 +14,7 @@ public class ScheduleSeatLockService {
 
 	private final StringRedisTemplate redisTemplate;
 
-	private static final int LOCK_EXPIRE_SECONDS = 3;  // 락 유지시간(3초 동안 좌석 HOLD → 그 뒤 자동 해제(TTL)) TODO: 더 짧게 하는 게 좋을까..
+	private static final int LOCK_EXPIRE_SECONDS = 5;  // 락 TTL: hold 처리 중 서버 다운/예외 시 자동 해제되게 하는 안전장치
 
 	/** === 좌석 lock 시도 (성공하면 true 반환) === */
 	public String tryLock(Long scheduleId, Long seatId, Long memberId) {

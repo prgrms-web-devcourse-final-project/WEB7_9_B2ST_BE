@@ -32,8 +32,6 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
-import tools.jackson.databind.ObjectMapper;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("KakaoApiClientImpl - ID Token 서명 검증 테스트")
 class KakaoApiClientSignatureTest {
@@ -48,7 +46,6 @@ class KakaoApiClientSignatureTest {
 	private RestTemplate restTemplate;
 	@Mock
 	private KakaoJwksClient jwksClient;
-	private ObjectMapper objectMapper;
 	// 테스트용 RSA 키 쌍
 	private RSAPublicKey publicKey;
 	private RSAPrivateKey privateKey;
@@ -56,8 +53,7 @@ class KakaoApiClientSignatureTest {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		objectMapper = new ObjectMapper();
-		kakaoApiClient = new KakaoApiClientImpl(restTemplate, objectMapper, jwksClient);
+		kakaoApiClient = new KakaoApiClientImpl(restTemplate, jwksClient);
 
 		ReflectionTestUtils.setField(kakaoApiClient, "clientId", CLIENT_ID);
 		ReflectionTestUtils.setField(kakaoApiClient, "clientSecret", "test-secret");

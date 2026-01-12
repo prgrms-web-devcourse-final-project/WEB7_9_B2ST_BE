@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -19,25 +21,13 @@ import jakarta.persistence.LockModeType;
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long>, ReservationRepositoryCustom {
 
-	/** === 로그인 유저 예매 전체 조회 === */
-	List<Reservation> findAllByMemberId(Long memberId);
-
-	/** 활성 PENDING 존재 여부(만료된 PENDING은 제외) */
-	boolean existsByScheduleIdAndSeatIdAndStatusAndExpiresAtAfter(
+	Optional<Reservation> findTopByMemberIdAndScheduleIdAndStatusOrderByIdDesc(
+		Long memberId,
 		Long scheduleId,
-		Long seatId,
-		ReservationStatus status,
-		LocalDateTime now
-	);
-
-	/** COMPLETED 존재 여부(완료는 언제나 중복 방지) */
-	boolean existsByScheduleIdAndSeatIdAndStatus(
-		Long scheduleId,
-		Long seatId,
 		ReservationStatus status
 	);
 
-	/** 상태 변경 경쟁(complete/fail/expire) 직렬화를 위한 락 조회 */
+	/** 락 조회 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT r FROM Reservation r WHERE r.id = :reservationId")
 	Optional<Reservation> findByIdWithLock(@Param("reservationId") Long reservationId);
@@ -52,6 +42,15 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 		""")
 	List<Long> findExpiredPendingIds(@Param("pending") ReservationStatus pending, @Param("now") LocalDateTime now);
 
+	@Query("""
+		select r.id
+		  from Reservation r
+		 where r.scheduleId in :scheduleIds
+		""")
+	List<Long> findIdsByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
+
+	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
+
 	/** PENDING -> EXPIRED 일괄 처리 */
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("""
@@ -65,4 +64,20 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long>,
 		@Param("pending") ReservationStatus pending,
 		@Param("expired") ReservationStatus expired
 	);
+
+	@Query("""
+			select r
+			from Reservation r
+			where r.status = :status
+			  and (:scheduleId is null or r.scheduleId = :scheduleId)
+			  and (:memberId is null or r.memberId = :memberId)
+			order by r.id desc
+		""")
+	Page<Reservation> findByStatusWithOptionalFilters(
+		@Param("status") ReservationStatus status,
+		@Param("scheduleId") Long scheduleId,
+		@Param("memberId") Long memberId,
+		Pageable pageable
+	);
+
 }

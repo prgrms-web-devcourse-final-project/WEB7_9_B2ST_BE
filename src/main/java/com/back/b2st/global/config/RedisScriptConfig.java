@@ -8,110 +8,63 @@ import org.springframework.data.redis.core.script.RedisScript;
 /**
  * Redis Lua Script 설정
  *
- * 대규모 트래픽 환경에서 원자성과 성능을 보장하기 위한 Lua Script 빈 등록
- *
- * ⚠️ 개발 초기 단계 - 대기열 기능 활성화 시에만 로드
- * application.yml에서 `queue.enabled: true` 설정 필요
+ * ✅ WAITING: ZSET(score=timestampMillis)
+ * ✅ ENTERABLE: ZSET(score=expiresAtSeconds) (SoT)
  */
 @Configuration
 @ConditionalOnProperty(name = "queue.enabled", havingValue = "true", matchIfMissing = false)
 public class RedisScriptConfig {
 
 	/**
-	 * WAITING → ENTERABLE 이동 스크립트 (원자적 실행)
+	 * WAITING → ENTERABLE 이동 스크립트 (원자적 승격 + 상한 게이트)
 	 *
-	 * 3개의 Redis 명령을 하나의 원자적 작업으로 실행:
-	 * 1. WAITING ZSET에서 제거
-	 * 2. 개별 User Key 생성 + TTL 설정
-	 * 3. ENTERABLE SET에 추가
+	 * KEYS[1]: waitingKey (ZSET)
+	 * KEYS[2]: enterableKey (ZSET, score=expiresAtSeconds)
 	 *
-	 * 장점:
-	 * - 네트워크 왕복 3번 → 1번으로 감소 (성능 3배 향상)
-	 * - 원자성 보장 (중간 실패 시 롤백)
-	 * - 대규모 트래픽에서 안정성 확보
+	 * ARGV[1]: userId
+	 * ARGV[2]: expiresAtSeconds
+	 * ARGV[3]: nowSeconds
+	 * ARGV[4]: maxActiveUsers
 	 *
-	 * @return RedisScript<Long>
+	 * Return:
+	 *  1: MOVED
+	 *  0: SKIPPED (WAITING에 없거나 이미 유효 ENTERABLE)
+	 *  2: REJECTED_FULL
 	 */
 	@Bean
 	public RedisScript<Long> moveToEnterableScript() {
 		String script = """
-			-- KEYS[1]: waiting key (ZSET)
-			-- KEYS[2]: user key (STRING + TTL)
-			-- KEYS[3]: set key (SET)
-			-- ARGV[1]: userId (String)
-			-- ARGV[2]: ttl (seconds, Integer)
-			
-			-- 1. WAITING ZSET에서 제거
-			redis.call('ZREM', KEYS[1], ARGV[1])
-			
-			-- 2. 개별 User Key 생성 + TTL 설정
-			redis.call('SETEX', KEYS[2], ARGV[2], '1')
-			
-			-- 3. ENTERABLE SET에 추가
-			redis.call('SADD', KEYS[3], ARGV[1])
-			
-			return 1
-			""";
+			local userId = ARGV[1]
+			local expiresAt = tonumber(ARGV[2])
+			local now = tonumber(ARGV[3])
+			local maxActive = tonumber(ARGV[4])
 
-		return RedisScript.of(script, Long.class);
-	}
+			-- 0) 이미 ENTERABLE이고 유효하면 idempotent skip
+			local current = redis.call('ZSCORE', KEYS[2], userId)
+			if current and tonumber(current) >= now then
+				return 0
+			end
 
-	/**
-	 * 대기열에 사용자 추가 + 카운트 증가 스크립트 (원자적 실행)
-	 *
-	 * 2개의 Redis 명령을 하나의 원자적 작업으로 실행:
-	 * 1. WAITING ZSET에 추가
-	 * 2. 전체 카운트 증가
-	 *
-	 * @return RedisScript<Long>
-	 */
-	@Bean
-	public RedisScript<Long> addToWaitingWithCountScript() {
-		String script = """
-			-- KEYS[1]: waiting key (ZSET)
-			-- KEYS[2]: count key (STRING)
-			-- ARGV[1]: userId (String)
-			-- ARGV[2]: timestamp (score)
-			
-			-- 1. WAITING ZSET에 추가
-			redis.call('ZADD', KEYS[1], ARGV[2], ARGV[1])
-			
-			-- 2. 카운트 증가
-			local count = redis.call('INCR', KEYS[2])
-			
-			return count
-			""";
+			-- 1) WAITING에 있는지 확인 + 기존 score 확보(순번 보존)
+			local waitingScore = redis.call('ZSCORE', KEYS[1], userId)
+			if not waitingScore then
+				return 0
+			end
 
-		return RedisScript.of(script, Long.class);
-	}
+			-- 2) ENTERABLE 유효 인원 게이트
+			local activeCount = redis.call('ZCOUNT', KEYS[2], now, '+inf')
+			if activeCount >= maxActive then
+				-- WAITING 유지(순번 유지) - ZREM 하지 않음
+				return 2
+			end
 
-	/**
-	 * ENTERABLE에서 제거 + 카운트 감소 스크립트 (원자적 실행)
-	 *
-	 * 3개의 Redis 명령을 하나의 원자적 작업으로 실행:
-	 * 1. 개별 User Key 삭제
-	 * 2. ENTERABLE SET에서 제거
-	 * 3. 카운트 감소
-	 *
-	 * @return RedisScript<Long>
-	 */
-	@Bean
-	public RedisScript<Long> removeFromEnterableScript() {
-		String script = """
-			-- KEYS[1]: user key (STRING)
-			-- KEYS[2]: set key (SET)
-			-- ARGV[1]: userId (String)
-			
-			-- 1. 개별 User Key 삭제
-			redis.call('DEL', KEYS[1])
-			
-			-- 2. ENTERABLE SET에서 제거
-			redis.call('SREM', KEYS[2], ARGV[1])
-			
+			-- 3) 이동 수행
+			redis.call('ZREM', KEYS[1], userId)
+			redis.call('ZADD', KEYS[2], expiresAt, userId)
+
 			return 1
 			""";
 
 		return RedisScript.of(script, Long.class);
 	}
 }
-

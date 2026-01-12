@@ -7,13 +7,18 @@ on:
     paths:
       - ".github/workflows/**"
       - "src/**"
+      - "build.gradle"
+      - "settings.gradle"
       - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - "gradlew"
+      - "gradlew.bat"
       - "Dockerfile"
       - "docker/**"
     branches:
       - develop
 
-# 권한 최소화/명시화
 permissions:
   contents: write
   packages: write
@@ -65,8 +70,7 @@ jobs:
       - name: set lower case owner name
         id: export_owner
         run: |
-         # OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
-          OWNER_LC="chehyeon-kim23" # 본인 아이디를 소문자로 직접 입력
+          OWNER_LC="chehyeon-kim23"
           echo "owner_lc=$OWNER_LC" >> $GITHUB_OUTPUT
 
       - name: export image name
@@ -78,14 +82,11 @@ jobs:
         with:
           context: .
           push: true
-          build-args: |
-            DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN }}
           cache-from: type=registry,ref=ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:cache
           cache-to: type=registry,ref=ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:cache,mode=max
           tags: |
             ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:${{ needs.makeTagAndRelease.outputs.tag_name }},
-            ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:latest          
-  
+            ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -103,37 +104,53 @@ jobs:
           INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=TT-ec2-1" "Name=instance-state-name,Values=running" --query "Reservations[].Instances[].InstanceId" --output text)
           echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_ENV
 
-      - name: AWS SSM Send-Command (Official CLI)
+      - name: AWS SSM Send-Command (Doppler 완전 통합)
         run: |
-            aws ssm send-command \
-            --instance-ids "${{ env.INSTANCE_ID }}" \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy Spring Boot with Prod Profile" \
-            --parameters '{
-              "commands": [
-                "#!/bin/bash",
-                
-                "export HOME=/root",
-                "export PATH=$PATH:/usr/local/bin",
-          
-                
-                "git config --global --add safe.directory /dockerProjects/tt-src/WEB7_9_B2ST_BE",
-                
-                "cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/ || exit 1",
-                "git fetch --all",
-                "git reset --hard origin/develop",
-          
-                
-                "cd docker/",
-                "export DOPPLER_TOKEN=\"${{ secrets.DOPPLER_TOKEN }}\"",
-                "echo \"${{ secrets.PERSONAL_ACCESS_TOKEN }}\" | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null",
-          
-                "doppler run -- docker compose pull",
-                "doppler run -- docker compose up -d --force-recreate",
-          
-                "docker image prune -f",
-          
-                "docker logout ghcr.io 2>/dev/null"
-              ]
-            }' \
-            --region ${{ secrets.AWS_REGION }}
+          aws ssm send-command \
+          --instance-ids "${{ env.INSTANCE_ID }}" \
+          --document-name "AWS-RunShellScript" \
+          --comment "Deploy with Doppler (all secrets managed centrally)" \
+          --parameters '{
+            "commands": [
+              "#!/bin/bash",
+              "set -euo pipefail",
+
+              "export HOME=/root",
+              "export PATH=$PATH:/usr/local/bin",
+
+              "git config --global --add safe.directory /dockerProjects/tt-src/WEB7_9_B2ST_BE",
+
+              "cd /dockerProjects/tt-src/WEB7_9_B2ST_BE/ || exit 1",
+              "git fetch --all",
+              "git reset --hard origin/develop",
+
+              "cd docker/",
+
+              "# Doppler 설정 (파일에서 토큰만 읽기)",
+              "export DOPPLER_TOKEN=\"$(sudo tr -d \"\\r\\n\" < /etc/tt-secrets/doppler-token)\"",
+              "export DOPPLER_PROJECT=tt",
+              "export DOPPLER_CONFIG=prd",
+
+              "# GitHub 레지스트리 로그인 (Doppler에서 GITHUB_TOKEN 주입)",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- bash -c \"echo \\$GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin 2>/dev/null\"",
+
+              "# Alertmanager 설정 파일 환경변수 치환",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- bash -lc \"envsubst < monitoring/alertmanager/alertmanager.yml > /tmp/alertmanager-resolved.yml\"",
+              "cp /tmp/alertmanager-resolved.yml monitoring/alertmanager/alertmanager.yml",
+              "rm -f /tmp/alertmanager-resolved.yml",
+
+              "# Docker Compose 실행 (모든 환경변수 Doppler에서 주입)",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose pull",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose up -d --force-recreate",
+
+              "# 정리",
+              "docker image prune -f",
+              "docker logout ghcr.io 2>/dev/null",
+
+              "echo \"✅ Deployment completed at $(date)\"",
+
+              "# 최종 상태 확인",
+              "doppler run --project \"$DOPPLER_PROJECT\" --config \"$DOPPLER_CONFIG\" -- docker compose ps"
+            ]
+          }' \
+          --region ${{ secrets.AWS_REGION }}

@@ -27,6 +27,8 @@
 
 ## 🎯 프로젝트 개요
 
+<img width="1408" height="633" alt="image" src="https://github.com/user-attachments/assets/23181df2-a498-4e96-9f33-7a71cb2848fc" />
+
 **TT(Ticket & Trade)** 는 공연 티켓 예매 및 2차 거래(교환/양도) 플랫폼의 백엔드 서버입니다.
 
 ### 개발 기간

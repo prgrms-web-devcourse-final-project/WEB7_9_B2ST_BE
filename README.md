@@ -12,16 +12,16 @@
 
 ## 📋 목차
 
-- [프로젝트 개요](#-프로젝트-개요)
-- [팀 구성](#-팀-구성)
-- [링크](#-링크)
-- [핵심 기능](#️-핵심-기능)
-- [기술 스택](#️-기술-스택)
-- [시스템 아키텍처](#️-시스템-아키텍처)
-- [ERD](#️-erd)
-- [프로젝트 구조](#-프로젝트-구조)
-- [모니터링 구성](#-모니터링-구성)
-- [협업 규칙](#-협업-규칙)
+- 🎯 [프로젝트 개요](#-프로젝트-개요)
+- 👥 [팀 구성](#-팀-구성)
+- 🔗 [링크](#-링크)
+- ⚙️ [핵심 기능](#️-핵심-기능)
+- 🛠️ [기술 스택](#️-기술-스택)
+- 🏗️ [시스템 아키텍처](#️-시스템-아키텍처)
+- 🗂️ [ERD](#️-erd)
+- 🗂️ [프로젝트 구조](#-프로젝트-구조)
+- 📊 [모니터링 구성](#-모니터링-구성)
+- 🧩 [협업 규칙](#-협업-규칙)
 
 ---
 
@@ -31,9 +31,6 @@
 
 **TT(Ticket & Trade)** 는 공연 티켓 예매 및 2차 거래(교환/양도) 플랫폼의 백엔드 서버입니다.
 
-### 개발 기간
-
-- 2024.12.03 ~ 2025.01.12
 
 ### 주요 도메인
 
@@ -53,11 +50,11 @@
 
 |       이름       |   역할    |                                                               GitHub                                                               |
 |:--------------:|:-------:|:----------------------------------------------------------------------------------------------------------------------------------:|
-|     whyin      | Backend |           [![GitHub](https://img.shields.io/badge/-whyin-181717?logo=github&logoColor=white)](https://github.com/whyin)            |
-| Chehyeon-Kim23 | Backend |  [![GitHub](https://img.shields.io/badge/-Chehyeon--Kim23-181717?logo=github&logoColor=white)](https://github.com/Chehyeon-Kim23)  |
-|      Nomi      | Backend |          [![GitHub](https://img.shields.io/badge/-77r77r-181717?logo=github&logoColor=white)](https://github.com/77r77r)           |
-| Minhyung Park  | Backend |          [![GitHub](https://img.shields.io/badge/-minibr-181717?logo=github&logoColor=white)](https://github.com/minibr)           |
-|     WeeRim     | Backend | [![GitHub](https://img.shields.io/badge/-weilim0513--tech-181717?logo=github&logoColor=white)](https://github.com/weilim0513-tech) |
+|     김영인     | Backend (PO) |           [![GitHub](https://img.shields.io/badge/-whyin-181717?logo=github&logoColor=white)](https://github.com/whyin)            |
+| 김채현 | Backend |  [![GitHub](https://img.shields.io/badge/-Chehyeon--Kim23-181717?logo=github&logoColor=white)](https://github.com/Chehyeon-Kim23)  |
+|      노미경      | Backend |          [![GitHub](https://img.shields.io/badge/-77r77r-181717?logo=github&logoColor=white)](https://github.com/77r77r)           |
+| 박민형  | Backend (팀장) |          [![GitHub](https://img.shields.io/badge/-minibr-181717?logo=github&logoColor=white)](https://github.com/minibr)           |
+|     이위림     | Backend | [![GitHub](https://img.shields.io/badge/-weilim0513--tech-181717?logo=github&logoColor=white)](https://github.com/weilim0513-tech) |
 
 ---
 
@@ -130,17 +127,16 @@
 |:------|:------------------------|
 | 신청 기간 | 오픈/마감 일시 기반 신청 가능 기간 검증 |
 | 신청 등록 | 회차/등급별 사전신청, 수량 지정      |
-| 신청 확정 | 신청 → 결제 대기 → 결제 완료 흐름   |
-| 만료 처리 | 결제 기한 초과 시 신청 자동 만료     |
+| 신청 확정 | 신청 → 결제 대기 → 결제 완료 흐름, 예외: CANCELLED, EXPIRED|
+| 만료 처리 | 결제 기한 초과 시 신청 자동 만료, 결제 시도 차단     |
 | 신청 취소 | 사용자 요청에 의한 신청 취소 처리     |
 
 ### 💳 결제 (Payment)
 
 | 기능      | 구현 상세                                             |
 |:--------|:--------------------------------------------------|
-| 도메인별 분리 | 좌석예매/추첨/사전신청/거래 각각 독립된 결제 흐름                      |
-| 상태 관리   | PENDING → PROCESSING → COMPLETED/FAILED/CANCELLED |
-| 환불 계좌   | 계좌번호 마스킹 저장, BankCode Enum 매핑                     |
+| 도메인별 분리 | 좌석예매/추첨/사전신청/거래별 결제 생성/검증 로직 독립                      |
+| 상태 관리   | PENDING → PROCESSING → COMPLETED/FAILED/CANCELLED (전이 규칙 명시) |
 
 ### 🔁 거래 (Trade)
 
@@ -148,6 +144,7 @@
 |:-------|:-----------------------|
 | 거래 등록  | 티켓 소유권 검증, 중복 등록 방지    |
 | 거래 요청  | 구매자 거래 요청, 판매자 승인 대기   |
+| 임시 점유  | 승인 시 redis에 티켓 임시 점유 등록, 결제 기한까지 재거래/재예약 요청 즉시 차단(최종 확정은 DB로 검증)  |
 | 거래 승인  | 판매자 승인 시 결제 프로세스 진입    |
 | 소유권 이전 | 결제 완료 시 티켓 소유권 구매자로 변경 |
 

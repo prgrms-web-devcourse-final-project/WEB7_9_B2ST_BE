@@ -1,7 +1,11 @@
 package com.back.b2st.domain.ticket.service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -13,7 +17,6 @@ import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRe
 import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
 import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
-import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.dto.response.ReservationSeatInfo;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
@@ -28,16 +31,15 @@ import com.back.b2st.domain.ticket.entity.TicketStatus;
 import com.back.b2st.domain.ticket.error.TicketErrorCode;
 import com.back.b2st.domain.ticket.repository.TicketRepository;
 import com.back.b2st.domain.trade.entity.Trade;
+import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.repository.TradeRepository;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class TicketService {
 
 	private final TicketRepository ticketRepository;
@@ -150,13 +152,10 @@ public class TicketService {
 		}
 	}
 
-	@Transactional
-	public void ensureTicketsForCompletedReservations(Long memberId) {
-		List<Reservation> completedReservations =
-			reservationRepository.findAllByMemberIdAndStatus(memberId, ReservationStatus.COMPLETED);
-
-		for (Reservation reservation : completedReservations) {
-			ensureTicketsForReservation(reservation.getId());
+	private void ensureTicketsForCompletedReservations(Long memberId) {
+		List<TicketRepository.MissingTicketKey> missingTickets = ticketRepository.findMissingTicketsForMember(memberId);
+		for (TicketRepository.MissingTicketKey key : missingTickets) {
+			createTicket(key.getReservationId(), key.getMemberId(), key.getSeatId());
 		}
 	}
 
@@ -168,17 +167,17 @@ public class TicketService {
 
 		// 구매자로 받은 완료된 거래 조회 (교환/양도)
 		List<Trade> completedTrades = tradeRepository.findAllByBuyerIdAndStatus(memberId, TradeStatus.COMPLETED);
+		Map<Long, AcquisitionType> acquisitionTypeBySeatId = computeAcquisitionTypeBySeatId(completedTrades);
 
 		return tickets.stream()
-			.map(ticket -> toTicketResOrNull(ticket, completedTrades))
+			.map(ticket -> toTicketResOrNull(ticket, acquisitionTypeBySeatId))
 			.filter(Objects::nonNull)
 			.collect(Collectors.toList());
 	}
 
-	private TicketRes toTicketResOrNull(Ticket ticket, List<Trade> completedTrades) {
+	private TicketRes toTicketResOrNull(Ticket ticket, Map<Long, AcquisitionType> acquisitionTypeBySeatId) {
 		Seat seat = seatRepository.findById(ticket.getSeatId()).orElse(null);
 		if (seat == null) {
-			log.warn("Seat not found for ticketId={}, seatId={}", ticket.getId(), ticket.getSeatId());
 			return null;
 		}
 
@@ -186,11 +185,11 @@ public class TicketService {
 		try {
 			schedule = resolveScheduleForTicket(ticket);
 		} catch (BusinessException e) {
-			log.warn("Schedule resolve failed for ticketId={}, reservationId={}", ticket.getId(), ticket.getReservationId());
 			return null;
 		}
 
-		AcquisitionType acquisitionType = determineAcquisitionType(ticket, completedTrades);
+		AcquisitionType acquisitionType =
+			acquisitionTypeBySeatId.getOrDefault(ticket.getSeatId(), AcquisitionType.RESERVATION);
 
 		return TicketRes.builder()
 			.ticketId(ticket.getId())
@@ -205,27 +204,32 @@ public class TicketService {
 			.build();
 	}
 
-	/**
-	 * 티켓의 획득 경로를 판단합니다.
-	 * @param ticket 현재 티켓
-	 * @param completedTrades 구매자로 받은 완료된 거래 목록
-	 * @return AcquisitionType (RESERVATION, TRANSFER, EXCHANGE)
-	 */
-	private AcquisitionType determineAcquisitionType(Ticket ticket, List<Trade> completedTrades) {
-		// 완료된 거래 중에서 현재 티켓의 좌석과 일치하는 거래 찾기
-		for (Trade trade : completedTrades) {
-			// Trade의 원본 티켓 조회
-			Ticket originalTicket = ticketRepository.findById(trade.getTicketId()).orElse(null);
-			if (originalTicket != null && originalTicket.getSeatId().equals(ticket.getSeatId())) {
-				// 같은 좌석이면 교환 또는 양도로 받은 티켓
-				return trade.getType() == com.back.b2st.domain.trade.entity.TradeType.TRANSFER
-					? AcquisitionType.TRANSFER
-					: AcquisitionType.EXCHANGE;
-			}
+	private Map<Long, AcquisitionType> computeAcquisitionTypeBySeatId(List<Trade> completedTrades) {
+		if (completedTrades.isEmpty()) {
+			return Map.of();
 		}
 
-		// 거래 이력이 없으면 예매로 받은 티켓
-		return AcquisitionType.RESERVATION;
+		Set<Long> tradeTicketIds = completedTrades.stream()
+			.map(Trade::getTicketId)
+			.collect(Collectors.toSet());
+
+		Map<Long, Ticket> originalTicketsById = ticketRepository.findAllById(tradeTicketIds).stream()
+			.collect(Collectors.toMap(Ticket::getId, Function.identity(), (a, b) -> a));
+
+		Map<Long, AcquisitionType> acquisitionTypeBySeatId = new HashMap<>();
+		for (Trade trade : completedTrades) {
+			Ticket originalTicket = originalTicketsById.get(trade.getTicketId());
+			if (originalTicket == null) {
+				continue;
+			}
+
+			acquisitionTypeBySeatId.putIfAbsent(
+				originalTicket.getSeatId(),
+				trade.getType() == TradeType.TRANSFER ? AcquisitionType.TRANSFER : AcquisitionType.EXCHANGE
+			);
+		}
+
+		return acquisitionTypeBySeatId;
 	}
 
 	private PerformanceSchedule resolveScheduleForTicket(Ticket ticket) {

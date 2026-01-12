@@ -1,6 +1,7 @@
 package com.back.b2st.domain.ticket.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,6 +13,7 @@ import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRe
 import com.back.b2st.domain.prereservation.booking.entity.PrereservationBooking;
 import com.back.b2st.domain.prereservation.booking.repository.PrereservationBookingRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.dto.response.ReservationSeatInfo;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
@@ -131,34 +133,76 @@ public class TicketService {
 		return ticket;
 	}
 
+	@Transactional
+	public void ensureTicketsForReservation(Long reservationId) {
+		Reservation reservation = reservationRepository.findById(reservationId).orElse(null);
+		if (reservation == null) {
+			return;
+		}
+
+		List<ReservationSeatInfo> seats = reservationSeatRepository.findSeatInfos(reservationId);
+		if (seats.isEmpty()) {
+			return;
+		}
+
+		for (ReservationSeatInfo seat : seats) {
+			createTicket(reservationId, reservation.getMemberId(), seat.seatId());
+		}
+	}
+
+	@Transactional
+	public void ensureTicketsForCompletedReservations(Long memberId) {
+		List<Reservation> completedReservations =
+			reservationRepository.findAllByMemberIdAndStatus(memberId, ReservationStatus.COMPLETED);
+
+		for (Reservation reservation : completedReservations) {
+			ensureTicketsForReservation(reservation.getId());
+		}
+	}
+
+	@Transactional
 	public List<TicketRes> getMyTickets(Long memberId) {
+		ensureTicketsForCompletedReservations(memberId);
+
 		List<Ticket> tickets = ticketRepository.findByMemberId(memberId);
 
 		// 구매자로 받은 완료된 거래 조회 (교환/양도)
 		List<Trade> completedTrades = tradeRepository.findAllByBuyerIdAndStatus(memberId, TradeStatus.COMPLETED);
 
 		return tickets.stream()
-			.map(ticket -> {
-				Seat seat = seatRepository.findById(ticket.getSeatId())
-					.orElseThrow(() -> new BusinessException(TicketErrorCode.TICKET_NOT_FOUND));
-				PerformanceSchedule schedule = resolveScheduleForTicket(ticket);
-
-				// 티켓 획득 경로 판단
-				AcquisitionType acquisitionType = determineAcquisitionType(ticket, completedTrades);
-
-				return TicketRes.builder()
-					.ticketId(ticket.getId())
-					.reservationId(ticket.getReservationId())
-					.seatId(ticket.getSeatId())
-					.status(ticket.getStatus())
-					.sectionName(seat.getSectionName())
-					.rowLabel(seat.getRowLabel())
-					.seatNumber(seat.getSeatNumber())
-					.performanceId(schedule.getPerformance().getPerformanceId())
-					.acquisitionType(acquisitionType)
-					.build();
-			})
+			.map(ticket -> toTicketResOrNull(ticket, completedTrades))
+			.filter(Objects::nonNull)
 			.collect(Collectors.toList());
+	}
+
+	private TicketRes toTicketResOrNull(Ticket ticket, List<Trade> completedTrades) {
+		Seat seat = seatRepository.findById(ticket.getSeatId()).orElse(null);
+		if (seat == null) {
+			log.warn("Seat not found for ticketId={}, seatId={}", ticket.getId(), ticket.getSeatId());
+			return null;
+		}
+
+		PerformanceSchedule schedule;
+		try {
+			schedule = resolveScheduleForTicket(ticket);
+		} catch (BusinessException e) {
+			log.warn("Schedule resolve failed for ticketId={}, reservationId={}", ticket.getId(), ticket.getReservationId());
+			return null;
+		}
+
+		AcquisitionType acquisitionType = determineAcquisitionType(ticket, completedTrades);
+
+		return TicketRes.builder()
+			.ticketId(ticket.getId())
+			.reservationId(ticket.getReservationId())
+			.seatId(ticket.getSeatId())
+			.status(ticket.getStatus())
+			.sectionName(seat.getSectionName())
+			.rowLabel(seat.getRowLabel())
+			.seatNumber(seat.getSeatNumber())
+			.performanceId(schedule.getPerformance().getPerformanceId())
+			.acquisitionType(acquisitionType)
+			.build();
 	}
 
 	/**

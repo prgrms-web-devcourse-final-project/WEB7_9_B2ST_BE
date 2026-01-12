@@ -158,6 +158,7 @@ public class ReservationService {
 		Reservation reservation = getReservationWithLock(reservationId);
 
 		if (reservation.getStatus() == ReservationStatus.COMPLETED) {
+			ticketService.ensureTicketsForReservation(reservationId);
 			return;
 		}
 
@@ -169,6 +170,8 @@ public class ReservationService {
 
 		// 좌석 상태 변경 (HOLD → SOLD)
 		reservationSeatManager.confirmAllSeats(reservationId);
+
+		ticketService.ensureTicketsForReservation(reservationId);
 	}
 
 	// === 중복 예매 방지 === //

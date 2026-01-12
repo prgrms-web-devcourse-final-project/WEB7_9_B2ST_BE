@@ -222,4 +222,42 @@ class ReservationServiceTest {
 		verify(reservation, never()).expire();
 		verify(reservationSeatManager, never()).releaseAllSeats(anyLong());
 	}
+
+	@Test
+	@DisplayName("completeReservation(): 예매 완료 시 좌석 확정 + 티켓 생성 보장")
+	void completeReservation_success() {
+		// given
+		Reservation reservation = mock(Reservation.class);
+
+		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
+			.thenReturn(Optional.of(reservation));
+		when(reservation.getStatus()).thenReturn(ReservationStatus.PENDING);
+
+		// when
+		reservationService.completeReservation(RESERVATION_ID);
+
+		// then
+		verify(reservation).complete(any(LocalDateTime.class));
+		verify(reservationSeatManager).confirmAllSeats(RESERVATION_ID);
+		verify(ticketService).ensureTicketsForReservation(RESERVATION_ID);
+	}
+
+	@Test
+	@DisplayName("completeReservation(): 이미 완료된 예매면 티켓만 보정하고 종료")
+	void completeReservation_alreadyCompleted_ensuresTicketsOnly() {
+		// given
+		Reservation reservation = mock(Reservation.class);
+
+		when(reservationRepository.findByIdWithLock(RESERVATION_ID))
+			.thenReturn(Optional.of(reservation));
+		when(reservation.getStatus()).thenReturn(ReservationStatus.COMPLETED);
+
+		// when
+		reservationService.completeReservation(RESERVATION_ID);
+
+		// then
+		verify(ticketService).ensureTicketsForReservation(RESERVATION_ID);
+		verify(reservationSeatManager, never()).confirmAllSeats(anyLong());
+		verify(reservation, never()).complete(any(LocalDateTime.class));
+	}
 }

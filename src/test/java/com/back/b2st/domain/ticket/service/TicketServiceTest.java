@@ -567,6 +567,30 @@ class TicketServiceTest {
 	}
 
 	@Test
+	@DisplayName("내티켓조회_좌석이_없어도_전체_조회가_실패하지_않고_유효한_티켓만_반환")
+	void getMyTickets_missingSeat_shouldSkipInvalidTickets() {
+		// given
+		Ticket invalidTicket = Ticket.builder()
+			.reservationId(rId)
+			.memberId(mId)
+			.seatId(999_999L)
+			.build();
+		ticketRepository.save(invalidTicket);
+		em.flush();
+		em.clear();
+
+		// when
+		List<TicketRes> tickets = ticketService.getMyTickets(mId);
+
+		// then
+		assertThat(tickets).isNotEmpty();
+		assertThat(tickets)
+			.extracting(TicketRes::getTicketId)
+			.contains(ticket.getId())
+			.doesNotContain(invalidTicket.getId());
+	}
+
+	@Test
 	@DisplayName("내티켓조회_예매로받은티켓_RESERVATION")
 	void getMyTickets_reservationTicket_shouldReturnReservationType() {
 		// given: 예매로 받은 티켓 (기존 setUp에서 생성됨)

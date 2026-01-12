@@ -19,6 +19,7 @@ import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRe
 import com.back.b2st.domain.prereservation.entry.error.PrereservationErrorCode;
 import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
 import com.back.b2st.domain.prereservation.policy.service.PrereservationSlotService;
+import com.back.b2st.domain.prereservation.policy.service.PrereservationTimeTableService;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
@@ -43,6 +44,9 @@ class PrereservationHoldServiceTest {
 
 	@Mock
 	private PrereservationSlotService prereservationSlotService;
+
+	@Mock
+	private PrereservationTimeTableService prereservationTimeTableService;
 
 	@InjectMocks
 	private PrereservationHoldService prereservationHoldService;

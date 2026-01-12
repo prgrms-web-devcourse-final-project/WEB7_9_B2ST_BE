@@ -13,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.back.b2st.domain.email.service.EmailSender;
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
@@ -24,6 +25,7 @@ import com.back.b2st.domain.prereservation.entry.entity.Prereservation;
 import com.back.b2st.domain.prereservation.entry.error.PrereservationErrorCode;
 import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
 import com.back.b2st.domain.prereservation.policy.service.PrereservationSlotService;
+import com.back.b2st.domain.prereservation.policy.service.PrereservationTimeTableService;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
@@ -43,6 +45,9 @@ class PrereservationApplyServiceTest {
 
 	@Mock
 	private PrereservationSlotService prereservationSlotService;
+
+	@Mock
+	private PrereservationTimeTableService prereservationTimeTableService;
 
 	@Mock
 	private EmailSender emailSender;
@@ -110,12 +115,12 @@ class PrereservationApplyServiceTest {
 	}
 
 	@Test
-	@DisplayName("apply(): 예매 오픈 시간 이후면 APPLICATION_CLOSED 예외")
-	void apply_afterBookingOpen_throw() {
+	@DisplayName("apply(): 예매 오픈 날짜 당일이면 APPLICATION_CLOSED 예외")
+	void apply_onBookingDate_throw() {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
 		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().minusMinutes(1));
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().toLocalDate().atTime(23, 59));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 
 		// when & then
@@ -130,7 +135,7 @@ class PrereservationApplyServiceTest {
 		// given
 		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
 		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0));
 		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
 		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.empty());
 
@@ -153,7 +158,7 @@ class PrereservationApplyServiceTest {
 		Section section = mock(Section.class);
 
 		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0));
 		given(schedule.getPerformance()).willReturn(performance);
 		given(performance.getVenue()).willReturn(venue);
 		given(venue.getVenueId()).willReturn(venueId);
@@ -181,7 +186,7 @@ class PrereservationApplyServiceTest {
 		Section section = mock(Section.class);
 
 		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0));
 		given(schedule.getPerformance()).willReturn(performance);
 		given(performance.getVenue()).willReturn(venue);
 		given(venue.getVenueId()).willReturn(venueId);
@@ -212,7 +217,7 @@ class PrereservationApplyServiceTest {
 		Section section = mock(Section.class);
 
 		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0));
 		given(schedule.getPerformance()).willReturn(performance);
 		given(performance.getVenue()).willReturn(venue);
 		given(venue.getVenueId()).willReturn(venueId);
@@ -240,7 +245,7 @@ class PrereservationApplyServiceTest {
 		Long venueId = 100L;
 		String email = "user@example.com";
 
-		LocalDateTime bookingOpenAt = LocalDateTime.now().plusMinutes(10);
+		LocalDateTime bookingOpenAt = LocalDateTime.now().plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0);
 		LocalDateTime slotStartAt = bookingOpenAt.plusHours(1);
 		LocalDateTime slotEndAt = bookingOpenAt.plusHours(2);
 
@@ -292,7 +297,7 @@ class PrereservationApplyServiceTest {
 		Section section = mock(Section.class);
 
 		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
-		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusMinutes(10));
+		given(schedule.getBookingOpenAt()).willReturn(LocalDateTime.now().plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0));
 		given(schedule.getPerformance()).willReturn(performance);
 		given(performance.getVenue()).willReturn(venue);
 		given(venue.getVenueId()).willReturn(venueId);
@@ -436,5 +441,45 @@ class PrereservationApplyServiceTest {
 		assertThat(result).hasSize(1);
 		assertThat(result.get(0).scheduleId()).isEqualTo(10L);
 		assertThat(result.get(0).sectionIds()).containsExactly(1L);
+	}
+
+	@Test
+	@DisplayName("apply(): slotStrict=false이면 타임테이블 없이도 이메일 발송까지 성공한다")
+	void apply_slotStrictFalse_allowsWithoutTimeTable() {
+		// given
+		Long venueId = 100L;
+		String email = "user@example.com";
+
+		ReflectionTestUtils.setField(prereservationApplyService, "slotStrict", false);
+
+		LocalDateTime bookingOpenAt = LocalDateTime.now().plusDays(1).withHour(13).withMinute(0).withSecond(0).withNano(0);
+
+		PerformanceSchedule schedule = mock(PerformanceSchedule.class);
+		Performance performance = mock(Performance.class);
+		Venue venue = mock(Venue.class);
+		Section section = mock(Section.class);
+
+		given(schedule.getBookingType()).willReturn(BookingType.PRERESERVE);
+		given(schedule.getBookingOpenAt()).willReturn(bookingOpenAt);
+		given(schedule.getBookingCloseAt()).willReturn(null);
+		given(schedule.getPerformance()).willReturn(performance);
+		given(performance.getVenue()).willReturn(venue);
+		given(venue.getVenueId()).willReturn(venueId);
+
+		given(section.getVenueId()).willReturn(venueId);
+		given(section.getSectionName()).willReturn("A구역");
+
+		given(performanceScheduleRepository.findById(SCHEDULE_ID)).willReturn(Optional.of(schedule));
+		given(sectionRepository.findById(SECTION_ID)).willReturn(Optional.of(section));
+		given(prereservationRepository.existsByPerformanceScheduleIdAndMemberIdAndSectionId(
+			SCHEDULE_ID, MEMBER_ID, SECTION_ID
+		)).willReturn(false);
+
+		// when & then
+		assertThatCode(() -> prereservationApplyService.apply(SCHEDULE_ID, MEMBER_ID, email, SECTION_ID))
+			.doesNotThrowAnyException();
+
+		then(prereservationSlotService).shouldHaveNoInteractions();
+		then(emailSender).should().sendNotificationEmail(eq(email), anyString(), anyString(), anyString(), anyString());
 	}
 }

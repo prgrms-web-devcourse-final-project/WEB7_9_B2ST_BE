@@ -3,6 +3,7 @@ package com.back.b2st.domain.prereservation.policy.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,6 +62,47 @@ public class PrereservationTimeTableService {
 
 			timeTable.updateBookingTime(item.bookingStartAt(), item.bookingEndAt());
 			prereservationTimeTableRepository.save(timeTable);
+		}
+	}
+
+	@Transactional
+	public void ensureDefaultTimeTablesIfMissing(Long scheduleId) {
+		PerformanceSchedule schedule = validatePrereserveScheduleOrThrow(scheduleId);
+
+		Long venueId = schedule.getPerformance().getVenue().getVenueId();
+		List<Section> sections = sectionRepository.findByVenueId(venueId).stream()
+			.sorted(java.util.Comparator.comparing(Section::getSectionName))
+			.toList();
+
+		if (sections.isEmpty()) {
+			throw new BusinessException(PrereservationErrorCode.SECTION_NOT_FOUND);
+		}
+
+		LocalDateTime bookingOpenAt = schedule.getBookingOpenAt();
+
+		for (int idx = 0; idx < sections.size(); idx++) {
+			Section section = sections.get(idx);
+
+			if (prereservationTimeTableRepository.findByPerformanceScheduleIdAndSectionId(scheduleId, section.getId())
+				.isPresent()) {
+				continue;
+			}
+
+			LocalDateTime startAt = bookingOpenAt.plusHours(idx);
+			LocalDateTime endAt = startAt.plusHours(1).minusSeconds(1);
+
+			validateTimeRangeOrThrow(startAt, endAt);
+			validateWithinScheduleOrThrow(schedule, startAt, endAt);
+
+			try {
+				prereservationTimeTableRepository.save(PrereservationTimeTable.builder()
+					.performanceScheduleId(scheduleId)
+					.sectionId(section.getId())
+					.bookingStartAt(startAt)
+					.bookingEndAt(endAt)
+					.build());
+			} catch (DataIntegrityViolationException ignored) {
+			}
 		}
 	}
 

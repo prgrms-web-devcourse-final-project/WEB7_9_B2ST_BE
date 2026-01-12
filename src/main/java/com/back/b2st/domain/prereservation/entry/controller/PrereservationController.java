@@ -40,8 +40,8 @@ public class PrereservationController {
 		summary = "사전 구역 신청",
 		description = """
 			BookingType이 PRERESERVE(신청 예매)인 회차에 대해 예매 가능한 구역을 사전에 신청합니다.
-			- 예매 오픈 시간(bookingOpenAt) 24시간 전부터 신청 가능
-			- 예매 오픈 시간(bookingOpenAt) 이후 신청 불가
+			- 예매 오픈 날짜 기준 전날 00:00부터 신청 가능
+			- 예매 오픈 날짜 기준 당일 00:00 이후 신청 불가
 			- 동일 회차/구역 중복 신청 불가
 			"""
 	)

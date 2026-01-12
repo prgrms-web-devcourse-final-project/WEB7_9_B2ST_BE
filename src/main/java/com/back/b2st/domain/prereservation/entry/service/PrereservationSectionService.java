@@ -16,6 +16,7 @@ import com.back.b2st.domain.prereservation.entry.dto.response.PrereservationSect
 import com.back.b2st.domain.prereservation.entry.entity.Prereservation;
 import com.back.b2st.domain.prereservation.entry.error.PrereservationErrorCode;
 import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
+import com.back.b2st.domain.prereservation.policy.service.PrereservationTimeTableService;
 import com.back.b2st.domain.prereservation.policy.service.PrereservationSlotService;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
@@ -31,11 +32,12 @@ public class PrereservationSectionService {
 	private final SectionRepository sectionRepository;
 	private final PrereservationRepository prereservationRepository;
 	private final PrereservationSlotService prereservationSlotService;
+	private final PrereservationTimeTableService prereservationTimeTableService;
 
 	@Value("${prereservation.slot.strict:true}")
 	private boolean slotStrict = true;
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public List<PrereservationSectionRes> getSections(Long scheduleId, Long memberId) {
 		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
 			.orElseThrow(() -> new BusinessException(PrereservationErrorCode.SCHEDULE_NOT_FOUND));
@@ -56,16 +58,20 @@ public class PrereservationSectionService {
 			.map(Prereservation::getSectionId)
 			.collect(Collectors.toSet());
 
+		if (slotStrict) {
+			prereservationTimeTableService.ensureDefaultTimeTablesIfMissing(scheduleId);
+		}
+
 		return sections.stream()
 			.map(section -> {
 				var slot = slotStrict
 					? prereservationSlotService.calculateSlotOrThrow(schedule, section)
 					: new PrereservationSlotService.Slot(
-						schedule.getBookingOpenAt(),
-						schedule.getBookingCloseAt() != null
-							? schedule.getBookingCloseAt()
-							: schedule.getBookingOpenAt().plusDays(30)
-					);
+					schedule.getBookingOpenAt(),
+					schedule.getBookingCloseAt() != null
+						? schedule.getBookingCloseAt()
+						: schedule.getBookingOpenAt().plusDays(30)
+				);
 				return new PrereservationSectionRes(
 					section.getId(),
 					section.getSectionName(),

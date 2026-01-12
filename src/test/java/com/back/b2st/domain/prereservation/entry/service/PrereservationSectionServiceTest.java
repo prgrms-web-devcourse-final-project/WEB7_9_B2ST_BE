@@ -23,6 +23,7 @@ import com.back.b2st.domain.prereservation.entry.entity.Prereservation;
 import com.back.b2st.domain.prereservation.entry.error.PrereservationErrorCode;
 import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
 import com.back.b2st.domain.prereservation.policy.service.PrereservationSlotService;
+import com.back.b2st.domain.prereservation.policy.service.PrereservationTimeTableService;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
 import com.back.b2st.domain.venue.venue.entity.Venue;
@@ -42,6 +43,9 @@ class PrereservationSectionServiceTest {
 
 	@Mock
 	private PrereservationSlotService prereservationSlotService;
+
+	@Mock
+	private PrereservationTimeTableService prereservationTimeTableService;
 
 	@InjectMocks
 	private PrereservationSectionService prereservationSectionService;

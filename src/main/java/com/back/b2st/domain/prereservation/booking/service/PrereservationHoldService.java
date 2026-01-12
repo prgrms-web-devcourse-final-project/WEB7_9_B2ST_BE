@@ -2,8 +2,8 @@ package com.back.b2st.domain.prereservation.booking.service;
 
 import java.time.LocalDateTime;
 
-import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.back.b2st.domain.performanceschedule.entity.BookingType;
@@ -11,12 +11,13 @@ import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.prereservation.entry.error.PrereservationErrorCode;
 import com.back.b2st.domain.prereservation.entry.repository.PrereservationRepository;
+import com.back.b2st.domain.prereservation.policy.service.PrereservationTimeTableService;
 import com.back.b2st.domain.prereservation.policy.service.PrereservationSlotService;
+import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.domain.seat.seat.entity.Seat;
 import com.back.b2st.domain.seat.seat.repository.SeatRepository;
 import com.back.b2st.domain.venue.section.entity.Section;
 import com.back.b2st.domain.venue.section.repository.SectionRepository;
-import com.back.b2st.domain.scheduleseat.error.ScheduleSeatErrorCode;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class PrereservationHoldService {
 	private final SectionRepository sectionRepository;
 	private final PrereservationRepository prereservationRepository;
 	private final PrereservationSlotService prereservationSlotService;
+	private final PrereservationTimeTableService prereservationTimeTableService;
 
 	@Value("${prereservation.booking.strict:true}")
 	private boolean bookingStrict = true;
@@ -37,7 +39,7 @@ public class PrereservationHoldService {
 	@Value("${prereservation.slot.strict:true}")
 	private boolean slotStrict = true;
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public void validateSeatHoldAllowed(Long memberId, Long scheduleId, Long seatId) {
 		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
 			.orElseThrow(() -> new BusinessException(PrereservationErrorCode.SCHEDULE_NOT_FOUND));
@@ -77,6 +79,8 @@ public class PrereservationHoldService {
 		if (!slotStrict) {
 			return;
 		}
+
+		prereservationTimeTableService.ensureDefaultTimeTablesIfMissing(scheduleId);
 
 		Section section = sectionRepository.findById(seatSectionId)
 			.orElseThrow(() -> new BusinessException(PrereservationErrorCode.SECTION_NOT_FOUND));

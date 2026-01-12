@@ -13,10 +13,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.result.entity.LotteryResult;
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.error.PaymentErrorCode;
+import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.service.LotteryReservationService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import jakarta.persistence.EntityManager;
@@ -28,11 +31,16 @@ class LotteryPaymentFinalizerTest {
 	@Mock
 	private EntityManager entityManager;
 
+	@Mock
+	private LotteryReservationService lotteryReservationService;
+
 	@InjectMocks
 	private LotteryPaymentFinalizer lotteryPaymentFinalizer;
 
 	private static final Long LOTTERY_RESULT_ID = 10L;
+	private static final Long LOTTERY_ENTRY_ID = 11L;
 	private static final Long MEMBER_ID = 1L;
+	private static final Long SCHEDULE_ID = 100L;
 
 	@Test
 	@DisplayName("supports(): DomainType.LOTTERY 지원")
@@ -90,13 +98,21 @@ class LotteryPaymentFinalizerTest {
 
 		LotteryResult lotteryResult = org.mockito.Mockito.mock(LotteryResult.class);
 		given(lotteryResult.getMemberId()).willReturn(MEMBER_ID);
+		given(lotteryResult.getLotteryEntryId()).willReturn(LOTTERY_ENTRY_ID);
 		given(lotteryResult.isPaid()).willReturn(false);
 		given(entityManager.find(LotteryResult.class, LOTTERY_RESULT_ID, LockModeType.PESSIMISTIC_WRITE))
 			.willReturn(lotteryResult);
 
+		LotteryEntry lotteryEntry = org.mockito.Mockito.mock(LotteryEntry.class);
+		given(lotteryEntry.getScheduleId()).willReturn(SCHEDULE_ID);
+		given(entityManager.find(LotteryEntry.class, LOTTERY_ENTRY_ID)).willReturn(lotteryEntry);
+		given(lotteryReservationService.getOrCreateCompletedReservation(MEMBER_ID, SCHEDULE_ID))
+			.willReturn(org.mockito.Mockito.mock(Reservation.class));
+
 		assertThatCode(() -> lotteryPaymentFinalizer.finalizePayment(payment)).doesNotThrowAnyException();
 
 		then(lotteryResult).should().confirmPayment();
+		then(lotteryReservationService).should().getOrCreateCompletedReservation(MEMBER_ID, SCHEDULE_ID);
 	}
 
 	@Test
@@ -108,12 +124,20 @@ class LotteryPaymentFinalizerTest {
 
 		LotteryResult lotteryResult = org.mockito.Mockito.mock(LotteryResult.class);
 		given(lotteryResult.getMemberId()).willReturn(MEMBER_ID);
+		given(lotteryResult.getLotteryEntryId()).willReturn(LOTTERY_ENTRY_ID);
 		given(lotteryResult.isPaid()).willReturn(true);
 		given(entityManager.find(LotteryResult.class, LOTTERY_RESULT_ID, LockModeType.PESSIMISTIC_WRITE))
 			.willReturn(lotteryResult);
 
+		LotteryEntry lotteryEntry = org.mockito.Mockito.mock(LotteryEntry.class);
+		given(lotteryEntry.getScheduleId()).willReturn(SCHEDULE_ID);
+		given(entityManager.find(LotteryEntry.class, LOTTERY_ENTRY_ID)).willReturn(lotteryEntry);
+		given(lotteryReservationService.getOrCreateCompletedReservation(MEMBER_ID, SCHEDULE_ID))
+			.willReturn(org.mockito.Mockito.mock(Reservation.class));
+
 		assertThatCode(() -> lotteryPaymentFinalizer.finalizePayment(payment)).doesNotThrowAnyException();
 
 		then(lotteryResult).should(org.mockito.Mockito.never()).confirmPayment();
+		then(lotteryReservationService).should().getOrCreateCompletedReservation(MEMBER_ID, SCHEDULE_ID);
 	}
 }

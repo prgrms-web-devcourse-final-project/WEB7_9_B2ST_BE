@@ -2,6 +2,7 @@ package com.back.b2st.domain.reservation.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.back.b2st.domain.reservation.dto.response.LotteryReservationCreatedRes;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationSeat;
+import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
@@ -29,19 +31,42 @@ public class LotteryReservationService {
 	/** === 추첨 예매 생성 (결제 완료 기준) === */
 	@Transactional
 	public LotteryReservationCreatedRes createCompletedReservation(Long memberId, Long scheduleId) {
+		Reservation reservation = getOrCreateCompletedReservation(memberId, scheduleId);
+		return LotteryReservationCreatedRes.from(reservation);
+	}
+
+	@Transactional
+	public Reservation getOrCreateCompletedReservation(Long memberId, Long scheduleId) {
 		LocalDateTime now = LocalDateTime.now();
+
+		Optional<Reservation> completed =
+			reservationRepository.findTopByMemberIdAndScheduleIdAndStatusOrderByIdDesc(
+				memberId, scheduleId, ReservationStatus.COMPLETED
+			);
+
+		if (completed.isPresent()) {
+			return completed.get();
+		}
+
+		Optional<Reservation> pending =
+			reservationRepository.findTopByMemberIdAndScheduleIdAndStatusOrderByIdDesc(
+				memberId, scheduleId, ReservationStatus.PENDING
+			);
+
+		if (pending.isPresent()) {
+			Reservation reservation = pending.get();
+			reservation.complete(now);
+			return reservation;
+		}
 
 		Reservation reservation = Reservation.builder()
 			.scheduleId(scheduleId)
 			.memberId(memberId)
 			.expiresAt(now)
 			.build();
-
-		// 생성 즉시 예매 완료 처리
 		reservation.complete(now);
 
-		Reservation saved = reservationRepository.save(reservation);
-		return LotteryReservationCreatedRes.from(saved);
+		return reservationRepository.save(reservation);
 	}
 
 	/** === 추첨 좌석 확정 === */

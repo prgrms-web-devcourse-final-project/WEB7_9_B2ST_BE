@@ -384,6 +384,3 @@ groups:
 
 </details>
 
-## 📄 라이선스
-
-프로그래머스 K-Digital Training 파이널 프로젝트

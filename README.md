@@ -221,13 +221,6 @@
 src/main/java/com/back/b2st/
 ├── domain/
 │   ├── auth/               # JWT, OAuth, 로그인 보안, 토큰 관리
-│   │   ├── client/         # KakaoApiClient, KakaoJwksClient
-│   │   ├── controller/     # AuthController, AuthAdminController
-│   │   ├── service/        # AuthService, LoginSecurityService, SecurityThreatDetectionService
-│   │   ├── entity/         # RefreshToken(Redis), LoginLog, OAuthNonce
-│   │   ├── listener/       # LoginEventListener (비동기 로그 저장)
-│   │   └── metrics/        # AuthMetrics, SecurityMetrics
-│   │
 │   ├── member/             # 회원 CRUD, 탈퇴/복구, Rate Limiting
 │   ├── email/              # 이메일 인증, 비동기 발송
 │   ├── performance/        # 공연 관리

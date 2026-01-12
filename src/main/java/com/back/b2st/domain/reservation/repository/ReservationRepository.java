@@ -21,6 +21,12 @@ import jakarta.persistence.LockModeType;
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long>, ReservationRepositoryCustom {
 
+	Optional<Reservation> findTopByMemberIdAndScheduleIdAndStatusOrderByIdDesc(
+		Long memberId,
+		Long scheduleId,
+		ReservationStatus status
+	);
+
 	/** 락 조회 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT r FROM Reservation r WHERE r.id = :reservationId")

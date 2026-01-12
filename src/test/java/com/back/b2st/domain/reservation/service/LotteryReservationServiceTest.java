@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.back.b2st.domain.reservation.dto.response.LotteryReservationCreatedRes;
 import com.back.b2st.domain.reservation.entity.Reservation;
 import com.back.b2st.domain.reservation.entity.ReservationSeat;
+import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
 import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
@@ -46,6 +48,12 @@ class LotteryReservationServiceTest {
 		Long memberId = 1L;
 		Long scheduleId = 10L;
 
+		when(reservationRepository.findTopByMemberIdAndScheduleIdAndStatusOrderByIdDesc(
+			memberId, scheduleId, ReservationStatus.COMPLETED
+		)).thenReturn(Optional.empty());
+		when(reservationRepository.findTopByMemberIdAndScheduleIdAndStatusOrderByIdDesc(
+			memberId, scheduleId, ReservationStatus.PENDING
+		)).thenReturn(Optional.empty());
 		when(reservationRepository.save(any(Reservation.class)))
 			.thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -62,7 +70,64 @@ class LotteryReservationServiceTest {
 		assertThat(saved.getMemberId()).isEqualTo(memberId);
 		assertThat(saved.getScheduleId()).isEqualTo(scheduleId);
 		assertThat(saved.getExpiresAt()).isNotNull();
+		assertThat(saved.getStatus()).isEqualTo(ReservationStatus.COMPLETED);
 		assertThat(res).isNotNull();
+	}
+
+	@Test
+	@DisplayName("getOrCreateCompletedReservation: 이미 완료된 예매가 있으면 저장 없이 반환한다")
+	void getOrCreateCompletedReservation_returnsCompletedWithoutSave() {
+
+		// given
+		Long memberId = 1L;
+		Long scheduleId = 10L;
+
+		Reservation existing = Reservation.builder()
+			.memberId(memberId)
+			.scheduleId(scheduleId)
+			.expiresAt(java.time.LocalDateTime.now())
+			.build();
+		existing.complete(java.time.LocalDateTime.now());
+
+		when(reservationRepository.findTopByMemberIdAndScheduleIdAndStatusOrderByIdDesc(
+			memberId, scheduleId, ReservationStatus.COMPLETED
+		)).thenReturn(Optional.of(existing));
+
+		// when
+		Reservation res = lotteryReservationService.getOrCreateCompletedReservation(memberId, scheduleId);
+
+		// then
+		assertThat(res).isSameAs(existing);
+		verify(reservationRepository, never()).save(any());
+	}
+
+	@Test
+	@DisplayName("getOrCreateCompletedReservation: PENDING 예매가 있으면 완료 처리하고 반환한다")
+	void getOrCreateCompletedReservation_completesPending() {
+
+		// given
+		Long memberId = 1L;
+		Long scheduleId = 10L;
+
+		Reservation pending = Reservation.builder()
+			.memberId(memberId)
+			.scheduleId(scheduleId)
+			.expiresAt(java.time.LocalDateTime.now().plusMinutes(10))
+			.build();
+
+		when(reservationRepository.findTopByMemberIdAndScheduleIdAndStatusOrderByIdDesc(
+			memberId, scheduleId, ReservationStatus.COMPLETED
+		)).thenReturn(Optional.empty());
+		when(reservationRepository.findTopByMemberIdAndScheduleIdAndStatusOrderByIdDesc(
+			memberId, scheduleId, ReservationStatus.PENDING
+		)).thenReturn(Optional.of(pending));
+
+		// when
+		Reservation res = lotteryReservationService.getOrCreateCompletedReservation(memberId, scheduleId);
+
+		// then
+		assertThat(res.getStatus()).isEqualTo(ReservationStatus.COMPLETED);
+		verify(reservationRepository, never()).save(any());
 	}
 
 	@Test

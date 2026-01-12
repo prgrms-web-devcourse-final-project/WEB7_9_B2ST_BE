@@ -3,23 +3,24 @@ package com.back.b2st.domain.payment.service;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.back.b2st.domain.lottery.entry.entity.LotteryEntry;
 import com.back.b2st.domain.lottery.result.entity.LotteryResult;
 import com.back.b2st.domain.payment.entity.DomainType;
 import com.back.b2st.domain.payment.entity.Payment;
 import com.back.b2st.domain.payment.error.PaymentErrorCode;
+import com.back.b2st.domain.reservation.service.LotteryReservationService;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
 public class LotteryPaymentFinalizer implements PaymentFinalizer {
 
-	@PersistenceContext
-	private EntityManager entityManager;
+	private final LotteryReservationService lotteryReservationService;
+	private final EntityManager entityManager;
 
 	@Override
 	public boolean supports(DomainType domainType) {
@@ -44,6 +45,12 @@ public class LotteryPaymentFinalizer implements PaymentFinalizer {
 		if (!lotteryResult.isPaid()) {
 			lotteryResult.confirmPayment();
 		}
+
+		LotteryEntry lotteryEntry = entityManager.find(LotteryEntry.class, lotteryResult.getLotteryEntryId());
+		if (lotteryEntry == null) {
+			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND);
+		}
+
+		lotteryReservationService.getOrCreateCompletedReservation(payment.getMemberId(), lotteryEntry.getScheduleId());
 	}
 }
-

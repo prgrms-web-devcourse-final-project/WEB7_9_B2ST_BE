@@ -50,8 +50,8 @@
 
 |       이름       |   역할    |                                                               GitHub                                                               |
 |:--------------:|:-------:|:----------------------------------------------------------------------------------------------------------------------------------:|
-|     김영인     | Backend (PO) |           [![GitHub](https://img.shields.io/badge/-whyin-181717?logo=github&logoColor=white)](https://github.com/whyin)            |
-| 김채현 | Backend |  [![GitHub](https://img.shields.io/badge/-Chehyeon--Kim23-181717?logo=github&logoColor=white)](https://github.com/Chehyeon-Kim23)  |
+|     김채현     | Backend (PO) |           [![GitHub](https://img.shields.io/badge/-Chehyeon--Kim23-181717?logo=github&logoColor=white)](https://github.com/Chehyeon-Kim23)            |
+| 김채현 | Backend |  [![GitHub](https://img.shields.io/badge/-whyin-181717?logo=github&logoColor=white)](https://github.com/whyin)  |
 |      노미경      | Backend |          [![GitHub](https://img.shields.io/badge/-77r77r-181717?logo=github&logoColor=white)](https://github.com/77r77r)           |
 | 박민형  | Backend (팀장) |          [![GitHub](https://img.shields.io/badge/-minibr-181717?logo=github&logoColor=white)](https://github.com/minibr)           |
 |     이위림     | Backend | [![GitHub](https://img.shields.io/badge/-weilim0513--tech-181717?logo=github&logoColor=white)](https://github.com/weilim0513-tech) |

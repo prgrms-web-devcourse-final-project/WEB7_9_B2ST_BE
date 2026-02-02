@@ -1,0 +1,40 @@
+# ----- 이메일 발송 -----
+
+# 이메일 발송 성공 추이
+sum(rate(email_sent_total{result="success"}[1m]))
+
+# 이메일 발송 실패 추이
+sum(rate(email_sent_total{result="failure"}[1m]))
+
+# 이메일 발송 성공률 (%)
+sum(rate(email_sent_total{result="success"}[5m])) / sum(rate(email_sent_total[5m])) * 100
+
+# 24시간 이메일 발송 수
+sum(increase(email_sent_total[24h])) by (result)
+
+
+# ----- 이메일 인증 -----
+
+# 이메일 인증 성공 추이
+sum(rate(email_verification_total{result="success"}[1m]))
+
+# 이메일 인증 실패 추이
+sum(rate(email_verification_total{result="failure"}[1m]))
+
+# 이메일 인증 성공률 (%)
+sum(rate(email_verification_total{result="success"}[5m])) / sum(rate(email_verification_total[5m])) * 100
+
+# 24시간 인증 시도 수
+sum(increase(email_verification_total[24h])) by (result)
+
+
+# ----- Email API 성능 -----
+
+# Email API P95 응답시간
+histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=~"/api/email.*"}[5m])) by (le))
+
+# Email API 에러율
+sum(rate(http_server_requests_seconds_count{uri=~"/api/email.*", status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count{uri=~"/api/email.*"}[5m])) * 100
+
+# Email API RPS
+sum(rate(http_server_requests_seconds_count{uri=~"/api/email.*"}[1m]))

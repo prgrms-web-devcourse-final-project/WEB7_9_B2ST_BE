@@ -1,34 +1,44 @@
-# Gradle로 Spring Boot JAR 빌드
-FROM gradle:8.10.0-jdk21 AS builder
+# 1단계: Gradle로 Spring Boot JAR 빌드
+FROM gradle:8.10.0-jdk21-alpine AS builder
 
 WORKDIR /app
 
-# Gradle 설정 파일 먼저 복사
+# 의존성 캐싱 레이어
 COPY build.gradle settings.gradle ./
 COPY gradle gradle
 COPY gradlew .
-RUN chmod +x gradlew
+RUN chmod +x gradlew && \
+    ./gradlew dependencies --no-daemon
 
-# 종속성 설치
-RUN ./gradlew dependencies --no-daemon
-
-# 소스 코드 복사
+# 애플리케이션 빌드
 COPY src src
-
-# 애플리케이션 빌드(테스트 제외)
 RUN ./gradlew bootJar --no-daemon -x test
 
-# 2단계: 실행용 이미지
-FROM eclipse-temurin:21-jre
+# 2단계: 실행용 이미지 (최소화)
+FROM eclipse-temurin:21-jre-alpine
+
+# 보안: 비-root 유저 생성
+RUN addgroup -S spring && adduser -S spring -G spring
+
 WORKDIR /app
 
-# --- 도플러 CLI 설치 추가 ---
-RUN apt-get update && apt-get install -y curl gnupg && \
-    (curl -Ls https://cli.doppler.com/install.sh || wget -qO- https://cli.doppler.com/install.sh) | sh
-# -------------------------
-
+# JAR 파일만 복사
 COPY --from=builder /app/build/libs/*.jar app.jar
+
+# 소유권 변경
+RUN chown spring:spring app.jar
+
+# 비-root 유저로 전환
+USER spring
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "doppler run -- java -Dspring.profiles.active=prod -jar app.jar"]
+# 성능 최적화된 JVM 옵션
+ENTRYPOINT ["java", \
+    "-XX:+UseContainerSupport", \
+    "-XX:MaxRAMPercentage=75.0", \
+    "-XX:InitialRAMPercentage=50.0", \
+    "-XX:+UseG1GC", \
+    "-XX:+DisableExplicitGC", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-jar", "app.jar"]

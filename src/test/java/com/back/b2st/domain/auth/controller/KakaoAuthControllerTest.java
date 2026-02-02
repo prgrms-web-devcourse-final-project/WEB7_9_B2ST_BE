@@ -319,7 +319,7 @@ class KakaoAuthControllerTest extends AbstractContainerBaseTest {
 				.andReturn().getResponse().getContentAsString();
 
 			String accessToken = objectMapper.readTree(loginResponse)
-				.path("data").path("accessToken").textValue();
+				.path("data").path("accessToken").stringValue();
 
 			// 카카오 API Mock
 			String code = "link-code";

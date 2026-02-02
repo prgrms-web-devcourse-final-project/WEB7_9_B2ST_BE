@@ -24,7 +24,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "reservation",
 	indexes = {
-		@Index(name = "idx_reservation_member", columnList = "member_id")
+		@Index(name = "idx_reservation_member_schedule", columnList = "member_id, schedule_id"),
+		@Index(name = "idx_reservation_status_expires", columnList = "status, expires_at")
 	}
 )
 @SequenceGenerator(
@@ -45,9 +46,6 @@ public class Reservation extends BaseEntity {
 	@Column(name = "member_id", nullable = false)
 	private Long memberId;    // 예매자 FK
 
-	@Column(name = "seat_id", nullable = false)
-	private Long seatId;    // 좌석 FK
-
 	@Column(name = "canceled_at")
 	private LocalDateTime canceledAt;
 
@@ -65,12 +63,10 @@ public class Reservation extends BaseEntity {
 	public Reservation(
 		Long scheduleId,
 		Long memberId,
-		Long seatId,
 		LocalDateTime expiresAt
 	) {
 		this.scheduleId = scheduleId;
 		this.memberId = memberId;
-		this.seatId = seatId;
 		this.expiresAt = expiresAt;
 		this.status = ReservationStatus.PENDING;
 	}

@@ -90,4 +90,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 		Long domainId,
 		Long memberId
 	);
+
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+		delete from Payment p
+		where p.domainType = :domainType
+		  and p.domainId in :domainIds
+		""")
+	int deleteAllByDomainTypeAndDomainIdIn(
+		@Param("domainType") DomainType domainType,
+		@Param("domainIds") List<Long> domainIds
+	);
 }

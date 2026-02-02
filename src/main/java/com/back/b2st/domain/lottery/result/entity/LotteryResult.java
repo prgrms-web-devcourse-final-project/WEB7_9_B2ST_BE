@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import com.back.b2st.global.jpa.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -31,7 +33,8 @@ import lombok.NoArgsConstructor;
 		@Index(name = "idx_lottery_results_member", columnList = "member_id"),
 		@Index(name = "idx_lottery_results_lottery_entry_member", columnList = "lottery_entry_id, member_id"),
 		@Index(name = "idx_lottery_results_payment_deadline", columnList = "payment_deadline"),
-		@Index(name = "idx_lottery_results_uuid", columnList = "uuid")
+		@Index(name = "idx_lottery_results_uuid", columnList = "uuid"),
+		@Index(name = "idx_lottery_results_paid", columnList = "is_paid")
 	},
 	uniqueConstraints = {
 		@UniqueConstraint(
@@ -49,6 +52,7 @@ import lombok.NoArgsConstructor;
 	sequenceName = "lottery_result_seq",
 	allocationSize = 50
 )
+@DynamicUpdate
 public class LotteryResult extends BaseEntity {
 
 	public static final int PAYMENT_DEADLINE_DAYS = 2;    // TODO : 생성일 + 2일(임시)
@@ -90,5 +94,21 @@ public class LotteryResult extends BaseEntity {
 		this.paymentDeadline = LocalDateTime.now()
 			.plusDays(PAYMENT_DEADLINE_DAYS).with(LocalTime.MAX);
 		this.paid = false;
+	}
+
+	public void confirmPayment() {
+		this.paid = true;
+	}
+
+	// test
+	public static LotteryResult expired(
+		Long lotteryEntryId,
+		Long memberId
+	) {
+		LotteryResult result = new LotteryResult(lotteryEntryId, memberId);
+		result.paymentDeadline = LocalDateTime.now()
+			.minusDays(1)
+			.with(LocalTime.MIN);
+		return result;
 	}
 }

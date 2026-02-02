@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import com.back.b2st.domain.auth.error.AuthErrorCode;
+import com.back.b2st.domain.auth.metrics.AuthMetrics;
 import com.back.b2st.global.error.exception.BusinessException;
 
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class LoginSecurityService {
+
+	private final AuthMetrics authMetrics;
 
 	// 세팅 상수
 	private static final int MAX_ATTEMPTS = 5; // 최대 로그인 시도 횟수
@@ -50,7 +53,6 @@ public class LoginSecurityService {
 
 	/**
 	 * 로그인 전 계정 잠금 상태 확인
-	 * 잠겨있으면 BusinessException 발생
 	 *
 	 * @param email 확인할 이메일
 	 * @throws BusinessException ACCOUNT_LOCKED
@@ -61,9 +63,9 @@ public class LoginSecurityService {
 		if (Boolean.TRUE.equals(redisTemplate.hasKey(lockKey))) { // null 방지
 			Long ttl = redisTemplate.getExpire(lockKey, TimeUnit.SECONDS);
 			int remainingMinutes = ttl != null ? (int)Math.ceil(ttl / 60.0) : 0;
-			// 내부 로그에만 잠금 정보 기록 (운영용)
+			// 내부 로그에만 잠금 정보 기록
 			log.warn("🔒 잠긴 계정 로그인 시도: email={}, 남은시간={}분", maskEmail(email), remainingMinutes);
-			// 클라이언트에는 일반 로그인 실패로 응답 (보안: 계정 잠금 상태 노출 방지)
+			// 클라이언트에는 일반 로그인 실패로 응답
 			throw new BusinessException(AuthErrorCode.LOGIN_FAILED);
 		}
 	}
@@ -94,10 +96,11 @@ public class LoginSecurityService {
 		// 최대 시도 초과 시 계정 잠금
 		if (attempts >= MAX_ATTEMPTS) {
 			lockAccount(email);
-			// 내부 로그에만 잠금 정보 기록 (운영용)
+			authMetrics.recordAccountLock();
+			// 내부 로그에만 잠금 정보 기록
 			log.warn("🔒 계정 잠금 발생: email={}, IP={}, 잠금시간={}분", maskEmail(email), clientIp,
 				LOCKOUT_DURATION.toMinutes());
-			// 클라이언트에는 일반 로그인 실패로 응답 (보안: 계정 잠금 상태 노출 방지)
+			// 클라이언트에는 일반 로그인 실패로 응답
 			throw new BusinessException(AuthErrorCode.LOGIN_FAILED);
 		}
 	}

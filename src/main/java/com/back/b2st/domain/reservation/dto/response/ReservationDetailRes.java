@@ -5,8 +5,7 @@ import java.time.LocalDateTime;
 public record ReservationDetailRes(
 	Long reservationId,
 	String status,
-	PerformanceInfo performance,
-	SeatInfo seat
+	PerformanceInfo performance
 ) {
 
 	public record PerformanceInfo(

@@ -17,4 +17,6 @@ public interface TradeRequestRepository extends JpaRepository<TradeRequest, Long
 	List<TradeRequest> findByTradeAndStatus(Trade trade, TradeRequestStatus status);
 
 	List<TradeRequest> findByRequesterIdAndStatus(Long requesterId, TradeRequestStatus status);
+
+	void deleteAllByTrade_IdIn(List<Long> tradeIds);
 }

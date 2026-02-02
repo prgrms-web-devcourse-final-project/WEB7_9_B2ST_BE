@@ -6,5 +6,6 @@ package com.back.b2st.domain.lottery.entry.entity;
 public enum LotteryStatus {
 	APPLIED,
 	WIN,
-	LOSE
+	LOSE,
+	PAID
 }

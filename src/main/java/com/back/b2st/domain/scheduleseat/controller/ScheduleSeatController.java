@@ -27,7 +27,6 @@ public class ScheduleSeatController implements ScheduleSeatApi {
 	private final ScheduleSeatService scheduleSeatService;
 	private final ScheduleSeatStateService scheduleSeatStateService;
 
-	/** === 회차별 좌석 전체 / 상태별 조회 === */
 	@GetMapping("/{scheduleId}/seats")
 	public BaseResponse<List<ScheduleSeatViewRes>> getScheduleSeats(
 		@PathVariable Long scheduleId,
@@ -39,7 +38,6 @@ public class ScheduleSeatController implements ScheduleSeatApi {
 		return BaseResponse.success(scheduleSeatService.getSeatsByStatus(scheduleId, status));
 	}
 
-	/** === 좌석 HOLD === */
 	@PostMapping("/{scheduleId}/seats/{seatId}/hold")
 	public BaseResponse<Void> holdSeat(
 		@CurrentUser UserPrincipal user,

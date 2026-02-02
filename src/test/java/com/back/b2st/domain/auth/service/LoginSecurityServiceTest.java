@@ -17,6 +17,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import com.back.b2st.domain.auth.error.AuthErrorCode;
+import com.back.b2st.domain.auth.metrics.AuthMetrics;
 import com.back.b2st.global.error.exception.BusinessException;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +28,8 @@ class LoginSecurityServiceTest {
 	private StringRedisTemplate redisTemplate;
 	@Mock
 	private ValueOperations<String, String> valueOperations;
+	@Mock
+	private AuthMetrics authMetrics;
 	@InjectMocks
 	private LoginSecurityService loginSecurityService;
 
@@ -40,7 +43,7 @@ class LoginSecurityServiceTest {
 			when(redisTemplate.hasKey("login:lock:" + TEST_EMAIL)).thenReturn(false);
 			// when & then
 			assertThatCode(() -> loginSecurityService.checkAccountLock(TEST_EMAIL))
-				.doesNotThrowAnyException();
+					.doesNotThrowAnyException();
 		}
 
 		@Test
@@ -49,14 +52,14 @@ class LoginSecurityServiceTest {
 			// given
 			when(redisTemplate.hasKey("login:lock:" + TEST_EMAIL)).thenReturn(true);
 			when(redisTemplate.getExpire("login:lock:" + TEST_EMAIL, TimeUnit.SECONDS))
-				.thenReturn(300L); // 5분 남음
+					.thenReturn(300L); // 5분 남음
 			// when & then: 보안상 LOGIN_FAILED로 반환 (잠금 상태 숨김)
 			assertThatThrownBy(() -> loginSecurityService.checkAccountLock(TEST_EMAIL))
-				.isInstanceOf(BusinessException.class)
-				.satisfies(e -> {
-					BusinessException be = (BusinessException)e;
-					assertThat(be.getErrorCode()).isEqualTo(AuthErrorCode.LOGIN_FAILED);
-				});
+					.isInstanceOf(BusinessException.class)
+					.satisfies(e -> {
+						BusinessException be = (BusinessException) e;
+						assertThat(be.getErrorCode()).isEqualTo(AuthErrorCode.LOGIN_FAILED);
+					});
 		}
 	}
 
@@ -68,10 +71,10 @@ class LoginSecurityServiceTest {
 		void whenUnderMaxAttempts_thenJustRecord() {
 			// given
 			when(redisTemplate.execute(any(), anyList(), any()))
-				.thenReturn(3L); // 3번째 시도
+					.thenReturn(3L); // 3번째 시도
 			// when & then
 			assertThatCode(() -> loginSecurityService.recordFailedAttempt(TEST_EMAIL, TEST_IP))
-				.doesNotThrowAnyException();
+					.doesNotThrowAnyException();
 		}
 
 		@Test
@@ -80,21 +83,21 @@ class LoginSecurityServiceTest {
 			// given
 			when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 			when(redisTemplate.execute(any(), anyList(), any()))
-				.thenReturn(5L); // 5번째 시도
+					.thenReturn(5L); // 5번째 시도
 			// when & then
 			assertThatThrownBy(() -> loginSecurityService.recordFailedAttempt(TEST_EMAIL, TEST_IP))
-				.isInstanceOf(BusinessException.class)
-				.satisfies(e -> {
-					BusinessException be = (BusinessException)e;
-					// 보안상 LOGIN_FAILED로 반환 (잠금 상태 숨김)
-					assertThat(be.getErrorCode()).isEqualTo(AuthErrorCode.LOGIN_FAILED);
-				});
+					.isInstanceOf(BusinessException.class)
+					.satisfies(e -> {
+						BusinessException be = (BusinessException) e;
+						// 보안상 LOGIN_FAILED로 반환 (잠금 상태 숨김)
+						assertThat(be.getErrorCode()).isEqualTo(AuthErrorCode.LOGIN_FAILED);
+					});
 			// 잠금 처리 확인
 			verify(valueOperations).set(
-				eq("login:lock:" + TEST_EMAIL),
-				eq("locked"),
-				eq(600L), // 10분
-				eq(TimeUnit.SECONDS));
+					eq("login:lock:" + TEST_EMAIL),
+					eq("locked"),
+					eq(600L), // 10분
+					eq(TimeUnit.SECONDS));
 		}
 	}
 

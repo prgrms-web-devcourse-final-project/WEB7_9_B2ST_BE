@@ -1,0 +1,55 @@
+# ----- SLO Overview -----
+
+# 전체 가용성 (%)
+sum(rate(http_server_requests_seconds_count{status!~"5.."}[5m]))
+/
+sum(rate(http_server_requests_seconds_count[5m]))
+* 100
+
+# 에러율 (%)
+sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+/
+sum(rate(http_server_requests_seconds_count[5m]))
+* 100
+
+# P95 응답시간 (초)
+histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))
+
+# Error Budget (7일 SLO 99.9% 기준)
+(1 - ((1 - sum(increase(http_server_requests_seconds_count{status!~"5.."}[7d])) / sum(increase(http_server_requests_seconds_count[7d]))) * 7 * 24 * 60 / 10.08)) * 100
+
+# Error Budget (30일 SLO 99.9% 기준)
+(1 - ((1 - sum(increase(http_server_requests_seconds_count{status!~"5.."}[30d])) / sum(increase(http_server_requests_seconds_count[30d]))) * 30 * 24 * 60 / 43.2)) * 100
+
+
+# ----- Traffic & Performance -----
+
+# 처리량 (RPS)
+sum(rate(http_server_requests_seconds_count[1m]))
+
+# P50 응답시간
+histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))
+
+# P90 응답시간
+histogram_quantile(0.90, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))
+
+# P95 응답시간
+histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))
+
+# P99 응답시간
+histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket[5m])) by (le))
+
+
+# ----- Business KPI -----
+
+# 로그인 성공률 (%)
+sum(rate(auth_login_total{result="success"}[5m])) / sum(rate(auth_login_total[5m])) * 100
+
+# 이메일 인증 성공률 (%)
+sum(rate(email_verification_total{result="success"}[5m])) / sum(rate(email_verification_total[5m])) * 100
+
+# 잠긴 계정 수
+auth_locked_account_count
+
+# 보안 위협 탐지 (유형별)
+sum(rate(security_threat_detected_total[5m])) by (type)

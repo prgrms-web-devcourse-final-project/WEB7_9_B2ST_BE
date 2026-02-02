@@ -100,19 +100,16 @@ class TradeRequestConcurrencyTest extends AbstractContainerBaseTest {
 		Reservation reservation1 = Reservation.builder()
 			.performanceId(1L)
 			.memberId(ownerId)
-			.seatId(seat1.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation reservation2 = Reservation.builder()
 			.performanceId(1L)
 			.memberId(requester1Id)
-			.seatId(seat2.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation reservation3 = Reservation.builder()
 			.performanceId(1L)
 			.memberId(requester2Id)
-			.seatId(seat3.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		reservationRepository.save(reservation1);
@@ -242,13 +239,11 @@ class TradeRequestConcurrencyTest extends AbstractContainerBaseTest {
 		Reservation reservation1 = Reservation.builder()
 			.performanceId(1L)
 			.memberId(ownerId)
-			.seatId(seat1.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		Reservation reservation2 = Reservation.builder()
 			.performanceId(1L)
 			.memberId(requesterId)
-			.seatId(seat2.getId())
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 		reservationRepository.save(reservation1);

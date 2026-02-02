@@ -23,7 +23,6 @@ import com.nimbusds.jwt.SignedJWT;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
@@ -32,7 +31,6 @@ public class KakaoApiClientImpl implements KakaoApiClient {
 
 	// http 통신용 RestTemplate
 	private final RestTemplate restTemplate;
-	private final ObjectMapper objectMapper;
 	private final KakaoJwksClient jwksClient;
 
 	@Value("${oauth.kakao.client-id}")
@@ -158,16 +156,16 @@ public class KakaoApiClientImpl implements KakaoApiClient {
 
 			// dto 생성
 			return new KakaoIdTokenPayload(
-				claims.getIssuer(),
-				claims.getAudience().get(0),
-				claims.getSubject(), // 카카오 회원번호
-				claims.getIssueTime() != null ? claims.getIssueTime().getTime() / 1000 : null,
-				claims.getExpirationTime() != null ? claims.getExpirationTime().getTime() / 1000 : null,
-				claims.getDateClaim("auth_time") != null ? claims.getDateClaim("auth_time").getTime() / 1000 : null,
-				claims.getStringClaim("nonce"),
-				claims.getStringClaim("nickname"),
-				claims.getStringClaim("picture"),
-				claims.getStringClaim("email"));
+					claims.getIssuer(),
+					claims.getAudience().get(0),
+					claims.getSubject(), // 카카오 회원번호
+					claims.getIssueTime() != null ? claims.getIssueTime().getTime() / 1000 : null,
+					claims.getExpirationTime() != null ? claims.getExpirationTime().getTime() / 1000 : null,
+					claims.getDateClaim("auth_time") != null ? claims.getDateClaim("auth_time").getTime() / 1000 : null,
+					claims.getStringClaim("nonce"),
+					claims.getStringClaim("nickname"),
+					claims.getStringClaim("picture"),
+					claims.getStringClaim("email"));
 
 		} catch (BusinessException e) {
 			// 이미 적절한 BusinessException은 그대로 전파

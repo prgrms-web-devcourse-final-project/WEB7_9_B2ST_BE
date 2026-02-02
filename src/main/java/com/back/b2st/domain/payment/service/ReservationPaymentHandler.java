@@ -1,5 +1,7 @@
 package com.back.b2st.domain.payment.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -8,8 +10,10 @@ import com.back.b2st.domain.payment.error.PaymentErrorCode;
 import com.back.b2st.domain.performanceschedule.entity.PerformanceSchedule;
 import com.back.b2st.domain.performanceschedule.repository.PerformanceScheduleRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
@@ -26,6 +30,7 @@ public class ReservationPaymentHandler implements PaymentDomainHandler {
 
 	private final ReservationRepository reservationRepository;
 	private final ScheduleSeatRepository scheduleSeatRepository;
+	private final ReservationSeatRepository reservationSeatRepository;
 	private final SeatHoldTokenService seatHoldTokenService;
 	private final PerformanceScheduleRepository performanceScheduleRepository;
 	private final SeatGradeRepository seatGradeRepository;
@@ -50,23 +55,38 @@ public class ReservationPaymentHandler implements PaymentDomainHandler {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 		}
 
-		Long scheduleId = reservation.getScheduleId();
-		Long seatId = reservation.getSeatId();
+		List<ReservationSeat> reservationSeats =
+			reservationSeatRepository.findByReservationId(reservationId);
 
-		ScheduleSeat scheduleSeat = scheduleSeatRepository.findByScheduleIdAndSeatId(scheduleId, seatId)
-			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND));
+		if (reservationSeats.isEmpty()) {
+			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
+		}
+
+		ReservationSeat rs = reservationSeats.getFirst();
+
+		ScheduleSeat scheduleSeat =
+			scheduleSeatRepository.findById(rs.getScheduleSeatId())
+				.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND));
 
 		if (scheduleSeat.getStatus() != SeatStatus.HOLD) {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE);
 		}
 
-		seatHoldTokenService.validateOwnership(scheduleId, seatId, memberId);
+		seatHoldTokenService.validateOwnership(
+			scheduleSeat.getScheduleId(),
+			scheduleSeat.getSeatId(),
+			memberId
+		);
 
-		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleId)
+		PerformanceSchedule schedule = performanceScheduleRepository.findById(scheduleSeat.getScheduleId())
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_FOUND));
+
 		Long performanceId = schedule.getPerformance().getPerformanceId();
 
-		SeatGrade seatGrade = seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(performanceId, seatId)
+		SeatGrade seatGrade = seatGradeRepository.findTopByPerformanceIdAndSeatIdOrderByIdDesc(
+				performanceId,
+				scheduleSeat.getSeatId()
+			)
 			.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE));
 
 		Long expectedAmount = seatGrade.getPrice().longValue();

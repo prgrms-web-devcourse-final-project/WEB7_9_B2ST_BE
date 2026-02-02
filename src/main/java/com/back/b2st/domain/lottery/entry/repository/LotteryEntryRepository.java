@@ -3,6 +3,7 @@ package com.back.b2st.domain.lottery.entry.repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -20,11 +21,13 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 
 	@Query("""
 			SELECT new com.back.b2st.domain.lottery.entry.dto.response.AppliedLotteryInfo(
-					le.uuid, p.title, ps.startAt, ps.roundNo, le.grade, le.quantity, le.status
+					le.uuid, p.title, ps.startAt, ps.roundNo, le.grade,
+					(SELECT DISTINCT sg.price FROM SeatGrade sg WHERE sg.performanceId = p.performanceId AND sg.grade = le.grade),
+					le.quantity, le.status
 			)
 			FROM LotteryEntry le
 			JOIN Performance p ON le.performanceId = p.performanceId
-			JOIN PerformanceSchedule ps ON le.scheduleId = ps.performanceScheduleId
+			JOIN PerformanceSchedule ps ON le.scheduleId = ps.performanceScheduleId 
 			WHERE le.memberId = :memberId
 			  AND le.createdAt >= :month
 			ORDER BY le.createdAt DESC
@@ -36,6 +39,15 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 	);
 
 	List<Long> findByScheduleId(Long scheduleId);
+
+	@Query("""
+		select le.id
+		  from LotteryEntry le
+		 where le.scheduleId in :scheduleIds
+		""")
+	List<Long> findIdsByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
+
+	void deleteAllByScheduleIdIn(List<Long> scheduleIds);
 
 	/**
 	 * 신청 정보 확인
@@ -81,4 +93,7 @@ public interface LotteryEntryRepository extends JpaRepository<LotteryEntry, Long
 		@Param("scheduleId") Long scheduleId,
 		@Param("winnerIds") List<Long> winnerIds
 	);
+
+	// test
+	LotteryEntry findByUuid(UUID uuid);
 }

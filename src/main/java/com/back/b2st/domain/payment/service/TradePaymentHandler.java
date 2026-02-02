@@ -3,13 +3,14 @@ package com.back.b2st.domain.payment.service;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.back.b2st.domain.payment.entity.DomainType;
-import com.back.b2st.domain.payment.error.PaymentErrorCode;
-import com.back.b2st.domain.ticket.entity.Ticket;
-import com.back.b2st.domain.ticket.entity.TicketStatus;
-import com.back.b2st.domain.ticket.error.TicketErrorCode;
-import com.back.b2st.domain.ticket.service.TicketService;
-import com.back.b2st.domain.trade.entity.Trade;
+	import com.back.b2st.domain.payment.entity.DomainType;
+	import com.back.b2st.domain.payment.error.PaymentErrorCode;
+	import com.back.b2st.domain.seat.grade.repository.SeatGradeRepository;
+	import com.back.b2st.domain.ticket.entity.Ticket;
+	import com.back.b2st.domain.ticket.entity.TicketStatus;
+	import com.back.b2st.domain.ticket.error.TicketErrorCode;
+	import com.back.b2st.domain.ticket.service.TicketService;
+	import com.back.b2st.domain.trade.entity.Trade;
 import com.back.b2st.domain.trade.entity.TradeStatus;
 import com.back.b2st.domain.trade.entity.TradeType;
 import com.back.b2st.domain.trade.error.TradeErrorCode;
@@ -27,7 +28,8 @@ public class TradePaymentHandler implements PaymentDomainHandler {
 	@PersistenceContext
 	private EntityManager entityManager;
 
-	private final TicketService ticketService;
+		private final TicketService ticketService;
+		private final SeatGradeRepository seatGradeRepository;
 
 	@Override
 	public boolean supports(DomainType domainType) {
@@ -63,13 +65,22 @@ public class TradePaymentHandler implements PaymentDomainHandler {
 			throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE, "거래 가격이 설정되지 않았습니다.");
 		}
 
-		// 6. 티켓 상태 사전 검증 (결제 준비 시점에 검증하여 UX 개선)
-		Ticket ticket = ticketService.getTicketById(trade.getTicketId());
-		validateTicketForPayment(ticket, trade);
+			// 6. 티켓 상태 사전 검증 (결제 준비 시점에 검증하여 UX 개선)
+			Ticket ticket = ticketService.getTicketById(trade.getTicketId());
+			validateTicketForPayment(ticket, trade);
 
-		Long expectedAmount = trade.getPrice().longValue();
-		return new PaymentTarget(DomainType.TRADE, tradeId, expectedAmount);
-	}
+			// 7. 정책 검증: 정가(SeatGrade.price) 이하만 허용
+			Integer originalPrice = seatGradeRepository
+				.findTopByPerformanceIdAndSeatIdOrderByIdDesc(trade.getPerformanceId(), ticket.getSeatId())
+				.map(seatGrade -> seatGrade.getPrice())
+				.orElseThrow(() -> new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE, "좌석 가격 정보가 없습니다."));
+			if (trade.getPrice() > originalPrice) {
+				throw new BusinessException(PaymentErrorCode.DOMAIN_NOT_PAYABLE, "양도 가격이 정가를 초과합니다.");
+			}
+
+			Long expectedAmount = trade.getPrice().longValue();
+			return new PaymentTarget(DomainType.TRADE, tradeId, expectedAmount);
+		}
 
 	private void validateTicketForPayment(Ticket ticket, Trade trade) {
 		// 티켓이 양도 가능한 상태인지 검증

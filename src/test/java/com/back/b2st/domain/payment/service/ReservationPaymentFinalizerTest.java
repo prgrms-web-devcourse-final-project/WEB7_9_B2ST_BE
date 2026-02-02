@@ -19,9 +19,11 @@ import com.back.b2st.domain.payment.entity.PaymentMethod;
 import com.back.b2st.domain.payment.error.PaymentErrorCode;
 import com.back.b2st.domain.payment.repository.PaymentRepository;
 import com.back.b2st.domain.reservation.entity.Reservation;
+import com.back.b2st.domain.reservation.entity.ReservationSeat;
 import com.back.b2st.domain.reservation.entity.ReservationStatus;
 import com.back.b2st.domain.reservation.error.ReservationErrorCode;
 import com.back.b2st.domain.reservation.repository.ReservationRepository;
+import com.back.b2st.domain.reservation.repository.ReservationSeatRepository;
 import com.back.b2st.domain.scheduleseat.entity.ScheduleSeat;
 import com.back.b2st.domain.scheduleseat.entity.SeatStatus;
 import com.back.b2st.domain.scheduleseat.repository.ScheduleSeatRepository;
@@ -45,6 +47,9 @@ class ReservationPaymentFinalizerTest {
 
 	@Autowired
 	private ReservationRepository reservationRepository;
+
+	@Autowired
+	private ReservationSeatRepository reservationSeatRepository;
 
 	@Autowired
 	private ScheduleSeatRepository scheduleSeatRepository;
@@ -80,6 +85,7 @@ class ReservationPaymentFinalizerTest {
 		// given
 		ScheduleSeat scheduleSeat = createScheduleSeat(SeatStatus.HOLD);
 		Reservation reservation = createReservation(ReservationStatus.PENDING);
+		createReservationSeat(reservation, scheduleSeat);
 		Payment payment = createDonePayment(reservation.getId());
 
 		// when
@@ -107,6 +113,7 @@ class ReservationPaymentFinalizerTest {
 		// given
 		ScheduleSeat scheduleSeat = createScheduleSeat(SeatStatus.SOLD);
 		Reservation reservation = createReservation(ReservationStatus.COMPLETED);
+		createReservationSeat(reservation, scheduleSeat);
 		reservation.complete(LocalDateTime.now(clock));
 		reservationRepository.save(reservation);
 
@@ -192,8 +199,9 @@ class ReservationPaymentFinalizerTest {
 	@DisplayName("좌석이 HOLD가 아니면 예외 발생")
 	void finalizePayment_throwsError_whenSeatNotHold() {
 		// given
-		createScheduleSeat(SeatStatus.AVAILABLE); // HOLD가 아닌 AVAILABLE
+		ScheduleSeat seat = createScheduleSeat(SeatStatus.AVAILABLE);// HOLD가 아닌 AVAILABLE
 		Reservation reservation = createReservation(ReservationStatus.PENDING);
+		createReservationSeat(reservation, seat);
 		Payment payment = createDonePayment(reservation.getId());
 
 		// when & then
@@ -238,7 +246,6 @@ class ReservationPaymentFinalizerTest {
 		Reservation reservation = Reservation.builder()
 			.memberId(memberId)
 			.scheduleId(scheduleId)
-			.seatId(seatId)
 			.expiresAt(LocalDateTime.now().plusMinutes(5))
 			.build();
 
@@ -265,4 +272,14 @@ class ReservationPaymentFinalizerTest {
 		payment.complete(LocalDateTime.now());
 		return paymentRepository.save(payment);
 	}
+
+	private void createReservationSeat(Reservation reservation, ScheduleSeat seat) {
+		reservationSeatRepository.save(
+			ReservationSeat.builder()
+				.reservationId(reservation.getId())
+				.scheduleSeatId(seat.getId())
+				.build()
+		);
+	}
+
 }

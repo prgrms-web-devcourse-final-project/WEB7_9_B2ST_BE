@@ -58,14 +58,14 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 	// 헬퍼 메서드
 	private Member createMember(String email, String password, String name) {
 		return Member.builder()
-			.email(email)
-			.password(passwordEncoder.encode(password))
-			.name(name)
-			.role(Member.Role.MEMBER)
-			.provider(Member.Provider.EMAIL)
-			.isEmailVerified(true)
-			.isIdentityVerified(true)
-			.build();
+				.email(email)
+				.password(passwordEncoder.encode(password))
+				.name(name)
+				.role(Member.Role.MEMBER)
+				.provider(Member.Provider.EMAIL)
+				.isEmailVerified(true)
+				.isIdentityVerified(true)
+				.build();
 	}
 
 	private String getAccessToken(String email, String password) throws Exception {
@@ -74,10 +74,10 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 		String response = mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(loginRequest)))
-			.andReturn().getResponse().getContentAsString();
+				.andReturn().getResponse().getContentAsString();
 
 		JsonNode jsonNode = objectMapper.readTree(response);
-		return jsonNode.path("data").path("accessToken").asText();
+		return jsonNode.path("data").path("accessToken").asString();
 	}
 
 	@Nested
@@ -96,20 +96,20 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			mockMvc.perform(get("/api/mypage/me")
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON))
-				.andDo(print())
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.email").value(email))
-				.andExpect(jsonPath("$.data.name").value(member.getName()));
+					.andDo(print())
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.data.email").value(email))
+					.andExpect(jsonPath("$.data.name").value(member.getName()));
 		}
 
 		@Test
 		@DisplayName("실패 - 토큰 없음")
 		void fail_noToken() throws Exception {
 			mockMvc.perform(get("/api/mypage/me").contentType(MediaType.APPLICATION_JSON))
-				.andDo(print())
-				.andExpect(status().isUnauthorized())
-				.andExpect(jsonPath("$.code").value(401))
-				.andExpect(jsonPath("$.message").value(CommonErrorCode.UNAUTHORIZED.getMessage()));
+					.andDo(print())
+					.andExpect(status().isUnauthorized())
+					.andExpect(jsonPath("$.code").value(401))
+					.andExpect(jsonPath("$.message").value(CommonErrorCode.UNAUTHORIZED.getMessage()));
 		}
 	}
 
@@ -132,8 +132,8 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
-				.andDo(print())
-				.andExpect(status().isOk());
+					.andDo(print())
+					.andExpect(status().isOk());
 
 			Member updatedMember = memberRepository.findByEmail(email).orElseThrow();
 			if (!passwordEncoder.matches("NewPass123!", updatedMember.getPassword())) {
@@ -156,9 +156,9 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
-				.andDo(print())
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value(MemberErrorCode.PASSWORD_MISMATCH.getStatus().value()));
+					.andDo(print())
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.code").value(MemberErrorCode.PASSWORD_MISMATCH.getStatus().value()));
 		}
 
 		@Test
@@ -176,9 +176,9 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
-				.andDo(print())
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value(MemberErrorCode.SAME_PASSWORD.getStatus().value()));
+					.andDo(print())
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.code").value(MemberErrorCode.SAME_PASSWORD.getStatus().value()));
 		}
 	}
 
@@ -201,16 +201,16 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
-				.andDo(print())
-				.andExpect(status().isOk());
+					.andDo(print())
+					.andExpect(status().isOk());
 
 			mockMvc.perform(get("/api/mypage/account")
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON))
-				.andDo(print())
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.bankCode").value(request.bankCode().getCode()))
-				.andExpect(jsonPath("$.data.accountNumber").value(request.accountNumber()));
+					.andDo(print())
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.data.bankCode").value(request.bankCode().getCode()))
+					.andExpect(jsonPath("$.data.accountNumber").value(request.accountNumber()));
 		}
 
 		@Test
@@ -225,9 +225,9 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			RefundAccountReq initRequest = new RefundAccountReq(BankCode.K_BANK, "1111111", "수정맨");
 
 			mockMvc.perform(post("/api/mypage/account")
-				.header("Authorization", "Bearer " + accessToken)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(initRequest)));
+					.header("Authorization", "Bearer " + accessToken)
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(initRequest)));
 
 			RefundAccountReq updateRequest = new RefundAccountReq(BankCode.CITY, "2222222", "수정맨");
 
@@ -235,12 +235,12 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(updateRequest)))
-				.andDo(print())
-				.andExpect(status().isOk());
+					.andDo(print())
+					.andExpect(status().isOk());
 
 			mockMvc.perform(get("/api/mypage/account").header("Authorization", "Bearer " + accessToken))
-				.andExpect(jsonPath("$.data.bankCode").value(updateRequest.bankCode().getCode()))
-				.andExpect(jsonPath("$.data.accountNumber").value(updateRequest.accountNumber()));
+					.andExpect(jsonPath("$.data.bankCode").value(updateRequest.bankCode().getCode()))
+					.andExpect(jsonPath("$.data.accountNumber").value(updateRequest.accountNumber()));
 		}
 
 		@Test
@@ -253,28 +253,28 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 
 			String accessToken = getAccessToken(email, password);
 			String requestJson = """
-				{
-				    "bankCode": "004",
-				    "accountNumber": "123456789",
-				    "holderName": "뱅크테스터"
-				}
-				""";
+					{
+					    "bankCode": "004",
+					    "accountNumber": "123456789",
+					    "holderName": "뱅크테스터"
+					}
+					""";
 
 			mockMvc.perform(post("/api/mypage/account")
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestJson))
-				.andDo(print())
-				.andExpect(status().isOk());
+					.andDo(print())
+					.andExpect(status().isOk());
 
 			BankCode expectedBank = BankCode.KB;
 			mockMvc.perform(get("/api/mypage/account")
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON))
-				.andDo(print())
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.bankCode").value(expectedBank.getCode()))
-				.andExpect(jsonPath("$.data.bankName").value(expectedBank.getDescription()));
+					.andDo(print())
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.data.bankCode").value(expectedBank.getCode()))
+					.andExpect(jsonPath("$.data.bankName").value(expectedBank.getDescription()));
 		}
 	}
 
@@ -293,13 +293,13 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			String accessToken = getAccessToken(email, password);
 			String requestBody = "{\"password\": \"" + password + "\"}";
 
-			mockMvc.perform(delete("/api/mypage/withdraw")
+			mockMvc.perform(post("/api/mypage/withdraw")
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody))
-				.andDo(print())
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.code").value(200));
+					.andDo(print())
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.code").value(200));
 
 			Member deleted = memberRepository.findByEmail(email).orElseThrow();
 			if (!deleted.isDeleted()) {
@@ -318,13 +318,13 @@ public class MypageControllerTest extends AbstractContainerBaseTest {
 			String accessToken = getAccessToken(email, password);
 			String requestBody = "{\"password\": \"WrongPass123!\"}";
 
-			mockMvc.perform(delete("/api/mypage/withdraw")
+			mockMvc.perform(post("/api/mypage/withdraw")
 					.header("Authorization", "Bearer " + accessToken)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(requestBody))
-				.andDo(print())
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value(MemberErrorCode.PASSWORD_MISMATCH.getMessage()));
+					.andDo(print())
+					.andExpect(status().isBadRequest())
+					.andExpect(jsonPath("$.message").value(MemberErrorCode.PASSWORD_MISMATCH.getMessage()));
 		}
 	}
 }

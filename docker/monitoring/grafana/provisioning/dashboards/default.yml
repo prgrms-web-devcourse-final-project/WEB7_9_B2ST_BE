@@ -1,0 +1,18 @@
+# Grafana Dashboard Provisioning
+# 대시보드 JSON 파일 자동 로드
+# /var/lib/grafana/dashboards 경로의 모든 JSON을 자동 임포트
+
+apiVersion: 1
+
+providers:
+  - name: 'TT Dashboards'
+    orgId: 1
+    folder: 'TT'               # Grafana 내 폴더명
+    folderUid: 'tt-dashboards'
+    type: file
+    disableDeletion: false     # UI에서 삭제 허용
+    updateIntervalSeconds: 30  # 파일 변경 감지 주기
+    allowUiUpdates: true       # UI에서 수정 허용
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

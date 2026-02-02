@@ -17,11 +17,12 @@ public class PaymentViewService {
 
 	@Transactional(readOnly = true)
 	public PaymentConfirmRes getByReservationId(Long reservationId, Long memberId) {
-		return paymentRepository.findByDomainTypeAndDomainIdAndMemberId(
-				DomainType.RESERVATION,
-				reservationId,
-				memberId
-			)
+		return getByDomain(DomainType.RESERVATION, reservationId, memberId);
+	}
+
+	@Transactional(readOnly = true)
+	public PaymentConfirmRes getByDomain(DomainType domainType, Long domainId, Long memberId) {
+		return paymentRepository.findByDomainTypeAndDomainIdAndMemberId(domainType, domainId, memberId)
 			.map(PaymentConfirmRes::from)
 			.orElse(null);
 	}

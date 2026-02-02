@@ -33,9 +33,15 @@ import lombok.NoArgsConstructor;
 		@Index(name = "idx_performance_schedule",
 			columnList = "performance_schedule_id, performance_id"
 		),
+		@Index(
+			name = "idx_performance_start_at",
+			columnList = "performance_id, start_at"
+		),
 		@Index(name = "idx_performance_booking_close_draw",
 			columnList = "booking_close_at, draw_completed"
-		)
+		),
+		@Index(name = "idx_draw", columnList = "draw_completed"),
+		@Index(name = "idx_seat_allocated", columnList = "seat_allocated")
 	}
 )
 @SequenceGenerator(
@@ -75,6 +81,9 @@ public class PerformanceSchedule extends BaseEntity {
 	@Column(name = "draw_completed")
 	private boolean drawCompleted;             // 추첨 완료 여부
 
+	@Column(name = "seat_allocated")
+	private boolean seatAllocated;             // 좌석 배정 여부
+
 	@Builder
 	public PerformanceSchedule(
 		Performance performance,
@@ -91,5 +100,10 @@ public class PerformanceSchedule extends BaseEntity {
 		this.bookingOpenAt = bookingOpenAt;
 		this.bookingCloseAt = bookingCloseAt;
 		this.drawCompleted = false;
+		this.seatAllocated = false;
+	}
+
+	public void markSeatAllocated() {
+		this.seatAllocated = true;
 	}
 }

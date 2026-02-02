@@ -1,27 +1,35 @@
 package com.back.b2st.domain.performance.dto.response;
 
+import com.back.b2st.domain.performanceschedule.entity.BookingType;
+import com.back.b2st.domain.performance.entity.Performance;
 import java.time.LocalDateTime;
 
-import com.back.b2st.domain.performance.entity.Performance;
-
 public record PerformanceListRes(
-		Long performanceId,      // 공연 ID
-		String title,            // 공연 제목
-		String category,         // 장르
-		String posterUrl,        // 포스터 URL
-		String venueName,        // 공연장 이름
-		LocalDateTime startDate, // 공연 시작일
-		LocalDateTime endDate    // 공연 종료일
+	Long performanceId,
+	String title,
+	String category,
+	String posterUrl,
+	String venueName,
+	LocalDateTime startDate,
+	LocalDateTime endDate,
+	LocalDateTime bookingOpenAt,
+	LocalDateTime bookingCloseAt,
+	boolean isBookable,
+	BookingType bookingType
 ) {
-	public static PerformanceListRes from(Performance performance) {
+	public static PerformanceListRes from(Performance performance, LocalDateTime now, String resolvedPosterUrl) {
 		return new PerformanceListRes(
-				performance.getPerformanceId(),
-				performance.getTitle(),
-				performance.getCategory(),
-				performance.getPosterUrl(),
-				performance.getVenue().getName(),
-				performance.getStartDate(),
-				performance.getEndDate()
+			performance.getPerformanceId(),
+			performance.getTitle(),
+			performance.getCategory(),
+			resolvedPosterUrl,
+			performance.getVenue().getName(),
+			performance.getStartDate(),
+			performance.getEndDate(),
+			performance.getBookingOpenAt(),
+			performance.getBookingCloseAt(),
+			performance.isBookable(now),
+			performance.getBookingType()
 		);
 	}
 }

@@ -27,17 +27,18 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
-		name = "queues",
-		uniqueConstraints = {@UniqueConstraint(
-						name = "uk_queue_schedule_type",
-						columnNames = {"schedule_id", "queue_type"}
-				)
-		}
+	name = "queues",
+	uniqueConstraints = {
+		@UniqueConstraint(
+			name = "uk_queue_performance",
+			columnNames = {"performance_id"}
+		)
+	}
 )
 @SequenceGenerator(
-		name = "queue_id_gen",
-		sequenceName = "queue_seq",
-		allocationSize = 50
+	name = "queue_id_gen",
+	sequenceName = "queue_seq",
+	allocationSize = 50
 )
 @DynamicUpdate
 public class Queue extends BaseEntity {
@@ -48,9 +49,9 @@ public class Queue extends BaseEntity {
 	@Schema(description = "대기열 ID", example = "1")
 	private Long id;
 
-	@Column(name = "schedule_id", nullable = false)
-	@Schema(description = "공연 회차 ID", example = "1")
-	private Long scheduleId;
+	@Column(name = "performance_id", nullable = false)
+	@Schema(description = "공연 ID", example = "1")
+	private Long performanceId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "queue_type", nullable = false, length = 20)
@@ -67,12 +68,12 @@ public class Queue extends BaseEntity {
 
 	@Builder
 	public Queue(
-			Long scheduleId,
-			QueueType queueType,
-			Integer maxActiveUsers,
-			Integer entryTtlMinutes
+		Long performanceId,
+		QueueType queueType,
+		Integer maxActiveUsers,
+		Integer entryTtlMinutes
 	) {
-		this.scheduleId = scheduleId;
+		this.performanceId = performanceId;
 		this.queueType = queueType;
 		this.maxActiveUsers = maxActiveUsers;
 		this.entryTtlMinutes = entryTtlMinutes;

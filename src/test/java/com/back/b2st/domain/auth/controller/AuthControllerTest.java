@@ -153,7 +153,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 				.andReturn();
 
 			String responseBody = loginResult.getResponse().getContentAsString();
-			String accessToken = objectMapper.readTree(responseBody).path("data").path("accessToken").asText();
+			String accessToken = objectMapper.readTree(responseBody).path("data").path("accessToken").asString();
 
 			Cookie refreshCookie = loginResult.getResponse().getCookie("refreshToken");
 			assertThat(refreshCookie).isNotNull();
@@ -206,7 +206,7 @@ class AuthControllerTest extends AbstractContainerBaseTest {
 					.content(objectMapper.writeValueAsString(loginReq)))
 				.andReturn().getResponse().getContentAsString();
 
-			String accessToken = objectMapper.readTree(loginResponse).path("data").path("accessToken").asText();
+			String accessToken = objectMapper.readTree(loginResponse).path("data").path("accessToken").asString();
 
 			mockMvc.perform(post("/api/auth/logout")
 					.header("Authorization", "Bearer " + accessToken)

@@ -1,0 +1,77 @@
+# ----- 거래 현황 (TradeMetrics 기반) -----
+
+# 거래 생성 추이 (유형별)
+sum(rate(trade_total{action="created"
+}[
+    1m
+])) by (type)
+
+# 거래 완료 추이 (유형별)
+sum(rate(trade_total{action="completed"
+}[
+    1m
+])) by (type)
+
+# 거래 취소 추이 (유형별)
+sum(rate(trade_total{action="cancelled"
+}[
+    1m
+])) by (type)
+
+# 거래 성공률 (유형별)
+sum(rate(trade_total{action="completed"
+}[
+    1h
+])) by (type) / sum(rate(trade_total{action="created"
+}[
+    1h
+])) by (type) * 100
+
+# 거래 요청 추이 (유형별)
+sum(rate(trade_request_total[
+    1m
+])) by (type)
+
+# 현재 활성 거래 수
+trade_active_count
+
+# 양도 금액 분포 P50
+trade_price{quantile="0.5"
+}
+
+# 양도 금액 분포 P95
+trade_price{quantile="0.95"
+}
+
+# 양도 vs 교환 비율
+sum(rate(trade_total{action="created", type="TRANSFER"
+}[
+    1h
+])) / sum(rate(trade_total{action="created"
+}[
+    1h
+])) * 100
+
+
+# ----- Trade API 성능 -----
+
+# Trade API P95 응답시간
+histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=~"/api/trades.*"
+}[
+    5m
+])) by (le))
+
+# Trade API 에러율
+sum(rate(http_server_requests_seconds_count{uri=~"/api/trades.*", status=~"5.."
+}[
+    5m
+])) / sum(rate(http_server_requests_seconds_count{uri=~"/api/trades.*"
+}[
+    5m
+])) * 100
+
+# Trade API RPS
+sum(rate(http_server_requests_seconds_count{uri=~"/api/trades.*"
+}[
+    1m
+]))

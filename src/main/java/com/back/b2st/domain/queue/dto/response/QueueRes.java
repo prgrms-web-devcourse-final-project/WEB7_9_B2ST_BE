@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record QueueRes(
 	Long queueId,
-	Long scheduleId,
+	Long performanceId,
 	String queueType,
 	Integer maxActiveUsers,
 	Integer entryTtlMinutes,
@@ -23,7 +23,7 @@ public record QueueRes(
 	public static QueueRes from(Queue queue) {
 		return new QueueRes(
 			queue.getId(),
-			queue.getScheduleId(),
+			queue.getPerformanceId(),
 			queue.getQueueType().name(),
 			queue.getMaxActiveUsers(),
 			queue.getEntryTtlMinutes(),
@@ -38,7 +38,7 @@ public record QueueRes(
 	public static QueueRes of(Queue queue, Integer currentWaiting, Integer currentEnterable) {
 		return new QueueRes(
 			queue.getId(),
-			queue.getScheduleId(),
+			queue.getPerformanceId(),
 			queue.getQueueType().name(),
 			queue.getMaxActiveUsers(),
 			queue.getEntryTtlMinutes(),

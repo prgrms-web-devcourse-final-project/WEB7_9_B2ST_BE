@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TT - 모두에게 공정한 예매서비스</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Vivid coral - more saturated */
+            --primary: #FF5040;
+            --primary-dark: #E84535;
+            --primary-light: #FF6B5C;
+            --accent: #FF8575;
+            --accent-coral: #FFC0B8;
+            --bg-main: #FAFAFA;
+            --bg-card: #FFFFFF;
+            --bg-card-hover: #FFFFFF;
+            --text-primary: #1A1A1A;
+            --text-secondary: #4A4A4A;
+            --text-muted: #888888;
+            --gradient-1: linear-gradient(135deg, #FF5040 0%, #FF6B5C 100%);
+            --gradient-2: linear-gradient(135deg, #FFC0B8 0%, #FFD4CE 100%);
+            --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 25px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ========== Hero Section ========== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            background: var(--bg-main);
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -200px;
+            right: -200px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 38, 0, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -100px;
+            left: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 181, 167, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+        }
+
+        .hero-tagline {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .hero-title {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .hero-title .highlight {
+            display: inline;
+            color: var(--primary);
+            position: relative;
+            background: linear-gradient(transparent 60%, rgba(255, 38, 0, 0.15) 60%);
+            padding: 0 4px;
+        }
+
+        .hero-logo {
+            font-size: clamp(4rem, 10vw, 8rem);
+            font-weight: 900;
+            color: var(--primary);
+            margin: 1.5rem 0;
+            letter-spacing: -0.05em;
+            text-shadow: 0 10px 40px rgba(255, 38, 0, 0.2);
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 3rem;
+            font-weight: 400;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: 0 10px 40px rgba(255, 38, 0, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 15px 50px rgba(255, 38, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(0, 0, 0, 0.03);
+            color: var(--text-primary);
+            border: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 0, 0, 0.06);
+            border-color: rgba(0, 0, 0, 0.2);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+        }
+
+        .scroll-indicator svg {
+            width: 30px;
+            height: 30px;
+            color: var(--text-muted);
+        }
+
+        @keyframes bounce {
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            40% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+
+            60% {
+                transform: translateX(-50%) translateY(-5px);
+            }
+        }
+
+        /* ========== Section Common ========== */
+        section {
+            padding: 6rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: var(--primary);
+            border-radius: 50px;
+            color: white;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .section-description {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* ========== Service Section ========== */
+        #service-intro {
+            background: var(--bg-main);
+        }
+
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .service-card {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 2.5rem;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            right: -20px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            transition: transform 0.5s ease;
+        }
+
+        .service-card:nth-child(1)::before {
+            background: rgba(255, 38, 0, 0.08);
+        }
+
+        .service-card:nth-child(2)::before {
+            background: rgba(255, 181, 167, 0.3);
+        }
+
+        /* Hover scale effect like the uploaded image */
+        .service-card:hover {
+            transform: scale(1.03);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .service-card:hover::before {
+            transform: scale(1.5);
+        }
+
+        .service-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .service-title::before {
+            content: '';
+            width: 4px;
+            height: 28px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .service-card:nth-child(1) .service-title::before {
+            background: var(--gradient-1);
+        }
+
+        .service-card:nth-child(2) .service-title::before {
+            background: var(--gradient-2);
+        }
+
+        .service-description {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+
+        .service-highlight {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 1.5rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--bg-main);
+            border-radius: 50px;
+            color: var(--primary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .service-card:nth-child(2) .service-highlight {
+            color: #cc6b5a;
+        }
+
+        /* ========== Booking Methods Section ========== */
+        #booking-methods {
+            position: relative;
+        }
+
+        #booking-methods::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(180deg, transparent, rgba(255, 38, 0, 0.2), transparent);
+            z-index: 0;
+        }
+
+        .methods-container {
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .method-card {
+            display: flex;
+            gap: 3rem;
+            align-items: center;
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 3rem;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: var(--shadow-soft);
+        }
+
+        /* Hover scale effect */
+        .method-card:hover {
+            transform: scale(1.02);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .method-card:nth-child(even) {
+            flex-direction: row-reverse;
+        }
+
+        .method-number {
+            flex-shrink: 0;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: white;
+            position: relative;
+        }
+
+        .method-card:nth-child(1) .method-number {
+            background: var(--gradient-1);
+            box-shadow: 0 10px 40px rgba(255, 38, 0, 0.3);
+        }
+
+        .method-card:nth-child(2) .method-number {
+            background: var(--gradient-3);
+            box-shadow: 0 10px 40px rgba(79, 172, 254, 0.3);
+        }
+
+        .method-card:nth-child(3) .method-number {
+            background: var(--gradient-2);
+            box-shadow: 0 10px 40px rgba(255, 181, 167, 0.3);
+        }
+
+        .method-content {
+            flex: 1;
+        }
+
+        .method-tag {
+            display: inline-block;
+            padding: 0.35rem 1rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .method-card:nth-child(1) .method-tag {
+            background: rgba(255, 38, 0, 0.1);
+            color: var(--primary);
+        }
+
+        .method-card:nth-child(2) .method-tag {
+            background: rgba(79, 172, 254, 0.15);
+            color: #0088cc;
+        }
+
+        .method-card:nth-child(3) .method-tag {
+            background: rgba(255, 181, 167, 0.3);
+            color: #cc6b5a;
+        }
+
+        .method-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .method-description {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+
+        .method-features {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .method-feature {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-main);
+            border-radius: 50px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .method-feature svg {
+            width: 16px;
+            height: 16px;
+            color: #22c55e;
+        }
+
+        /* ========== CTA Section ========== */
+        .cta-section {
+            text-align: center;
+            padding: 8rem 2rem;
+            background: var(--bg-main);
+            position: relative;
+        }
+
+        .cta-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-buttons .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: 0 10px 40px rgba(255, 38, 0, 0.3);
+        }
+
+        .cta-buttons .btn-primary:hover {
+            box-shadow: 0 15px 50px rgba(255, 38, 0, 0.4);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        .cta-buttons .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .cta-buttons .btn-secondary:hover {
+            background: rgba(0, 0, 0, 0.03);
+            border-color: rgba(0, 0, 0, 0.2);
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        /* ========== Footer ========== */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            background: var(--bg-card);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ========== Responsive ========== */
+        @media (max-width: 768px) {
+            .method-card {
+                flex-direction: column !important;
+                gap: 1.5rem;
+                padding: 2rem;
+                text-align: center;
+            }
+
+            .method-card:hover {
+                transform: scale(1.02) !important;
+            }
+
+            .method-number {
+                width: 80px;
+                height: 80px;
+                font-size: 2rem;
+            }
+
+            .method-features {
+                justify-content: center;
+            }
+
+            .service-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #booking-methods::before {
+                display: none;
+            }
+        }
+
+        /* ========== Animations ========== */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        .delay-1 {
+            animation-delay: 0.1s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-3 {
+            animation-delay: 0.3s;
+        }
+
+        .delay-4 {
+            animation-delay: 0.4s;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ========== Hero Section ========== -->
+    <section class="hero">
+        <div class="hero-content">
+            <p class="hero-tagline animate-on-scroll">Fair Ticketing Service</p>
+            <h1 class="hero-title animate-on-scroll delay-1">
+                티켓팅 이제 울지 마세요
+                <span class="highlight">모두에게 공정한 예매서비스</span>
+            </h1>
+            <div class="hero-logo animate-on-scroll delay-2">TT</div>
+            <p class="hero-subtitle animate-on-scroll delay-3">
+                추첨 응모와 구역별 사전 등록, 선착순 예매로<br>
+                모두에게 공정한 티켓팅 서비스를 제공합니다.
+            </p>
+            <div class="hero-buttons animate-on-scroll delay-4">
+                <a href="#service-intro" class="btn btn-secondary">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    서비스 소개
+                </a>
+                <a href="/booking" class="btn btn-primary">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z">
+                        </path>
+                    </svg>
+                    예매하러 가기
+                </a>
+                <a href="#booking-methods" class="btn btn-secondary">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2">
+                        </path>
+                    </svg>
+                    예매 안내
+                </a>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3">
+                </path>
+            </svg>
+        </div>
+    </section>
+
+    <!-- ========== Service Introduction ========== -->
+    <section id="service-intro">
+        <div class="section-header">
+            <span class="section-badge">WHY TT?</span>
+            <h2 class="section-title">우리가 만드는 차이</h2>
+            <p class="section-description">
+                공정한 기회와 투명한 거래, TT가 티켓팅의 새로운 기준을 만들어갑니다.
+            </p>
+        </div>
+
+        <div class="service-grid">
+            <div class="service-card">
+                <h3 class="service-title">공정한 티켓팅</h3>
+                <p class="service-description">
+                    추첨 예매 / 구역별 사전 등록 / 일반 선착순 예매 3가지 경험을 제공합니다.
+                    <br><br>
+                    공연 특성과 수요에 맞는 방식으로 기회를 분산하고, 규칙을 투명하게 공개해 납득 가능한 예매를 만듭니다.
+                </p>
+                <span class="service-highlight">✓ 매크로 영향 최소화</span>
+            </div>
+
+            <div class="service-card">
+                <h3 class="service-title">교환 / 양도 서비스</h3>
+                <p class="service-description">
+                    예매 후 일정 변경, 동행 취소 등으로 티켓을 사용하기 어려워졌을 때 외부 플랫폼을 거치지 않고 서비스 내에서 <strong
+                        style="color: var(--primary);">정가로 교환·양도</strong>를 한 번에 진행할 수 있습니다.
+                    <br><br>
+                    프리미엄 거래를 차단해 가격 왜곡과 불공정 거래를 줄이고, 필요한 사람에게 티켓이 정상적으로 돌아가도록 돕습니다.
+                </p>
+                <span class="service-highlight">✓ 암표 근절 정책</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== Booking Methods ========== -->
+    <section id="booking-methods">
+        <div class="section-header">
+            <span class="section-badge">HOW IT WORKS</span>
+            <h2 class="section-title">예매 방식 안내</h2>
+            <p class="section-description">
+                상황에 맞는 최적의 예매 방식을 선택하세요.
+            </p>
+        </div>
+
+        <div class="methods-container">
+            <!-- Method 1: 추첨 예매 -->
+            <div class="method-card">
+                <div class="method-number">1</div>
+                <div class="method-content">
+                    <span class="method-tag">Lottery</span>
+                    <h3 class="method-title">추첨 예매</h3>
+                    <p class="method-description">
+                        오픈 시간에 몰리는 클릭 경쟁 대신, 정해진 응모 기간 동안 신청하고 무작위 추첨으로 당첨자를 선정합니다.
+                        매크로·순간 트래픽 영향을 줄여 기회를 더 공정하게 분배합니다.
+                    </p>
+                    <div class="method-features">
+                        <span class="method-feature">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            무작위 추첨
+                        </span>
+                        <span class="method-feature">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            응모 기간 여유
+                        </span>
+                        <span class="method-feature">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            봇 방지
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Method 2: 일반 예매 -->
+            <div class="method-card">
+                <div class="method-number">2</div>
+                <div class="method-content">
+                    <span class="method-tag">First-Come</span>
+                    <h3 class="method-title">일반 예매</h3>
+                    <p class="method-description">
+                        오픈 시간에 선착순으로 좌석을 선택·결제하는 가장 익숙한 방식입니다.
+                        대기열 / 트래픽 제어로 접속 폭주 상황에서도 안정적인 예매 경험을 제공합니다.
+                    </p>
+                    <div class="method-features">
+                        <span class="method-feature">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            실시간 대기열
+                        </span>
+                        <span class="method-feature">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            서버 안정성
+                        </span>
+                        <span class="method-feature">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            원하는 좌석 선택
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Method 3: 구역별 사전 등록 -->
+            <div class="method-card">
+                <div class="method-number">3</div>
+                <div class="method-content">
+                    <span class="method-tag">Pre-Register</span>
+                    <h3 class="method-title">구역별 사전 등록</h3>
+                    <p class="method-description">
+                        예매 전에 원하는 구역과 조건을 미리 등록해두고, 오픈 시점에 해당 구역 기준으로 예매가 진행됩니다.
+                        좌석 탐색 시간을 줄이고, 인기 구역 경쟁에서도 혼선을 최소화합니다.
+                    </p>
+                    <div class="method-features">
+                        <span class="method-feature">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            사전 구역 선택
+                        </span>
+                        <span class="method-feature">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            빠른 예매
+                        </span>
+                        <span class="method-feature">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            혼잡도 분산
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== CTA Section ========== -->
+    <section class="cta-section">
+        <h2 class="cta-title">공정한 티켓팅, 지금 시작하세요</h2>
+        <p class="cta-subtitle">
+            더 이상 티켓팅에 울지 않아도 됩니다.<br>
+            TT와 함께 새로운 예매 경험을 만나보세요.
+        </p>
+        <div class="cta-buttons">
+            <a href="/signup" class="btn btn-primary">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                </svg>
+                회원가입
+            </a>
+            <a href="/performances" class="btn btn-secondary">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                공연 둘러보기
+            </a>
+        </div>
+    </section>
+
+    <!-- ========== Footer ========== -->
+    <footer>
+        <p>© 2026 TT - Fair Ticketing Service. All rights reserved.</p>
+        <p style="margin-top: 0.5rem;">
+            <a href="/terms">이용약관</a> · <a href="/privacy">개인정보처리방침</a> · <a href="/contact">문의하기</a>
+        </p>
+    </footer>
+
+</body>
+
+</html>
